@@ -60,6 +60,8 @@ pub struct Editor {
     pub typewriter: bool,
     /// Read-only (an item held by a stitched view elsewhere).
     pub read_only: bool,
+    /// The name screen readers give the editor: the document's title (ACC-3).
+    pub label: String,
     /// The color of each revision pass, by pass number (PRG-4).
     pub pass_colors: Vec<egui::Color32>,
     /// The last error, for the status bar.
@@ -140,6 +142,7 @@ impl Editor {
             typewriter: false,
             read_only: false,
             pass_colors: Vec::new(),
+            label: String::new(),
             error: None,
             caret_rect: None,
             smart: crate::typing::Smart::default(),

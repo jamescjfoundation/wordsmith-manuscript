@@ -417,6 +417,9 @@ impl Manuscript {
         let r = revisions::of(&s.project);
         let colors: Vec<egui::Color32> = r.sets.iter().map(|set| hex_color(&set.color).unwrap_or(egui::Color32::LIGHT_BLUE)).collect();
         for ed in [self.editor.as_mut(), self.other.as_mut()].into_iter().flatten() {
+            let title = s.project.binder.get(ed.item).map_or_else(String::new, |i| i.title.clone());
+            ed.label =
+                if stitch::is_stitched(ed) { format!("Text of “{title}” and the documents after it") } else { format!("Text of “{title}”") };
             if jcj_features::revisions::Revisions::of_doc(&ed.session.doc) != r {
                 let _ = r.store(&mut ed.session.doc);
             }

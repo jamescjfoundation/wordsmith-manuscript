@@ -21,10 +21,14 @@ pub const SERIF_ITALIC: &str = "manuscript-serif-italic";
 pub const SERIF_BOLD_ITALIC: &str = "manuscript-serif-bold-italic";
 
 /// Install the editor's faces once per context.
-pub fn install_fonts(ctx: &egui::Context) {
+///
+/// Returns whether the fonts can be used in this frame: fonts added now take effect from the next
+/// frame, so the editor waits one frame for them (a project opened before the first frame).
+pub fn install_fonts(ctx: &egui::Context) -> bool {
     let done = egui::Id::unique("manuscript-editor-fonts");
-    if ctx.data(|d| d.get_temp::<bool>(done)).unwrap_or(false) {
-        return;
+    let frame = ctx.cumulative_frame_nr();
+    if let Some(at) = ctx.data(|d| d.get_temp::<u64>(done)) {
+        return frame > at;
     }
     let family = crate::brand::editor_font();
     for (name, style) in [(SERIF, "Regular"), (SERIF_BOLD, "Bold"), (SERIF_ITALIC, "Italic"), (SERIF_BOLD_ITALIC, "Bold Italic")] {
@@ -48,7 +52,9 @@ pub fn install_fonts(ctx: &egui::Context) {
             });
         }
     }
-    ctx.data_mut(|d| d.insert_temp(done, true));
+    ctx.data_mut(|d| d.insert_temp(done, frame));
+    ctx.request_repaint();
+    false
 }
 
 /// How the editor looks: size, width, line spacing, surface.
@@ -233,8 +239,14 @@ impl Editor {
 
     /// Draw the editor in `ui`. Returns the response of the text area.
     pub fn ui(&mut self, ui: &mut Ui, look: &EditorLook) -> egui::Response {
-        install_fonts(ui.ctx());
         let colors = look.colors();
+        if !install_fonts(ui.ctx()) {
+            let area = ui.max_rect();
+            ui.painter().rect_filled(area, 0.0, colors.page);
+            let resp = ui.interact(area, ui.make_persistent_id("manuscript-editor"), Sense::hover());
+            self.describe(ui, &resp);
+            return resp;
+        }
         let n = self.paragraphs().len();
         if self.heights.len() != n {
             self.heights = (0..n).map(|i| self.estimate(i, look)).collect();
@@ -386,6 +398,7 @@ impl Editor {
         });
         ui.ctx().data_mut(|d| d.insert_temp(id.with("offset"), out.state.unclamped_offset().y));
         let resp = resp_out.unwrap_or_else(|| ui.interact(area, id, Sense::hover()));
+        self.describe(ui, &resp);
         if resp.has_focus() {
             ui.memory_mut(|m| {
                 m.set_focus_lock_filter(id, egui::EventFilter { tab: true, horizontal_arrows: true, vertical_arrows: true, escape: false })
@@ -393,6 +406,47 @@ impl Editor {
             self.input(ui, look);
         }
         resp
+    }
+
+    /// What a screen reader is told (ACC-3): a multiline text field named after the document,
+    /// whose value is the paragraph with the caret (with its kind when it is not body text) and
+    /// whose selection is the caret's or the selection's place in it.
+    fn describe(&self, ui: &Ui, resp: &egui::Response) {
+        let i = para_index(&self.session.sel.focus);
+        let p = self.paragraph(i);
+        let text = p.map(|p| p.text.replace(jcj_doc::para::OBJ, "")).unwrap_or_default();
+        let kind = p.map(|p| match mdoc::tag_of(p) {
+            BlockTag::Heading { level } => format!("Heading {level}: "),
+            BlockTag::Quote { .. } => "Quote: ".into(),
+            BlockTag::Verse { .. } => "Verse: ".into(),
+            BlockTag::Aside { .. } => "Aside: ".into(),
+            BlockTag::SceneBreak => "Scene break".into(),
+            BlockTag::Note { label, .. } => format!("Note {label}: "),
+            _ if crate::stitch::is_divider(p) => format!("Document: {}", crate::stitch::divider_title(p)),
+            _ => String::new(),
+        });
+        let value = format!("{}{text}", kind.unwrap_or_default());
+        let prefix = value.chars().count() - text.chars().count();
+        let char_at =
+            |off: usize| p.map_or(0, |p| p.text.get(..off.min(p.text.len())).map_or(0, |s| s.replace(jcj_doc::para::OBJ, "").chars().count()));
+        let (a, b) = self.session.sel.ordered();
+        let start = if para_index(&a) == i { char_at(a.off) } else { 0 };
+        let end = if para_index(&b) == i { char_at(b.off) } else { text.chars().count() };
+        let label = if self.label.is_empty() { "Document text".to_owned() } else { self.label.clone() };
+        let enabled = !self.read_only;
+        resp.widget_info(|| {
+            let mut w = egui::WidgetInfo::text_edit(enabled, value.clone(), value.clone(), "");
+            w.label = Some(label.clone());
+            w.text_selection = Some(egui::text::CharIndex(prefix + start)..egui::text::CharIndex(prefix + end));
+            w
+        });
+        let read_only = self.read_only;
+        ui.ctx().accesskit_node_builder(resp.id, |node| {
+            node.set_role(egui::accesskit::Role::MultilineTextInput);
+            if read_only {
+                node.set_read_only();
+            }
+        });
     }
 
     /// The paragraph and byte under a point.

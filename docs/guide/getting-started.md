@@ -35,3 +35,12 @@ project (`.wsmz`), which is unpacked into a folder beside it.
 
 Select Scene One in the binder and type. Your work is saved automatically; File › Save (Mod+S)
 saves at once. Mod+Alt+N adds a new document after the selected one.
+
+## Screen readers
+
+The window works with screen readers through the system's accessibility interface. Every button,
+field, binder row, card and table cell has a name. The editor reads as a text field named after
+the document ("Text of “Scene One”"); its value is the paragraph with the caret, with its kind when
+it is not body text ("Quote: …", "Heading 1: …"), and the caret and selection are reported as you
+move. In a text read as one, each document's title line reads as "Document: …". Every command is
+also in the command palette and can be given a key (File › Keys).
