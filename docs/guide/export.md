@@ -33,3 +33,11 @@ book details (`project.setBook`).
 The book package is the project packed as one file for Wordsmith Book, checked by reading it back
 through the book view. Its report lists the details Book needs that are not set yet (copyright
 year, rights statement, description...).
+
+## Fixes offered back by Wordsmith Book
+
+When Wordsmith Book suggests a light fix (a typo, a missing comma) while typesetting, it offers it
+back instead of changing your project. The status bar shows how many fixes wait; click it, or use
+Offered Fixes in the command palette. Each fix shows the document, why, and the words before and
+after. Accept takes it into the text (one undo step); Reject turns it down; Open shows the
+document. A fix whose words you have since changed can only be rejected.

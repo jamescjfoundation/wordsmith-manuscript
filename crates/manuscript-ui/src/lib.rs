@@ -26,6 +26,7 @@ pub mod history;
 pub mod imports;
 pub mod inspector;
 pub mod media;
+pub mod offers;
 pub mod outline;
 pub mod pages;
 pub mod progress;
@@ -131,6 +132,10 @@ pub struct Manuscript {
     pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
     pub showing: Option<String>,
+    /// The "Offered fixes" inbox (plan 9.2 item 4).
+    pub offers_view: offers::InboxView,
+    /// How many offered fixes wait (looked up with the outside check).
+    pub offers_pending: usize,
     /// When the project folder was last checked for outside changes (FIL-4).
     outside_checked: Option<Instant>,
     /// Where writing histories are kept on this computer (the app's settings folder), if anywhere.
@@ -222,6 +227,8 @@ impl Manuscript {
             compare: snapshots::CompareView::default(),
             history_dir: None,
             outside_checked: None,
+            offers_view: offers::InboxView::default(),
+            offers_pending: 0,
             history_view: history::HistoryView::default(),
             entry_types: entry_types::TypesView::default(),
             templates_dir: None,
@@ -595,6 +602,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.unsplit", "One Pane", ""));
         v.push(CommandInfo::new("view.history", "Writing History", ""));
         v.push(CommandInfo::new("view.entryTypes", "Entry Types", ""));
+        v.push(CommandInfo::new("view.offers", "Offered Fixes", ""));
         v.push(CommandInfo::new("file.saveTemplate", "Save as Template", ""));
         v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
@@ -915,6 +923,17 @@ impl App for Manuscript {
                 pr.ui(ui, &s.project);
             }
         }
+        if self.offers_pending > 0 {
+            ui.separator();
+            let n = self.offers_pending;
+            if ui
+                .small_button(format!("{n} offered fix{}", if n == 1 { "" } else { "es" }))
+                .on_hover_text("Fixes Wordsmith Book offers back")
+                .clicked()
+            {
+                self.offers_view.open = true;
+            }
+        }
         if !self.status.is_empty() {
             ui.separator();
             ui.label(&self.status);
@@ -1110,6 +1129,10 @@ impl Manuscript {
             user_templates::delete(&dir, t.strip_prefix("user:").unwrap_or(t))?;
             return Ok(());
         }
+        if cmd.id == "view.offers" {
+            self.offers_view.open = true;
+            return Ok(());
+        }
         if cmd.id == "view.entryTypes" {
             self.entry_types.open = true;
             return Ok(());
@@ -1259,6 +1282,7 @@ impl Manuscript {
         if self.outside_checked.is_none_or(|t| t.elapsed() >= OUTSIDE_EVERY) {
             self.outside_checked = Some(Instant::now());
             self.check_outside();
+            self.offers_pending = self.session.as_ref().map_or(0, offers::pending);
         }
         ui.ctx().request_repaint_after(OUTSIDE_EVERY);
         self.mark_revisions();
@@ -1278,6 +1302,22 @@ impl Manuscript {
             history::window(ui.ctx(), &p.writing.history, &mut self.history_view, progress::today());
         }
         self.save_template_ui(ui.ctx(), _shell);
+        if let Some(s) = self.session.as_mut() {
+            let rev = s.revision();
+            let (errors, open) = offers::window(ui.ctx(), s, &mut self.offers_view);
+            if let Some(e) = errors.into_iter().last() {
+                self.status = e;
+            }
+            if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+                self.sync_editor();
+                self.offers_pending = self.session.as_ref().map_or(0, offers::pending);
+            }
+            if let Some(id) = open {
+                self.binder.selected = Some(id);
+                self.open_item(id);
+                self.mode = ViewMode::Editor;
+            }
+        }
         if std::mem::take(&mut self.binder.open_types) {
             self.entry_types.open = true;
         }

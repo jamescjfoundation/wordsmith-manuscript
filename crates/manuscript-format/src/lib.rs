@@ -11,6 +11,7 @@ pub mod dialect;
 pub mod files;
 pub mod folder;
 pub mod limits;
+pub mod offers;
 pub mod pack;
 
 /// The schema version this build writes and the newest it reads.

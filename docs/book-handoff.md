@@ -44,6 +44,37 @@ the writer has not set), `book::counts`.
 Chosen fonts with their licenses come with Manuscript 0.2's export settings; until then the
 book view gives none and Book uses its own.
 
+## Offering fixes back (Manuscript 0.2)
+
+Book never writes the project folder. It writes its offers into a file **beside** the folder,
+`manuscript-format::offers::offers_path(root)`: for `My Novel.wsm`, `My Novel.wsm-offers.json`.
+The file is `manuscript-format::offers::OffersFile`, written with `offers::write`:
+
+```json
+{
+  "version": 1,
+  "offers": [
+    { "id": "7d2c…", "item": "0190a5c2-…", "find": "teh harbour", "replace": "the harbour",
+      "note": "typo", "made": "2026-11-24T10:00:00Z" }
+  ]
+}
+```
+
+- `id`: Book's own id for the offer, unique in the file. `item`: the stable id of the item whose
+  text changes (from the book view). `find`: the exact words as a reader sees them (no marks),
+  within one paragraph; they must occur exactly once in the item, so give enough words around the
+  change. `replace`: the new words (plain text; they take the formatting of the words replaced).
+- Book appends offers and never removes or rewrites one Manuscript may have decided.
+- Manuscript lists them in its "Offered fixes" inbox (`offers.list`, `offers.accept`,
+  `offers.reject`); an offer whose words are no longer there exactly once is "stale" and can only
+  be rejected.
+- The writer's decisions are kept in the project; Book reads them with
+  `manuscript-format::offers::decisions(&project)` (offer id → accepted or rejected). An offer
+  with no decision is still waiting. When a later export differs from an accepted or waiting fix,
+  Book shows the difference and never overwrites.
+
+The offers file has its own version (`offers::VERSION`, 1); Manuscript refuses a newer one.
+
 ## The book package (EXP-5)
 
 Export › Book package writes the project as a packed `.wsmz` (deterministic, `docs/format.md`),
