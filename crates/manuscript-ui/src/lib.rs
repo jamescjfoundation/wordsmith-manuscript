@@ -20,6 +20,7 @@ pub mod inspector;
 pub mod outline;
 pub mod progress;
 pub mod ribbon;
+pub mod search;
 pub mod session;
 pub mod snapshots;
 pub mod spelling;
@@ -110,6 +111,11 @@ pub struct Manuscript {
     pub cork: cork::CorkView,
     /// The bible entry form.
     pub entry: bible::EntryView,
+    /// Project search: the index, the query and the results.
+    pub searcher: search::Searcher,
+    search_text: String,
+    /// The last search's results: (item, matches).
+    pub search_results: Option<Vec<(ItemId, usize)>>,
     /// The writing session's statistics, for the open project.
     pub progress: Option<progress::Progress>,
     /// The folder the corkboard and outline show (follows the binder's selection).
@@ -167,6 +173,9 @@ impl Manuscript {
             entry: bible::EntryView::default(),
             view_root: None,
             progress: None,
+            searcher: search::Searcher::default(),
+            search_text: String::new(),
+            search_results: None,
             filter: filter::Filter::default(),
             filtered_at: u64::MAX,
             view: view::ViewPrefs::default(),
@@ -519,6 +528,59 @@ impl App for Manuscript {
         };
         let before = self.binder.selected;
         let rev = s.revision();
+        self.searcher.refresh(&s.project, rev);
+        ui.horizontal(|ui| {
+            let r = ui.add(egui::TextEdit::singleline(&mut self.search_text).hint_text("Search the project").desired_width(f32::INFINITY));
+            r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::SearchInput, true, "Search the project"));
+            if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                if self.search_text.trim().is_empty() {
+                    self.search_results = None;
+                } else {
+                    let q = find::Query { text: self.search_text.clone(), ..find::Query::default() };
+                    match self.searcher.search(&s.project, rev, &q) {
+                        Ok(found) => {
+                            let mut out: Vec<(ItemId, usize)> = Vec::new();
+                            for f in found {
+                                match out.last_mut() {
+                                    Some((i, n)) if *i == f.item => *n += 1,
+                                    _ => out.push((f.item, 1)),
+                                }
+                            }
+                            self.search_results = Some(out);
+                        }
+                        Err(e) => self.status = e,
+                    }
+                }
+            }
+        });
+        if let Some(results) = self.search_results.clone() {
+            ui.horizontal(|ui| {
+                ui.label(format!("{} documents", results.len()));
+                if ui.small_button("Back to the Binder").clicked() {
+                    self.search_results = None;
+                }
+            });
+            let mut open = None;
+            egui::ScrollArea::vertical().id_salt("manuscript-search-results").show(ui, |ui| {
+                for (id, n) in &results {
+                    let title = s.project.binder.get(*id).map(|i| i.title.clone()).unwrap_or_default();
+                    if ui.selectable_label(self.binder.selected == Some(*id), format!("{title} ({n})")).clicked() {
+                        open = Some(*id);
+                    }
+                }
+            });
+            if let Some(id) = open {
+                self.binder.selected = Some(id);
+                self.open_item(id);
+                self.find.query.text = self.search_text.clone();
+                let q = self.find.query.clone();
+                if let Some(ed) = self.editor.as_mut() {
+                    ed.set_caret(0, 0, false);
+                    let _ = ed.find_next(&q, false);
+                }
+            }
+            return;
+        }
         if filter::bar(ui, &s.project, &mut self.filter) || self.filtered_at != rev {
             self.binder.hidden = filter::hidden(&s.project, &self.filter);
             self.filtered_at = rev;

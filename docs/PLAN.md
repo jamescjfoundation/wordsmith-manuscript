@@ -590,7 +590,7 @@ with the Wordsmith Book plan and written up as `docs/book-handoff.md` in step M6
 | M4 Bible | 0.1 | Entries, templates, links, backlinks, notes-folder import | Done 2026-11-24 |
 | M5 Import | 0.1 | All 0.1 imports, document sets, verification | Done 2026-11-24 |
 | M6 Export | 0.1 | Standard manuscript DOCX and PDF, plain exports, book view | Done 2026-11-24 (contract awaits Book review) |
-| M7 Progress | 0.1 | Counts, targets, snapshots, project search | Not started |
+| M7 Progress | 0.1 | Counts, targets, snapshots, project search | Done 2026-11-24 |
 | M8 Release | 0.1 | CLI, agent tools, guide, installers, release | Not started |
 | R2 | 0.2 | Daily-work completeness | Not started |
 | R3 | 0.3 | Drafts and finish | Not started |

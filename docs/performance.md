@@ -10,3 +10,4 @@ build machine; CI records its own.
 
 Only the paragraphs in view are laid out; laid-out paragraphs are kept until they change, and the
 heights of the rest are estimated from their length until they come into view.
+| Project search on a 563,000-word project in 1,000 scenes | 200 ms | about 2 ms a query (index built in the background in about 120 ms; debug build) | `manuscript-ui/tests/search.rs`, `a_300000_word_project_answers_within_200_ms` | 2026-11-24 |

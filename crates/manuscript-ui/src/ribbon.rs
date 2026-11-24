@@ -85,7 +85,6 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let sepia = app.view.surface == crate::brand::EditorSurface::Sepia;
     let typewriter = app.view.typewriter;
     let dim = app.view.dim_in_focus;
-    let cmds: &dyn Commands = &*app;
     let mode = app.mode;
     let cmds: &dyn Commands = &*app;
     widgets::group(ui, shell, "Show", |ui, shell| {
