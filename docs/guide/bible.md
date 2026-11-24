@@ -19,3 +19,13 @@ File › Import › Notes Folder into the Story Bible takes a folder of Markdown
 becomes an entry named after its file; front matter (`aliases`, `type`, any other field) becomes
 its aliases, type and fields; `[[Name]]` and `[[Name|text]]` become links. A link to a name no
 entry has keeps its text and is listed in the report. Subfolders become bible folders.
+
+## Your own entry types
+
+Right-click Story Bible › Entry Types… (or Entry Types in the command palette) to change what each
+type of entry asks for, or to add a type of your own: ships, spells, songs, anything your story
+keeps track of. Name a field, choose what it holds (text, long text, a list, a picture, a link to
+another entry), move it up or remove it, then Save Type. Renaming a field keeps every entry's value
+under the new name. Removing a field never removes what you wrote: an entry's values for fields
+its type no longer has stay with it, after the type's fields. A changed default type can go back
+to the default; a type of your own can be removed once no entry uses it.

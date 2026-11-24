@@ -16,6 +16,7 @@ pub mod commands;
 pub mod comments;
 pub mod cork;
 pub mod editor;
+pub mod entry_types;
 pub mod exports;
 pub mod fields;
 pub mod filter;
@@ -128,6 +129,8 @@ pub struct Manuscript {
     pub showing: Option<String>,
     /// Where writing histories are kept on this computer (the app's settings folder), if anywhere.
     pub history_dir: Option<std::path::PathBuf>,
+    /// The entry types window (BIB-2).
+    pub entry_types: entry_types::TypesView,
     /// The writing history window (PRG-3).
     pub history_view: history::HistoryView,
     /// The snapshot comparison window (INS-5).
@@ -209,6 +212,7 @@ impl Manuscript {
             compare: snapshots::CompareView::default(),
             history_dir: None,
             history_view: history::HistoryView::default(),
+            entry_types: entry_types::TypesView::default(),
             showing: None,
             media_view: media::MediaView::default(),
             board: board::BoardView::default(),
@@ -535,6 +539,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.splitStacked", "Split Top and Bottom", ""));
         v.push(CommandInfo::new("view.unsplit", "One Pane", ""));
         v.push(CommandInfo::new("view.history", "Writing History", ""));
+        v.push(CommandInfo::new("view.entryTypes", "Entry Types", ""));
         v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
@@ -1021,6 +1026,10 @@ impl Manuscript {
             }
             _ => {}
         }
+        if cmd.id == "view.entryTypes" {
+            self.entry_types.open = true;
+            return Ok(());
+        }
         if cmd.id == "view.history" {
             self.start_progress();
             self.history_view.open = true;
@@ -1178,6 +1187,18 @@ impl Manuscript {
         }
         if let Some(p) = self.progress.as_ref() {
             history::window(ui.ctx(), &p.writing.history, &mut self.history_view, progress::today());
+        }
+        if std::mem::take(&mut self.binder.open_types) {
+            self.entry_types.open = true;
+        }
+        if let Some(s) = self.session.as_mut() {
+            let rev = s.revision();
+            if let Some(e) = entry_types::window(ui.ctx(), s, &mut self.entry_types).into_iter().last() {
+                self.status = e;
+            }
+            if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+                self.entry = Default::default();
+            }
         }
         if self.recovered.is_some() {
             ui.horizontal(|ui| {

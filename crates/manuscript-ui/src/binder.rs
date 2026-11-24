@@ -37,6 +37,8 @@ pub struct BinderView {
     pub confirm_empty: bool,
     /// Items hidden by the filters (SRC-3); their ancestors stay as context.
     pub hidden: HashSet<ItemId>,
+    /// The writer asked for the entry types window.
+    pub open_types: bool,
     /// Asking for a picture's or PDF's path (`false`) or a web address (`true`), and where it goes.
     pub add_media: Option<(bool, String, Option<ItemId>)>,
 }
@@ -264,6 +266,11 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                         run("binder.newFolder", json!({ "area": "bible" }));
                         close = true;
                     }
+                    ui.separator();
+                    if ui.button("Entry Types…").clicked() {
+                        run("open-types", serde_json::Value::Null);
+                        close = true;
+                    }
                 }
                 Node::Area(a) => {
                     if ui.button("New Document").clicked() {
@@ -371,6 +378,8 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
     for (id, v) in todo {
         if id == "confirm-empty" {
             view.confirm_empty = true;
+        } else if id == "open-types" {
+            view.open_types = true;
         } else if id == "ask-media" {
             let inside = if let Node::Item(i) = node { Some(i) } else { None };
             view.add_media = Some((v == json!(true), String::new(), inside));
