@@ -39,22 +39,39 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let cmds: &dyn Commands = &*app;
     widgets::group(ui, shell, &crate::i18n::tr("Paragraph"), |ui, shell| {
         let on = |b: bool| b;
-        widgets::small(ui, shell, cmds, &Control::new("write.body").label(crate::i18n::tr("Body")).on(on(block == BlockTag::Body)));
-        widgets::small(ui, shell, cmds, &Control::new("write.quote").label(crate::i18n::tr("Quote")).on(matches!(block, BlockTag::Quote { .. })));
-        widgets::small(ui, shell, cmds, &Control::new("write.verse").label(crate::i18n::tr("Verse")).on(matches!(block, BlockTag::Verse { .. })));
-        widgets::small(ui, shell, cmds, &Control::new("write.aside").label(crate::i18n::tr("Aside")).on(matches!(block, BlockTag::Aside { .. })));
+        widgets::small(ui, shell, cmds, &Control::new("write.body").label(crate::i18n::tr("Body")).icon("pilcrow").on(on(block == BlockTag::Body)));
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("write.quote").label(crate::i18n::tr("Quote")).icon("indent").on(matches!(block, BlockTag::Quote { .. })),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("write.verse").label(crate::i18n::tr("Verse")).icon("lineSpacing").on(matches!(block, BlockTag::Verse { .. })),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("write.aside").label(crate::i18n::tr("Aside")).icon("textBox").on(matches!(block, BlockTag::Aside { .. })),
+        );
         for level in 1..=3u8 {
-            let c =
-                Control::with("write.heading", json!({ "level": level })).label(format!("Heading {level}")).on(block == BlockTag::Heading { level });
+            let c = Control::with("write.heading", json!({ "level": level }))
+                .label(format!("Heading {level}"))
+                .icon("styles")
+                .on(block == BlockTag::Heading { level });
             widgets::small(ui, shell, cmds, &c);
         }
     });
     widgets::group(ui, shell, &crate::i18n::tr("Characters"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::new("write.italic").label(crate::i18n::tr("Italic")));
-        widgets::small(ui, shell, cmds, &Control::new("write.bold").label(crate::i18n::tr("Bold")));
-        widgets::small(ui, shell, cmds, &Control::new("write.smallCaps").label(crate::i18n::tr("Small Caps")));
-        widgets::small(ui, shell, cmds, &Control::new("write.strike").label(crate::i18n::tr("Strikethrough")));
-        widgets::small(ui, shell, cmds, &Control::new("write.plain").label(crate::i18n::tr("Plain")));
+        widgets::small(ui, shell, cmds, &Control::new("write.italic").label(crate::i18n::tr("Italic")).icon("italic"));
+        widgets::small(ui, shell, cmds, &Control::new("write.bold").label(crate::i18n::tr("Bold")).icon("bold"));
+        widgets::small(ui, shell, cmds, &Control::new("write.smallCaps").label(crate::i18n::tr("Small Caps")).icon("case"));
+        widgets::small(ui, shell, cmds, &Control::new("write.strike").label(crate::i18n::tr("Strikethrough")).icon("strike"));
+        widgets::small(ui, shell, cmds, &Control::new("write.plain").label(crate::i18n::tr("Plain")).icon("clear"));
     });
     widgets::group(ui, shell, &crate::i18n::tr("Link"), |ui, shell| {
         widgets::drop(ui, shell, "Link to…", "Link the selected words to a bible entry or a document.", |ui, shell| {
@@ -67,18 +84,18 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
                 }
             });
         });
-        widgets::small(ui, shell, cmds, &Control::new("write.unlink").label(crate::i18n::tr("Remove Link")));
-        widgets::small(ui, shell, cmds, &Control::new("write.comment").label(crate::i18n::tr("Comment")));
+        widgets::small(ui, shell, cmds, &Control::new("write.unlink").label(crate::i18n::tr("Remove Link")).icon("textBoxUnlink"));
+        widgets::small(ui, shell, cmds, &Control::new("write.comment").label(crate::i18n::tr("Comment")).icon("comment"));
     });
     widgets::group(ui, shell, &crate::i18n::tr("Read"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::new("view.stitch").label(crate::i18n::tr("As One Text")));
-        widgets::small(ui, shell, cmds, &Control::new("view.stitchManuscript").label(crate::i18n::tr("Whole Manuscript")));
-        widgets::small(ui, shell, cmds, &Control::new("view.split").label(crate::i18n::tr("Split")));
-        widgets::small(ui, shell, cmds, &Control::new("view.unsplit").label(crate::i18n::tr("One Pane")));
+        widgets::small(ui, shell, cmds, &Control::new("view.stitch").label(crate::i18n::tr("As One Text")).icon("readMode"));
+        widgets::small(ui, shell, cmds, &Control::new("view.stitchManuscript").label(crate::i18n::tr("Whole Manuscript")).icon("multiplePages"));
+        widgets::small(ui, shell, cmds, &Control::new("view.split").label(crate::i18n::tr("Split")).icon("sideBySide"));
+        widgets::small(ui, shell, cmds, &Control::new("view.unsplit").label(crate::i18n::tr("One Pane")).icon("onePage"));
     });
     widgets::group(ui, shell, &crate::i18n::tr("Insert"), |ui, shell| {
-        widgets::big(ui, shell, cmds, &Control::new("write.sceneBreak").label(crate::i18n::tr("Scene Break")));
-        widgets::small(ui, shell, cmds, &Control::new("write.lineBreak").label(crate::i18n::tr("Line Break")));
+        widgets::big(ui, shell, cmds, &Control::new("write.sceneBreak").label(crate::i18n::tr("Scene Break")).icon("breaks"));
+        widgets::small(ui, shell, cmds, &Control::new("write.lineBreak").label(crate::i18n::tr("Line Break")).icon("pageBreak"));
     });
 }
 
@@ -91,31 +108,71 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let mode = app.mode;
     let cmds: &dyn Commands = &*app;
     widgets::group(ui, shell, &crate::i18n::tr("Show"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::new("view.editor").label(crate::i18n::tr("Editor")).on(mode == crate::ViewMode::Editor));
-        widgets::small(ui, shell, cmds, &Control::new("view.corkboard").label(crate::i18n::tr("Corkboard")).on(mode == crate::ViewMode::Corkboard));
-        widgets::small(ui, shell, cmds, &Control::new("view.outline").label(crate::i18n::tr("Outline")).on(mode == crate::ViewMode::Outline));
-        widgets::small(ui, shell, cmds, &Control::new("view.board").label(crate::i18n::tr("Board")).on(mode == crate::ViewMode::Board));
-        widgets::small(ui, shell, cmds, &Control::new("view.pages").label(crate::i18n::tr("Pages")).on(mode == crate::ViewMode::Pages));
-        widgets::small(ui, shell, cmds, &Control::new("view.lanes").label(crate::i18n::tr("Lanes")).on(mode == crate::ViewMode::Lanes));
-        widgets::small(ui, shell, cmds, &Control::new("view.timeline").label(crate::i18n::tr("Timeline")).on(mode == crate::ViewMode::Timeline));
-        widgets::small(ui, shell, cmds, &Control::new("view.drafts").label(crate::i18n::tr("Drafts")));
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.editor").label(crate::i18n::tr("Editor")).icon("draft").on(mode == crate::ViewMode::Editor),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.corkboard").label(crate::i18n::tr("Corkboard")).icon("columns").on(mode == crate::ViewMode::Corkboard),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.outline").label(crate::i18n::tr("Outline")).icon("outline").on(mode == crate::ViewMode::Outline),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.board").label(crate::i18n::tr("Board")).icon("canvas").on(mode == crate::ViewMode::Board),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.pages").label(crate::i18n::tr("Pages")).icon("printLayout").on(mode == crate::ViewMode::Pages),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.lanes").label(crate::i18n::tr("Lanes")).icon("distributeRows").on(mode == crate::ViewMode::Lanes),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.timeline").label(crate::i18n::tr("Timeline")).icon("dateTime").on(mode == crate::ViewMode::Timeline),
+        );
+        widgets::small(ui, shell, cmds, &Control::new("view.drafts").label(crate::i18n::tr("Drafts")).icon("documentTemplate"));
     });
     widgets::group(ui, shell, &crate::i18n::tr("Focus"), |ui, shell| {
-        widgets::big(ui, shell, cmds, &Control::new("view.focus").label(crate::i18n::tr("Focus Mode")).on(focus));
-        widgets::small(ui, shell, cmds, &Control::new("view.typewriter").label(crate::i18n::tr("Typewriter Scrolling")).on(typewriter));
-        widgets::small(ui, shell, cmds, &Control::new("view.dimAround").label(crate::i18n::tr("Dim Around the Caret")).on(dim));
+        widgets::big(ui, shell, cmds, &Control::new("view.focus").label(crate::i18n::tr("Focus Mode")).icon("focus").on(focus));
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("view.typewriter").label(crate::i18n::tr("Typewriter Scrolling")).icon("immersive").on(typewriter),
+        );
+        widgets::small(ui, shell, cmds, &Control::new("view.dimAround").label(crate::i18n::tr("Dim Around the Caret")).icon("shading").on(dim));
     });
     widgets::group(ui, shell, &crate::i18n::tr("Theme"), |ui, shell| {
         let theme = jcj_shell::commands::shell_ids::THEME;
-        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "light" })).label(crate::i18n::tr("Light")));
-        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "dark" })).label(crate::i18n::tr("Dark")));
-        widgets::small(ui, shell, cmds, &Control::new("view.sepia").label(crate::i18n::tr("Sepia Page")).on(sepia));
+        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "light" })).label(crate::i18n::tr("Light")).icon("interfaceTheme"));
+        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "dark" })).label(crate::i18n::tr("Dark")).icon("darkMode"));
+        widgets::small(ui, shell, cmds, &Control::new("view.sepia").label(crate::i18n::tr("Sepia Page")).icon("pageColor").on(sepia));
     });
     widgets::group(ui, shell, &crate::i18n::tr("Text"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": 1 })).label(crate::i18n::tr("Larger")));
-        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": -1 })).label(crate::i18n::tr("Smaller")));
-        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": 60 })).label(crate::i18n::tr("Wider")));
-        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": -60 })).label(crate::i18n::tr("Narrower")));
+        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": 1 })).label(crate::i18n::tr("Larger")).icon("grow"));
+        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": -1 })).label(crate::i18n::tr("Smaller")).icon("shrink"));
+        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": 60 })).label(crate::i18n::tr("Wider")).icon("pageWidth"));
+        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": -60 })).label(crate::i18n::tr("Narrower")).icon("margins"));
     });
 }
 
@@ -125,8 +182,23 @@ pub fn bible_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let cmds: &dyn Commands = &*app;
     widgets::group(ui, shell, &crate::i18n::tr("New Entry"), |ui, shell| {
         for t in templates {
-            let c = Control::with("bible.new", json!({ "kind": t.kind, "name": format!("New {}", t.title) })).label(t.title.clone());
+            let c = Control::with("bible.new", json!({ "kind": t.kind, "name": format!("New {}", t.title) }))
+                .label(t.title.clone())
+                .icon(entry_icon(&t.kind));
             widgets::small(ui, shell, cmds, &c);
         }
     });
+}
+
+/// The icon for a bible entry type's New button.
+fn entry_icon(kind: &str) -> &'static str {
+    match kind {
+        "character" => "user",
+        "place" => "homeFolder",
+        "object" => "object",
+        "group" => "group",
+        "lore" => "sources",
+        "thread" => "multilevel",
+        _ => "file",
+    }
 }

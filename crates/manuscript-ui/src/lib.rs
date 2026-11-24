@@ -715,7 +715,7 @@ impl App for Manuscript {
             return Vec::new();
         }
         vec![
-            PanelSpec::new(BINDER_PANEL, i18n::tr("Binder"), "list", Side::Left),
+            PanelSpec::new(BINDER_PANEL, i18n::tr("Binder"), "navPane", Side::Left),
             PanelSpec::new(INSPECTOR_PANEL, i18n::tr("Inspector"), "info", Side::Right),
         ]
     }

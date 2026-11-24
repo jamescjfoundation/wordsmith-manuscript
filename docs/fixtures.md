@@ -17,6 +17,10 @@ Paragraphs are separated by blank lines; italic is shown as `_underscores_`.
 | `great-expectations.txt` | *Great Expectations*, Charles Dickens | 1867 edition, e-text 1400 | https://www.gutenberg.org/ebooks/1400 (fetched 2026-11-24) | about 184,000 |
 | `pride-and-prejudice.txt` | *Pride and Prejudice*, Jane Austen | 1894 illustrated edition, e-text 1342 | https://www.gutenberg.org/ebooks/1342 (fetched 2026-11-24) | about 127,000 |
 
+The README's pictures (`cargo xtask screenshots`, `crates/manuscript-ui/examples/screenshots.rs`)
+use the first six chapters of `pride-and-prejudice.txt`; their chapter and scene titles,
+synopses and bible entries are written for the pictures.
+
 `war-and-peace.txt` is the scale fixture (over 300,000 words). `great-expectations.txt` is the
 novel of the v0.1 test (plan section 10).
 
