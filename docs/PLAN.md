@@ -81,7 +81,8 @@ This plan is meant to be carried out step by step, by people and coding agents, 
 - Book design and typesetting: Wordsmith Book's job. Manuscript exports only a standard manuscript
   PDF and a plain reading copy.
 - Real-time co-writing and cloud accounts. Local files first; device sync is after v1.0.
-- Screenplay formatting: Wordsmith Script's job (see open question 2).
+- Screenplay formatting and editing: Wordsmith Script's job. A project can hold screenplays, but
+  Script edits them (SCR-1).
 - AI writing features. If added later, behind a setting that is off by default.
 - Mobile apps, until the file format has been stable for a release.
 - Proprietary file formats, as in Script (Script decision 0042): an import needs a legitimately
@@ -237,6 +238,7 @@ pull request in Script.
 | C10 | Grammar hints (Harper) beside spelling | Core (`jcj-proof`) | v0.2 (ED-9) |
 | C11 | Story board lanes | Promote from Script | v1.0 (PLN-4) |
 | C12 | EPUB import (known core gap) | Core | v1.0 (IMP-9) |
+| C13 | Entries: typed records with field templates, links, backlinks and a name list, stored as Markdown files with front matter (the story bible's general part, section 5.6) | Build in app first, `core-candidate`; promote when Script uses it | M4.1; promoted in R4 |
 
 "Build in app first" items are marked `// core-candidate:` in code with a core issue labelled
 `core-candidate`, and move once they work and a second app wants them.
@@ -257,6 +259,43 @@ hardest new piece, so its design is fixed here:
   session per item at a time.
 - Built for size: only the visible region is laid out; a 200,000-word stitched view must scroll and
   type within the frame budget of section 11.
+
+### 5.6 The story bible and Wordsmith Script
+
+Decided (decision to be written in M4.1): the bible's general part becomes a core crate, built
+here first.
+
+- **Built here first, in a general shape.** In M4 the bible is written as two layers in this
+  repository: a general entries layer (records with an id, a type, fields from a template, a
+  Markdown body, links, backlinks, and the list of names and aliases spelling learns from) marked
+  `// core-candidate:` with core issue C13; and Manuscript's own layer on top (the Story Bible
+  area, the entry types Character, Place and so on, linking from scenes, the inspector). The
+  general layer names no manuscript concept: entry types and templates are data, not code.
+- **Promoted to the core when Script starts using it** (R4), as a `jcj-` crate, by the core's rule
+  "a second app has a written plan to use it". Script's characters then read and write the same
+  entries.
+- **Why not a crate of this repository that Script depends on:** Script would then wait on
+  Manuscript's releases to change its own characters, and two apps would write data only one of
+  them owns. The core exists to hold exactly what several apps share; Book reading the project is
+  different, because Book only reads (section 9.2).
+- **Sharing in practice:** a bible is a folder of entry files. A project normally keeps its own
+  (`bible/`); a series or an adaptation points several projects, Manuscript or Script, at one
+  bible folder, with the same outside-change detection as section 6.2.
+
+### 5.7 Screenplays inside a project
+
+A project can hold screenplays, for adaptations and for books that contain scripts:
+
+- A screenplay is a binder item of kind `screenplay`, stored as `scripts/<id>.wss` in Wordsmith
+  Script's own format, unchanged.
+- Manuscript has no screenplay rules (they are Script's, and code is never copied between app
+  repositories). It shows the screenplay read-only as its text, counts its words, lists it on the
+  corkboard and in the outline with synopsis, label and status, and opens it in Wordsmith Script
+  for editing. Script saves the file in place; Manuscript's outside-change detection reloads it.
+- Screenplays are left out of manuscript exports and the book view unless a later decision adds
+  them.
+- If a richer preview is wanted (pages as Script prints them), Script's renderer must first reach
+  Manuscript through the core, by the core's rules; until then the text view stands.
 
 ## 6. Data format
 
@@ -279,7 +318,7 @@ A project is a folder. On macOS it is registered as a package so the system show
 Windows and Linux the user opens `project.toml` inside it.
 
 ```text
-My Novel.wsm/                   extension: `.wsm` unless the name check (M0.2) finds a conflict
+My Novel.wsm/                   extension: `.wsm` unless the extension check (M0.2) finds a conflict
   project.toml                  schema version, title, author, language, settings, label and
                                 status lists, keyword list, custom field definitions, targets,
                                 export presets, document-set rules
@@ -289,6 +328,7 @@ My Novel.wsm/                   extension: `.wsm` unless the name check (M0.2) f
   text/<id>.md                  one file per text item (manuscript scenes, notes, research notes)
   bible/<id>.md                 one file per bible entry: fields in front matter, body below
   media/<id>.<ext>              research images and PDFs, the cover, pictures in the text
+  scripts/<id>.wss              screenplays, in Wordsmith Script's format (v1.0, SCR-1)
   snapshots/<id>/<UTC time>.md  named, dated copies of one item's text
   drafts/<draft id>/binder.toml later drafts of the manuscript (v0.3, DRF-1)
   .recovery/                    unsaved work while the app runs; removed after a good save
@@ -414,7 +454,13 @@ change from section 5.4.
 | BIB-2 | Templates | Default sheets at 0.1; user-made templates with text, list, image and link fields at 0.2 | 0.1 / 0.2 |
 | BIB-3 | Backlinks | Each entry lists every item that links to it or mentions its name | 0.1 |
 | BIB-4 | Relationships | Typed links between entries (sibling of, rival of) | 1.0 |
-| BIB-5 | Shared bible | One bible for a series, and shared with Wordsmith Script projects | 1.0 |
+| BIB-5 | Shared bible | One bible for a series, and shared with Wordsmith Script projects (section 5.6, C13) | 1.0 |
+
+### Screenplays
+
+| Id | Feature | What it does | Release |
+| --- | --- | --- | --- |
+| SCR-1 | Screenplays in a project | Screenplay items stored in Script's format, shown read-only with counts, card and outline metadata, opened in Wordsmith Script to edit (section 5.7) | 1.0 |
 
 ### Progress and revision
 
@@ -571,9 +617,10 @@ with every word still matching. This runs as an end-to-end test in CI (M8.4).
 - Done when: `cargo xtask ci` and `cargo xtask sync --check` pass locally and in CI; the empty app
   opens a window through `jcj-shell` with Manuscript's name.
 
-**M0.2 `m0/name`** (a person's task; can run in parallel with M0.3–M0.4): name and trademark check
-for "Wordsmith Manuscript" and the `.wsm` / `.wsmz` extensions. Done when: the result is recorded
-as a decision; if the name or extension changes, this plan is updated.
+**M0.2 `m0/name`** (can run in parallel with M0.3–M0.4): the name "Wordsmith Manuscript" is
+confirmed. Check that `.wsm` and `.wsmz` are not registered to another common file type on macOS,
+Windows or Linux. Done when: decision 0002 records the name and the extensions; if an extension
+changes, this plan is updated.
 
 **M0.3 `m0/spec`**: `docs/SPEC.md`, the behavior spec, from public manuscript-format guides and
 general long-form writing practice, with our own design where they are silent. Each statement is
@@ -597,7 +644,7 @@ document set of one novel for the v0.1 test. Done when: every fixture's provenan
 `cargo xtask privacy` passes.
 
 **M0.6 `m0/core-issues`** (no branch needed; can run in parallel): open one core issue for each
-change C1 to C12 in section 5.4, each describing the general need without Manuscript's features,
+change C1 to C13 in section 5.4, each describing the general need without Manuscript's features,
 labelled `core-candidate` where the work starts in this app. Link each issue from section 5.4 in
 the same pull request that next touches this plan. Done when: every row of 5.4 has an issue link.
 
@@ -669,8 +716,10 @@ corkboard and outline (SRC-3).
 
 ### M4 Bible
 
-**M4.1 `m4/entries`**: bible area, entry types and default templates (BIB-1, BIB-2), entry editor
-with fields and body.
+**M4.1 `m4/entries`**: the general entries layer (C13, `core-candidate`, section 5.6) and, on it,
+the bible area, entry types and default templates (BIB-1, BIB-2), entry editor with fields and
+body. Decision: the bible's two layers and the plan to promote the general one.
+- Done when: the general layer has its own tests and no manuscript words in its interface.
 
 **M4.2 `m4/links`**: links from text to entries, backlinks (by link and by name mention), the
 project word list fed from entry names and aliases.
@@ -760,8 +809,9 @@ import places later drafts as drafts; interface languages (ACC-4); polish from 0
 
 ### R4 (v1.0): beyond
 
-Series with a shared bible (BND-8, BIB-5); the bible shared with Wordsmith Script projects (a core
-interface for bible entries if both apps need it, by the core's rules); relationships (BIB-4);
+Series with a shared bible (BND-8, BIB-5); the entries layer promoted to the core (C13) and the
+bible shared with Wordsmith Script projects (section 5.6); screenplays in a project (SCR-1,
+section 5.7); relationships (BIB-4);
 thread lanes (PLN-4, C11); timeline (PLN-5); suggested bible links (INS-4); EPUB import (IMP-9,
 C12); export through an external converter (EXP-7); a web build if the core supports one.
 
@@ -802,12 +852,11 @@ never committed.
 
 Each needs a person's answer; record it as a decision and update this plan.
 
-1. Is "Wordsmith Manuscript" confirmed for the name and trademark check (M0.2), and are `.wsm` and
-   `.wsmz` free to use?
-2. Should a manuscript project be able to hold screenplay documents (for adaptations), or should
-   the link with Wordsmith Script go only through a shared bible (R4)?
-3. Should the shared bible become a core interface (`jcj-` crate for bible entries) or a published
-   crate of this repository that Script depends on? Decided when R4 starts, by the core's rules.
+None open. Answered on 2026-11-24:
+
+1. The name "Wordsmith Manuscript" is confirmed (M0.2 still checks the file extensions).
+2. A project can hold screenplays; Script edits them (section 5.7, SCR-1).
+3. The shared bible's general part becomes a core crate, built here first (section 5.6, C13).
 
 ## 14. Third-party building blocks
 
