@@ -22,6 +22,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Focus Mode | `F11` |
 | Go to the Other Pane | `Mod+Alt+O` |
 | Italic | `Mod+I` |
+| Lanes | `Mod+6` |
 | Link | `Mod+K` |
 | Move Down | `Mod+Alt+Down` |
 | Move Into Previous | `Mod+Alt+Right` |

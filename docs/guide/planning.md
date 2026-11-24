@@ -71,3 +71,12 @@ item › Add to Collection to put it in a hand-picked collection (or start a new
 project search, Save Search keeps the search as a collection that always shows what matches now.
 When the project has collections, the menu above the binder switches between the binder and each
 collection; × takes an item out of a hand-picked collection.
+
+## Thread lanes
+
+View › Lanes (Mod+6) lays the scenes out in story order, one row per plot thread: a scene sits in
+a thread's lane when it is linked to that thread's entry (Plot Thread entries in the Story Bible,
+linked in the inspector), and scenes in no thread share the last row. Switch to Points of view for
+one row per point-of-view character. Drag a card to another lane to move the scene to that thread
+(or point of view); double-click a card to open the scene. Gaps in a row show where a thread goes
+quiet.

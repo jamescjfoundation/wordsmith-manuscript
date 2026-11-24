@@ -65,7 +65,7 @@ fn every_view_names_its_widgets() {
     h.run();
     h.get_by_label("Inspector").click();
     h.run();
-    for view in ["view.corkboard", "view.outline", "view.board", "view.pages", "view.split", "view.editor"] {
+    for view in ["view.corkboard", "view.outline", "view.board", "view.pages", "view.lanes", "view.split", "view.editor"] {
         {
             let st = h.state_mut();
             let shell = &mut st.shell;

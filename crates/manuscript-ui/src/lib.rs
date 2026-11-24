@@ -27,6 +27,7 @@ pub mod history;
 pub mod i18n;
 pub mod imports;
 pub mod inspector;
+pub mod lanes;
 pub mod media;
 pub mod offers;
 pub mod outline;
@@ -82,6 +83,8 @@ pub enum ViewMode {
     Board,
     /// Standard manuscript pages (ED-8).
     Pages,
+    /// Thread lanes (PLN-4).
+    Lanes,
 }
 
 /// How often the project folder is checked for changes made elsewhere.
@@ -128,6 +131,8 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// The thread lanes' state (PLN-4).
+    pub lanes: lanes::LanesView,
     /// The page view's state (ED-8).
     pub pages: pages::PageView,
     /// The freeform board's state (PLN-3).
@@ -247,6 +252,7 @@ impl Manuscript {
             media_view: media::MediaView::default(),
             board: board::BoardView::default(),
             pages: pages::PageView::default(),
+            lanes: lanes::LanesView::default(),
             split: jcj_shell::split::Split::None,
             split_state: jcj_shell::split::SplitState::default(),
             active_pane: 0,
@@ -623,6 +629,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.outline", "Outline", "Mod+3"));
         v.push(CommandInfo::new("view.board", "Board", "Mod+4"));
         v.push(CommandInfo::new("view.pages", "Pages", "Mod+5"));
+        v.push(CommandInfo::new("view.lanes", "Lanes", "Mod+6"));
         v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
         v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
         v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
@@ -1127,6 +1134,11 @@ impl Manuscript {
                 self.mode = ViewMode::Pages;
                 return Ok(());
             }
+            "view.lanes" => {
+                self.write_back();
+                self.mode = ViewMode::Lanes;
+                return Ok(());
+            }
             _ => {}
         }
         if cmd.id == "file.saveTemplate" {
@@ -1437,6 +1449,27 @@ impl Manuscript {
             }
             ViewMode::Board => {
                 self.board_ui(ui);
+                return;
+            }
+            ViewMode::Lanes => {
+                self.write_back();
+                let mut open = None;
+                if let Some(s) = self.session.as_mut() {
+                    let rev = s.revision();
+                    let (o, errors) = lanes::view(ui, s, &mut self.lanes);
+                    open = o;
+                    if let Some(e) = errors.into_iter().last() {
+                        self.status = e;
+                    }
+                    if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+                        self.sync_editor();
+                    }
+                }
+                if let Some(id) = open {
+                    self.binder.selected = Some(id);
+                    self.open_item(id);
+                    self.mode = ViewMode::Editor;
+                }
                 return;
             }
             ViewMode::Pages => {

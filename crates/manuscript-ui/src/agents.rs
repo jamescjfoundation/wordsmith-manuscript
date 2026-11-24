@@ -171,6 +171,8 @@ tools!(
     "entry.relate",
     "entry.unrelate",
     "entry.relations",
+    "lanes.get",
+    "lanes.move",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",

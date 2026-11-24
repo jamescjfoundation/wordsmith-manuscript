@@ -109,6 +109,7 @@ pub fn specs() -> Vec<Spec> {
     v.extend(crate::drafts::specs());
     v.extend(crate::series::specs());
     v.extend(crate::relations::specs());
+    v.extend(crate::lanes::specs());
     v.extend(crate::outline::specs());
     v.extend(crate::bible::specs());
     v.extend(crate::imports::specs());
@@ -430,6 +431,9 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Outcome {
                 return out;
             }
             if let Some(out) = crate::relations::run(s, other, v) {
+                return out;
+            }
+            if let Some(out) = crate::lanes::run(s, other, v) {
                 return out;
             }
             if let Some(out) = crate::outline::run(s, other, v) {
