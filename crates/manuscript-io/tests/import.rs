@@ -97,3 +97,32 @@ fn hostile_files_fail_cleanly() {
     }
     assert!(plan_file(&dir.join("missing.docx"), &Rules::default(), &TextRules::default()).is_err());
 }
+
+#[test]
+fn text_without_chapters_splits_at_separators_or_stays_one() {
+    let doc = text_document("First piece.\n\n***\n\nSecond piece.\n\n#\n\nThird.\n", &TextRules::default());
+    let p = mapping::plan(&doc, &Rules::default());
+    assert!(p.report.check.as_ref().unwrap().passed());
+    let titles: Vec<(&str, Role)> = p.items.iter().map(|i| (i.title.as_str(), i.role)).collect();
+    assert_eq!(titles, [("Chapter 1", Role::Chapter), ("Chapter 2", Role::Chapter), ("Chapter 3", Role::Chapter)]);
+    let doc = text_document("Just one\nwrapped paragraph.\n\nAnd another.\n", &TextRules::default());
+    let p = mapping::plan(&doc, &Rules::default());
+    assert_eq!(p.items.len(), 1);
+    assert_eq!(p.items[0].text.body.blocks.len(), 2);
+    // A chosen separator.
+    let doc = text_document("A.\n\n-- next --\n\nB.\n", &TextRules::default());
+    let p = mapping::plan(&doc, &Rules { scene_marks: vec!["-- next --".into()], ..Rules::default() });
+    assert_eq!(p.items.len(), 2);
+    // Lines kept as paragraphs when asked.
+    let doc = text_document("one\ntwo\n", &TextRules { join_lines: false });
+    assert_eq!(mapping::plan(&doc, &Rules::default()).items[0].text.body.blocks.len(), 2);
+}
+
+#[test]
+fn front_matter_before_chapters_keeps_its_breaks() {
+    let doc = text_document("Title\n\n***\n\nDedication.\n\nChapter 1\n\nText.\n", &TextRules::default());
+    let p = mapping::plan(&doc, &Rules::default());
+    assert_eq!(p.items[0].role, Role::FrontMatter);
+    assert!(p.items[0].text.body.blocks.contains(&Block::SceneBreak));
+    assert!(p.report.check.as_ref().unwrap().passed());
+}

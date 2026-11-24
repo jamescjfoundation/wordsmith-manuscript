@@ -154,7 +154,14 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             let rules = rules_of(s, v)?;
             let text = TextRules { join_lines: v.get("join_lines").and_then(Value::as_bool).unwrap_or(true) };
             let into = crate::commands::opt_id(v, "into")?;
-            let plan = import::plan_file(Path::new(&path), &rules, &text)?;
+            let mut plan = import::plan_file(Path::new(&path), &rules, &text)?;
+            // A single text with no title of its own takes the file's name.
+            if let [only] = plan.items.as_mut_slice()
+                && !only.title_from_source
+                && let Some(stem) = Path::new(&path).file_stem()
+            {
+                only.title = stem.to_string_lossy().into_owned();
+            }
             if let Some(c) = &plan.report.check
                 && !c.passed()
             {

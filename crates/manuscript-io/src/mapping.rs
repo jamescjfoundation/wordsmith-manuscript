@@ -444,7 +444,9 @@ pub fn plan(doc: &Document, rules: &Rules) -> Plan {
             &mut front
         };
         if kind == Line::Break {
-            if rules.split_scenes && target.role == Role::Chapter {
+            // Text before any part or chapter is split at breaks too: if no structure turns up,
+            // the pieces become items of their own (IMP-5).
+            if rules.split_scenes && (target.role == Role::Chapter || target.role == Role::FrontMatter) {
                 target.segments.push(Vec::new());
             } else if let Some(seg) = target.segments.last_mut() {
                 seg.push(Block::SceneBreak);
@@ -466,7 +468,30 @@ pub fn plan(doc: &Document, rules: &Rules) -> Plan {
     }
     close_part(&mut scene, &mut chapter, &mut part, &mut root);
     let mut items = Vec::new();
-    if front.has_text() {
+    let structured = !root.children.is_empty();
+    if !structured && front.has_text() {
+        // No parts or chapters: one text, or one item per piece between separator lines.
+        let n = front.segments.iter().filter(|s| !s.is_empty()).count();
+        let Node { segments, notes, comments, .. } = front;
+        let mut k = 0;
+        for seg in segments.into_iter().filter(|s| !s.is_empty()) {
+            k += 1;
+            let text = item_text(&mut reader, seg, &notes, &comments);
+            let (title, role) = if n == 1 { ("Imported Text".to_owned(), Role::None) } else { (format!("Chapter {k}"), Role::Chapter) };
+            items.push(Planned { title, title_from_source: false, role, kind: Kind::Text, depth: 0, text });
+        }
+    } else if front.has_text() {
+        let mut front = front;
+        // Front matter keeps its breaks as breaks.
+        let segs = std::mem::take(&mut front.segments);
+        let mut joined: Vec<Block> = Vec::new();
+        for (i, seg) in segs.into_iter().enumerate() {
+            if i > 0 {
+                joined.push(Block::SceneBreak);
+            }
+            joined.extend(seg);
+        }
+        front.segments = vec![joined];
         flatten(&mut reader, front, 0, &mut items);
     }
     for child in root.children {
