@@ -8,10 +8,14 @@
 pub mod binder;
 pub mod brand;
 pub mod commands;
+pub mod editor;
 pub mod inspector;
+pub mod ribbon;
 pub mod session;
+pub mod stitch;
 pub mod texts;
 pub mod tree;
+pub mod typing;
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -47,6 +51,13 @@ pub struct Manuscript {
     save_path: String,
     /// Unsaved work found in the project's recovery folder, waiting for the writer's choice.
     pub recovered: Option<Project>,
+    /// The open editor, if an item is open.
+    pub editor: Option<editor::Editor>,
+    /// How the editor looks.
+    pub look: editor::EditorLook,
+    /// Whether the editor had the keyboard last (undo goes to it then).
+    pub editor_focused: bool,
+    registry: std::sync::Arc<jcj_engine::Registry>,
 }
 
 impl Default for Manuscript {
@@ -71,6 +82,10 @@ impl Manuscript {
             open_path: String::new(),
             save_path: String::new(),
             recovered: None,
+            editor: None,
+            look: editor::EditorLook::default(),
+            editor_focused: false,
+            registry: editor::registry(),
         }
     }
 
@@ -147,6 +162,60 @@ impl Manuscript {
         Ok(())
     }
 
+    /// Write the editor's text back into the project if it changed (a save point).
+    pub fn write_back(&mut self) {
+        let (Some(ed), Some(s)) = (self.editor.as_mut(), self.session.as_mut()) else { return };
+        if !ed.is_dirty() {
+            return;
+        }
+        if crate::stitch::write_back(ed, &mut s.project) {
+            s.touch();
+        }
+        ed.written = ed.revision;
+    }
+
+    /// Open the editor on an item (writing the current one back first).
+    pub fn open_item(&mut self, id: ItemId) {
+        if self.editor.as_ref().is_some_and(|e| e.item == id && !crate::stitch::is_stitched(e)) {
+            return;
+        }
+        self.write_back();
+        let Some(s) = self.session.as_ref() else { return };
+        let Some(item) = s.project.binder.get(id) else { return };
+        if !item.kind.has_text() {
+            self.editor = None;
+            return;
+        }
+        let text = s.project.text(id).map(|t| t.body.clone()).unwrap_or_default();
+        let mut ed = editor::Editor::new(id, &text, self.registry.clone());
+        ed.smart.lang = s.project.settings.book.language.clone();
+        self.editor = Some(ed);
+    }
+
+    /// After a project command: an editor whose item's text changed in the project reloads, and
+    /// one whose item left the binder closes.
+    fn sync_editor(&mut self) {
+        let Some(s) = self.session.as_ref() else {
+            self.editor = None;
+            return;
+        };
+        let Some(ed) = self.editor.as_ref() else { return };
+        if crate::stitch::is_stitched(ed) {
+            return;
+        }
+        let id = ed.item;
+        if !s.project.binder.contains(id) {
+            self.editor = None;
+            return;
+        }
+        let want = s.project.text(id).map(|t| t.body.clone()).unwrap_or_default();
+        if !ed.is_dirty() && ed.text() != want {
+            let mut fresh = editor::Editor::new(id, &want, self.registry.clone());
+            fresh.smart = ed.smart.clone();
+            self.editor = Some(fresh);
+        }
+    }
+
     fn report(&mut self, r: Result<(), String>) {
         if let Err(e) = r {
             self.status = e;
@@ -170,6 +239,9 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        for spec in editor::styles::specs() {
+            v.push(CommandInfo::new(spec.id, spec.label, spec.key));
+        }
         for spec in commands::specs() {
             if spec.id == "edit.undo" || spec.id == "edit.redo" {
                 continue;
@@ -205,7 +277,32 @@ impl App for Manuscript {
         self.session.as_ref().map_or(0, Session::revision)
     }
 
+    fn run(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
+        let r = self.run_cmd(cmd, shell);
+        self.sync_editor();
+        r
+    }
+
+    fn document_ui(&mut self, ui: &mut egui::Ui, shell: &mut Shell) {
+        self.draw_document(ui, shell);
+    }
+
+    fn panels(&self) -> Vec<PanelSpec> {
+        vec![PanelSpec::new(BINDER_PANEL, "Binder", "list", Side::Left)]
+    }
+
+    fn ribbon_tabs(&self) -> Vec<jcj_shell::TabSpec> {
+        vec![jcj_shell::TabSpec::new("write", "Write", "W")]
+    }
+
+    fn ribbon_ui(&mut self, tab: &str, ui: &mut egui::Ui, shell: &mut Shell) {
+        if tab == "write" {
+            ribbon::write_tab(self, ui, shell);
+        }
+    }
+
     fn autosave(&mut self) -> Result<(), String> {
+        self.write_back();
         let Some(s) = self.session.as_mut() else { return Ok(()) };
         if s.root().is_none() {
             return s.write_recovery();
@@ -217,119 +314,6 @@ impl App for Manuscript {
         Ok(())
     }
 
-    fn run(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
-        match cmd.id.as_str() {
-            ids::SAVE => {
-                let s = self.session.as_mut().ok_or("no project is open")?;
-                s.save()?;
-                self.status = "Saved.".into();
-                Ok(())
-            }
-            ids::NEW => {
-                shell.open_file_page(Page::New);
-                Ok(())
-            }
-            ids::NEW_FROM_TEMPLATE => {
-                let template = cmd.params.get("template").and_then(|t| t.as_str()).unwrap_or("novel").to_owned();
-                let path = cmd.params.get("path").and_then(|p| p.as_str()).map_or_else(|| self.new_project_path(&template), PathBuf::from);
-                self.new_from_template(&template, &path)?;
-                shell.add_recent(&path.to_string_lossy());
-                Ok(())
-            }
-            ids::OPEN => {
-                shell.open_file_page(Page::Open);
-                Ok(())
-            }
-            ids::SAVE_AS => {
-                shell.open_file_page(Page::Save);
-                Ok(())
-            }
-            ids::OPEN_PATH => {
-                let path = cmd.params.get("path").and_then(|p| p.as_str()).ok_or("no path")?.to_owned();
-                self.close()?;
-                self.open(Path::new(&path))?;
-                shell.add_recent(&path);
-                Ok(())
-            }
-            ids::UNDO => {
-                let s = self.session.as_mut().ok_or("no project is open")?;
-                self.status = s.undo().map_or("Nothing to undo.".into(), |l| format!("Undid {l}."));
-                Ok(())
-            }
-            ids::REDO => {
-                let s = self.session.as_mut().ok_or("no project is open")?;
-                self.status = s.redo().map_or("Nothing to redo.".into(), |l| format!("Redid {l}."));
-                Ok(())
-            }
-            "binder.emptyTrash" if cmd.params.get("confirm").is_none() => {
-                self.binder.confirm_empty = true;
-                Ok(())
-            }
-            id => {
-                let s = self.session.as_mut().ok_or("no project is open")?;
-                let mut params = cmd.params.clone();
-                // Commands on "the selected item" from the ribbon and keys.
-                if params.get("id").is_none()
-                    && let Some(sel) = self.binder.selected
-                    && commands::find(id).is_some_and(|spec| spec.params.contains("\"id\""))
-                {
-                    params["id"] = json!(sel.as_text());
-                }
-                if (id == "binder.new" || id == "binder.newFolder")
-                    && params.get("after").is_none()
-                    && params.get("inside").is_none()
-                    && params.get("area").is_none()
-                {
-                    if let Some(sel) = self.binder.selected {
-                        params["after"] = json!(sel.as_text());
-                    }
-                }
-                let out = s.run(id, &params)?;
-                if let Some(new) = out.get("id").and_then(|v| v.as_str()).and_then(|v| v.parse::<ItemId>().ok()) {
-                    self.binder.selected = Some(new);
-                    self.binder.tree.rename(binder::Node::Item(new), "Untitled");
-                }
-                Ok(())
-            }
-        }
-    }
-
-    fn document_ui(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
-        if self.recovered.is_some() {
-            ui.horizontal(|ui| {
-                ui.label("Unsaved work from a session that did not end cleanly was found.");
-                if ui.button("Recover It").clicked() {
-                    self.accept_recovered();
-                }
-                if ui.button("Keep the Saved Version").clicked() {
-                    self.discard_recovered();
-                }
-            });
-            ui.separator();
-        }
-        let Some(s) = self.session.as_ref() else {
-            ui.centered_and_justified(|ui| ui.label("No project open. Use File › New or File › Open."));
-            return;
-        };
-        let Some(id) = self.binder.selected else {
-            ui.centered_and_justified(|ui| ui.label("Select a document in the binder."));
-            return;
-        };
-        let title = s.project.binder.get(id).map(|i| i.title.clone()).unwrap_or_default();
-        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-            ui.heading(title);
-            if let Some(t) = s.project.text(id) {
-                for p in t.body.plain_paragraphs() {
-                    ui.label(p);
-                }
-            }
-        });
-    }
-
-    fn panels(&self) -> Vec<PanelSpec> {
-        vec![PanelSpec::new(BINDER_PANEL, "Binder", "list", Side::Left)]
-    }
-
     fn panel_ui(&mut self, panel: &str, ui: &mut egui::Ui, _shell: &mut Shell) {
         if panel != BINDER_PANEL {
             return;
@@ -338,13 +322,32 @@ impl App for Manuscript {
             ui.label("No project open.");
             return;
         };
+        let before = self.binder.selected;
+        let rev = s.revision();
         let errors = binder::panel(ui, s, &mut self.binder);
         if let Some(e) = errors.into_iter().last() {
             self.status = e;
         }
+        if self.binder.selected != before
+            && let Some(id) = self.binder.selected
+        {
+            self.open_item(id);
+        }
+        if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+            self.sync_editor();
+        }
     }
 
     fn status_ui(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+        if let Some(ed) = &self.editor {
+            let (doc, sel) = ed.counts();
+            if sel > 0 {
+                ui.label(format!("{} of {} words", binder::format_words(sel), binder::format_words(doc)));
+            } else {
+                ui.label(format!("{} words", binder::format_words(doc)));
+            }
+            ui.separator();
+        }
         if let Some(s) = &self.session {
             ui.label(format!("Manuscript: {} words", binder::format_words(s.project.manuscript_words())));
         }
@@ -451,6 +454,139 @@ impl Manuscript {
         self.recovered = None;
         if let Some(root) = self.session.as_ref().and_then(|s| s.root()) {
             let _ = wordsmith_manuscript_format::pack::discard_recovery(root);
+        }
+    }
+}
+
+impl Manuscript {
+    fn run_cmd(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
+        if cmd.id.starts_with("write.") {
+            let ed = self.editor.as_mut().ok_or("open a document to style its text")?;
+            return ed.command(&cmd.id, &cmd.params);
+        }
+        match cmd.id.as_str() {
+            ids::SAVE => {
+                self.write_back();
+                let s = self.session.as_mut().ok_or("no project is open")?;
+                s.save()?;
+                self.status = "Saved.".into();
+                Ok(())
+            }
+            ids::NEW => {
+                shell.open_file_page(Page::New);
+                Ok(())
+            }
+            ids::NEW_FROM_TEMPLATE => {
+                let template = cmd.params.get("template").and_then(|t| t.as_str()).unwrap_or("novel").to_owned();
+                let path = cmd.params.get("path").and_then(|p| p.as_str()).map_or_else(|| self.new_project_path(&template), PathBuf::from);
+                self.new_from_template(&template, &path)?;
+                shell.add_recent(&path.to_string_lossy());
+                Ok(())
+            }
+            ids::OPEN => {
+                shell.open_file_page(Page::Open);
+                Ok(())
+            }
+            ids::SAVE_AS => {
+                shell.open_file_page(Page::Save);
+                Ok(())
+            }
+            ids::OPEN_PATH => {
+                let path = cmd.params.get("path").and_then(|p| p.as_str()).ok_or("no path")?.to_owned();
+                self.close()?;
+                self.open(Path::new(&path))?;
+                shell.add_recent(&path);
+                Ok(())
+            }
+            ids::UNDO if self.editor_focused && self.editor.is_some() => {
+                if let Some(ed) = self.editor.as_mut() {
+                    ed.run("edit.undo", &json!({}))?;
+                }
+                Ok(())
+            }
+            ids::REDO if self.editor_focused && self.editor.is_some() => {
+                if let Some(ed) = self.editor.as_mut() {
+                    ed.run("edit.redo", &json!({}))?;
+                }
+                Ok(())
+            }
+            ids::UNDO => {
+                self.write_back();
+                let s = self.session.as_mut().ok_or("no project is open")?;
+                self.status = s.undo().map_or("Nothing to undo.".into(), |l| format!("Undid {l}."));
+                Ok(())
+            }
+            ids::REDO => {
+                self.write_back();
+                let s = self.session.as_mut().ok_or("no project is open")?;
+                self.status = s.redo().map_or("Nothing to redo.".into(), |l| format!("Redid {l}."));
+                Ok(())
+            }
+            "binder.emptyTrash" if cmd.params.get("confirm").is_none() => {
+                self.binder.confirm_empty = true;
+                Ok(())
+            }
+            id => {
+                self.write_back();
+                let s = self.session.as_mut().ok_or("no project is open")?;
+                let mut params = cmd.params.clone();
+                // Commands on "the selected item" from the ribbon and keys.
+                if params.get("id").is_none()
+                    && let Some(sel) = self.binder.selected
+                    && commands::find(id).is_some_and(|spec| spec.params.contains("\"id\""))
+                {
+                    params["id"] = json!(sel.as_text());
+                }
+                if (id == "binder.new" || id == "binder.newFolder")
+                    && params.get("after").is_none()
+                    && params.get("inside").is_none()
+                    && params.get("area").is_none()
+                {
+                    if let Some(sel) = self.binder.selected {
+                        params["after"] = json!(sel.as_text());
+                    }
+                }
+                let out = s.run(id, &params)?;
+                if let Some(new) = out.get("id").and_then(|v| v.as_str()).and_then(|v| v.parse::<ItemId>().ok()) {
+                    self.binder.selected = Some(new);
+                    self.binder.tree.rename(binder::Node::Item(new), "Untitled");
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Manuscript {
+    fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+        if self.recovered.is_some() {
+            ui.horizontal(|ui| {
+                ui.label("Unsaved work from a session that did not end cleanly was found.");
+                if ui.button("Recover It").clicked() {
+                    self.accept_recovered();
+                }
+                if ui.button("Keep the Saved Version").clicked() {
+                    self.discard_recovered();
+                }
+            });
+            ui.separator();
+        }
+        if self.session.is_none() {
+            ui.centered_and_justified(|ui| ui.label("No project open. Use File › New or File › Open."));
+            return;
+        }
+        self.look.dark = ui.visuals().dark_mode;
+        match self.editor.as_mut() {
+            Some(ed) => {
+                let resp = ed.ui(ui, &self.look);
+                self.editor_focused = resp.has_focus() || (self.editor_focused && !ui.input(|i| i.pointer.any_pressed()));
+                if let Some(e) = ed.error.take() {
+                    self.status = e;
+                }
+            }
+            None => {
+                ui.centered_and_justified(|ui| ui.label("Select a document in the binder to write in it."));
+            }
         }
     }
 }

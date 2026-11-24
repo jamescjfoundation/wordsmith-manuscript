@@ -279,13 +279,24 @@ fn clean(marks: &mut Marks) {
     }
 }
 
-/// Merge neighbouring spans with equal marks and drop empty spans.
+/// The object replacement character, which stands for embedded objects in documents and is never
+/// part of a text.
+pub const OBJECT: char = '\u{FFFC}';
+
+/// Merge neighbouring spans with equal marks, drop empty spans, a note reference repeating the one
+/// right before it, and object replacement characters.
 pub fn normalize_inlines(content: &mut Inlines) {
     let mut out: Inlines = Vec::with_capacity(content.len());
     for mut inline in content.drain(..) {
+        if matches!(inline, Inline::NoteRef { .. }) && out.last() == Some(&inline) {
+            continue;
+        }
         match &mut inline {
             Inline::Span { text, marks } => {
                 clean(marks);
+                if text.contains(OBJECT) {
+                    text.retain(|c| c != OBJECT);
+                }
                 if text.is_empty() {
                     continue;
                 }

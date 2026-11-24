@@ -17,6 +17,7 @@ wordsmith-manuscript-format = { workspace = true }
 wordsmith-manuscript-io = { workspace = true }
 jcj-doc = { workspace = true }
 jcj-engine = { workspace = true }
+jcj-layout = { workspace = true }
 jcj-shell = { workspace = true }
 jcj-theme = { workspace = true }
 jcj-board = { workspace = true }

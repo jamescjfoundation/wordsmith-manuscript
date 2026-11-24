@@ -5445,6 +5445,7 @@ name = "wordsmith-manuscript-model"
 version = "0.1.0"
 dependencies = [
  "jcj-doc",
+ "proptest",
  "serde",
  "serde_json",
  "uuid",
@@ -5459,6 +5460,7 @@ dependencies = [
  "jcj-board",
  "jcj-doc",
  "jcj-engine",
+ "jcj-layout",
  "jcj-shell",
  "jcj-theme",
  "serde",
