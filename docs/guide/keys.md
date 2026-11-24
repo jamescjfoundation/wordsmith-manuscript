@@ -33,6 +33,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | New Project | `Mod+N` |
 | Open Project | `Mod+O` |
 | Outline | `Mod+3` |
+| Pages | `Mod+5` |
 | Plain Text | `Mod+Space` |
 | Read as One Text | `Mod+Alt+R` |
 | Read the Whole Manuscript | `Mod+Alt+Shift+R` |

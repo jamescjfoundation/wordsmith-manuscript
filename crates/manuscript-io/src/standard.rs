@@ -394,6 +394,18 @@ pub fn paginate(p: &Project, o: &Options, s: &Standard) -> (Compiled, jcj_layout
     (c, pag)
 }
 
+/// One page of a laid-out manuscript drawn into pixels at `scale` pixels per point: width,
+/// height and straight RGBA (for the page view).
+pub fn page_pixels(pag: &jcj_layout::paginate::Paginated, page: usize, scale: f32) -> Option<(u32, u32, Vec<u8>)> {
+    let img = jcj_output::image::render_page(&pag.doc, &pag.layout, page, scale, &jcj_output::image::RenderSettings::default())?;
+    Some((img.width, img.height, img.straight_rgba()))
+}
+
+/// How many pages a laid-out manuscript has.
+pub fn page_count(pag: &jcj_layout::paginate::Paginated) -> usize {
+    pag.layout.pages.len()
+}
+
 /// The standard manuscript as PDF.
 pub fn pdf(p: &Project, o: &Options, s: &Standard) -> Result<Written, String> {
     let (c, pag) = paginate(p, o, s);

@@ -37,6 +37,13 @@ active one: the binder opens documents there. A document is editable in one pane
 other pane already holds it (alone, or inside a text read as one), it opens read-only and shows the
 other pane's changes when you come back to it. One Pane, or a tab's close button, goes back to one.
 
+## Pages
+
+View › Pages (Mod+5) shows the selected chapter or scene, or with Whole manuscript ticked the whole
+book with its title page, as standard manuscript pages: laid out exactly as the PDF export lays
+them out, with the page count above. The pages follow your writing (they are laid out again in the
+background after each change); write in the editor and come back to see them.
+
 ## Comments
 
 Select some words and choose Add Comment (Mod+Alt+M): the words get a soft highlight and the

@@ -95,6 +95,7 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
         widgets::small(ui, shell, cmds, &Control::new("view.corkboard").label("Corkboard").on(mode == crate::ViewMode::Corkboard));
         widgets::small(ui, shell, cmds, &Control::new("view.outline").label("Outline").on(mode == crate::ViewMode::Outline));
         widgets::small(ui, shell, cmds, &Control::new("view.board").label("Board").on(mode == crate::ViewMode::Board));
+        widgets::small(ui, shell, cmds, &Control::new("view.pages").label("Pages").on(mode == crate::ViewMode::Pages));
     });
     widgets::group(ui, shell, "Focus", |ui, shell| {
         widgets::big(ui, shell, cmds, &Control::new("view.focus").label("Focus Mode").on(focus));

@@ -145,6 +145,7 @@ tools!(
     "board.link",
     "board.unlink",
     "board.arrange",
+    "pages.count",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",

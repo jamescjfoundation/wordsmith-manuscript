@@ -99,7 +99,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
 }
 
 /// The standard manuscript settings: given (`standard`), else the project's, else the defaults.
-fn standard_of(s: &Session, v: &Value) -> Result<standard::Standard, String> {
+pub(crate) fn standard_of(s: &Session, v: &Value) -> Result<standard::Standard, String> {
     match v.get("standard").or_else(|| s.project.settings.extra.get("manuscript_format")) {
         Some(x) => serde_json::from_value(x.clone()).map_err(|e| format!("standard manuscript settings: {e}")),
         None => Ok(standard::Standard::default()),

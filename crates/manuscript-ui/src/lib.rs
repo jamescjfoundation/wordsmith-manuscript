@@ -25,6 +25,7 @@ pub mod imports;
 pub mod inspector;
 pub mod media;
 pub mod outline;
+pub mod pages;
 pub mod progress;
 pub mod ribbon;
 pub mod search;
@@ -70,6 +71,8 @@ pub enum ViewMode {
     Outline,
     /// The freeform board (PLN-3).
     Board,
+    /// Standard manuscript pages (ED-8).
+    Pages,
 }
 
 /// The desktop app's state: what the shell draws around.
@@ -106,6 +109,8 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// The page view's state (ED-8).
+    pub pages: pages::PageView,
     /// The freeform board's state (PLN-3).
     pub board: board::BoardView,
     /// Pictures and PDFs loaded for the media viewer (BND-6).
@@ -192,6 +197,7 @@ impl Manuscript {
             showing: None,
             media_view: media::MediaView::default(),
             board: board::BoardView::default(),
+            pages: pages::PageView::default(),
             split: jcj_shell::split::Split::None,
             split_state: jcj_shell::split::SplitState::default(),
             active_pane: 0,
@@ -468,6 +474,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.corkboard", "Corkboard", "Mod+2"));
         v.push(CommandInfo::new("view.outline", "Outline", "Mod+3"));
         v.push(CommandInfo::new("view.board", "Board", "Mod+4"));
+        v.push(CommandInfo::new("view.pages", "Pages", "Mod+5"));
         v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
         v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
         v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
@@ -936,6 +943,11 @@ impl Manuscript {
                 self.mode = ViewMode::Board;
                 return Ok(());
             }
+            "view.pages" => {
+                self.write_back();
+                self.mode = ViewMode::Pages;
+                return Ok(());
+            }
             _ => {}
         }
         if cmd.id == "write.comment" {
@@ -1119,6 +1131,16 @@ impl Manuscript {
             }
             ViewMode::Board => {
                 self.board_ui(ui);
+                return;
+            }
+            ViewMode::Pages => {
+                self.write_back();
+                match self.session.as_ref() {
+                    Some(s) => pages::view(ui, s, &mut self.pages, self.binder.selected),
+                    None => {
+                        ui.centered_and_justified(|ui| ui.label("Open a project to see its pages."));
+                    }
+                }
                 return;
             }
             ViewMode::Editor => {}
