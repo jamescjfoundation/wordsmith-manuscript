@@ -83,3 +83,34 @@ fn backlinks_by_link_and_by_mention() {
     assert_eq!(b["mentioned"][0]["title"], "Scene 2");
     assert_eq!(b["mentioned"].as_array().unwrap().len(), 1);
 }
+
+#[test]
+fn the_word_list_follows_entry_names_and_aliases() {
+    let mut s = Session::new(Project::new());
+    let id = new(&mut s, "character", "Quellistra");
+    let words = wordsmith_manuscript_ui::spelling::project_words(&s.project);
+    assert!(words.contains("Quellistra"));
+    s.run("entry.set", &json!({ "id": id.as_text(), "aliases": ["Quell-the-Bright"] })).unwrap();
+    let words = wordsmith_manuscript_ui::spelling::project_words(&s.project);
+    assert!(words.contains("Quell") && words.contains("Bright"));
+    s.run("entry.set", &json!({ "id": id.as_text(), "name": "Ysolde" })).unwrap();
+    let words = wordsmith_manuscript_ui::spelling::project_words(&s.project);
+    assert!(words.contains("Ysolde") && !words.contains("Quellistra"));
+    let text = "Ysolde met Quell.";
+    assert!(wordsmith_manuscript_ui::spelling::marks(text, "en", &words).is_empty());
+}
+
+#[test]
+fn a_link_to_a_deleted_entry_shows_as_broken_and_stays() {
+    let mut s = Session::new(Project::new());
+    let id = new(&mut s, "place", "Harbor");
+    let scene = ItemId::from_counter(50);
+    s.project.binder.insert(Place::end_of(Area::Manuscript), Item::with_id(scene, Kind::Text, "Scene")).unwrap();
+    s.project.texts.insert(scene, ItemText::with_body(wordsmith_manuscript_format::dialect::parse(&format!("At the [harbor](wsm:{id}).\n"))));
+    s.run("binder.trash", &json!({ "id": id.as_text() })).unwrap();
+    s.run("binder.emptyTrash", &json!({ "confirm": true })).unwrap();
+    // The link is never removed silently.
+    assert!(wordsmith_manuscript_format::dialect::write(&s.project.texts[&scene].body).contains(&format!("wsm:{id}")));
+    let app = Manuscript::with_session(s);
+    assert_eq!(app.link_target(&format!("wsm:{id}")).map(|x| x.0), Some("A deleted item".into()));
+}
