@@ -80,6 +80,134 @@ pub fn build(template: &str, title: &str, next_id: &mut dyn FnMut() -> ItemId) -
     Some(p)
 }
 
+/// Settings a template leaves behind: they belong to one book's working life.
+pub const NOT_IN_TEMPLATES: [&str; 5] = ["bookmarks", "collections", "board", "revisions", "export_last"];
+
+/// A template made from a project (BND-4): its binder (the Trash left out), lists, fields, entry
+/// types, targets and export settings, the synopses and notes of every item, and the text of
+/// everything that is not a chapter or scene (front and back matter, notes, research). The
+/// manuscript's own text, the bible's entries, snapshots and comments stay with the project;
+/// so do the book's title and other details of this one book (the writer's name, contact and
+/// language stay).
+pub fn skeleton(p: &Project) -> Project {
+    let mut out = Project::new();
+    out.settings = p.settings.clone();
+    out.settings.extra.retain(|k, _| !NOT_IN_TEMPLATES.contains(&k.as_str()));
+    let b = &p.settings.book;
+    out.settings.book = crate::BookInfo {
+        author: b.author.clone(),
+        pen_name: b.pen_name.clone(),
+        surname: b.surname.clone(),
+        contact: b.contact.clone(),
+        language: b.language.clone(),
+        publisher: b.publisher.clone(),
+        ..crate::BookInfo::default()
+    };
+    for area in [Area::Manuscript, Area::Bible, Area::Research, Area::Notes] {
+        for item in p.binder.area(area) {
+            let kept = keep(item);
+            if let Some(k) = kept {
+                let _ = out.binder.insert(Place::end_of(area), k);
+            }
+        }
+    }
+    for row in out.binder.rows() {
+        let id = row.item.id;
+        let Some(t) = p.texts.get(&id) else { continue };
+        let mut t = t.clone();
+        if row.area == Area::Manuscript && !matches!(row.item.role, Role::FrontMatter | Role::BackMatter) {
+            t.body = Text::new();
+        }
+        t.meta.comments.clear();
+        for run in t.body.inline_runs_mut() {
+            for i in run.iter_mut() {
+                match i {
+                    crate::Inline::Span { marks, .. } | crate::Inline::NoteRef { marks, .. } => {
+                        marks.comment = None;
+                        marks.rev = None;
+                    }
+                }
+            }
+        }
+        t.body.normalize();
+        out.texts.insert(id, t);
+    }
+    out
+}
+
+/// The item and what is under it, bible entries and media files left out (a template keeps the
+/// bible's folders, and web links).
+fn keep(item: &Item) -> Option<Item> {
+    if matches!(item.kind, Kind::Entry | Kind::Media) {
+        return None;
+    }
+    let mut out = item.clone();
+    out.children = item.children.iter().filter_map(keep).collect();
+    Some(out)
+}
+
+/// The same project with new ids from `next_id` (each project made from a template is its own):
+/// the binder, texts and links between items follow.
+pub fn with_fresh_ids(p: &Project, next_id: &mut dyn FnMut() -> ItemId) -> Project {
+    let mut map: std::collections::BTreeMap<ItemId, ItemId> = std::collections::BTreeMap::new();
+    for row in p.binder.rows() {
+        map.insert(row.item.id, next_id());
+    }
+    fn renew(item: &Item, map: &std::collections::BTreeMap<ItemId, ItemId>) -> Item {
+        let mut out = item.clone();
+        out.id = map.get(&item.id).copied().unwrap_or(item.id);
+        out.children = item.children.iter().map(|c| renew(c, map)).collect();
+        out
+    }
+    let mut out = Project::new();
+    out.settings = p.settings.clone();
+    for area in [Area::Manuscript, Area::Bible, Area::Research, Area::Notes, Area::Trash] {
+        for item in p.binder.area(area) {
+            let _ = out.binder.insert(Place::end_of(area), renew(item, &map));
+        }
+    }
+    let relink = |link: &mut Option<String>| {
+        if let Some(l) = link.as_mut()
+            && let Some(old) = l.strip_prefix("wsm:").and_then(|x| x.parse::<ItemId>().ok())
+            && let Some(new) = map.get(&old)
+        {
+            *l = format!("wsm:{}", new.as_text());
+        }
+    };
+    for (id, t) in &p.texts {
+        let Some(new) = map.get(id) else { continue };
+        let mut t = t.clone();
+        for run in t.body.inline_runs_mut() {
+            for i in run.iter_mut() {
+                match i {
+                    crate::Inline::Span { marks, .. } | crate::Inline::NoteRef { marks, .. } => relink(&mut marks.link),
+                }
+            }
+        }
+        t.meta.entries = t.meta.entries.iter().filter_map(|e| map.get(e).copied()).collect();
+        out.texts.insert(*new, t);
+    }
+    for (id, e) in &p.entries {
+        if let Some(new) = map.get(id) {
+            let mut e = e.clone();
+            for (_, to) in e.relations.iter_mut() {
+                if let Some(n) = map.get(to) {
+                    *to = *n;
+                }
+            }
+            for run in e.body.inline_runs_mut() {
+                for i in run.iter_mut() {
+                    match i {
+                        crate::Inline::Span { marks, .. } | crate::Inline::NoteRef { marks, .. } => relink(&mut marks.link),
+                    }
+                }
+            }
+            out.entries.insert(*new, e);
+        }
+    }
+    out
+}
+
 fn title_page_note(p: &mut Project, id: ItemId) {
     p.text_mut(id).meta.synopsis = "Made at export from the book's title, author and word count.".into();
 }
@@ -105,6 +233,35 @@ mod tests {
         assert_eq!(bible, BIBLE_FOLDERS);
         assert_eq!(p.binder.area(Area::Notes).len(), 2);
         assert_eq!(p.settings.book.title, "The River");
+    }
+
+    #[test]
+    fn a_skeleton_keeps_the_shape_and_guidance_but_not_the_book() {
+        let mut p = build("novel", "The River", &mut ids()).unwrap();
+        let rows: Vec<(ItemId, Role)> = p.binder.rows_of(Area::Manuscript).iter().map(|r| (r.item.id, r.item.role)).collect();
+        let scene = rows.iter().find(|r| r.1 == Role::Scene).map(|r| r.0).unwrap();
+        let tp = rows.iter().find(|r| r.1 == Role::FrontMatter).map(|r| r.0).unwrap();
+        p.text_mut(scene).body = Text::from_paragraphs(&["The book's own words."]);
+        p.text_mut(scene).meta.synopsis = "Open on the river.".into();
+        p.text_mut(tp).body = Text::from_paragraphs(&["By the author"]);
+        p.settings.extra.insert("bookmarks".into(), serde_json::json!([scene.as_text()]));
+        p.settings.book.author = "A. Writer".into();
+        let entry = Item::with_id(ItemId::from_counter(900), Kind::Entry, "Mara");
+        let chars = p.binder.area(Area::Bible)[0].id;
+        p.binder.insert(Place::inside(Area::Bible, chars), entry).unwrap();
+        let s = skeleton(&p);
+        assert_eq!(s.settings.book.title, crate::BookInfo::default().title);
+        assert_eq!(s.settings.book.author, "A. Writer");
+        assert!(!s.settings.extra.contains_key("bookmarks"));
+        assert!(s.texts[&scene].body.is_empty(), "the manuscript's words stay with the book");
+        assert_eq!(s.texts[&scene].meta.synopsis, "Open on the river.");
+        assert_eq!(s.texts[&tp].body, Text::from_paragraphs(&["By the author"]));
+        assert!(!s.binder.contains(ItemId::from_counter(900)), "entries stay with the book");
+        assert_eq!(s.binder.area(Area::Bible).len(), BIBLE_FOLDERS.len());
+        let fresh = with_fresh_ids(&s, &mut ItemId::new);
+        assert_eq!(fresh.binder.rows().len(), s.binder.rows().len());
+        assert!(fresh.binder.rows().iter().all(|r| !s.binder.contains(r.item.id)));
+        assert_eq!(fresh.texts.len(), s.texts.len());
     }
 
     #[test]

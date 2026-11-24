@@ -9,6 +9,12 @@ When no project is open, the start window shows the templates, Open, and recent 
   synopsis.
 - **Short story collection**: a title page and a contents page, Story One with a scene, the same
   bible and notes.
+- **Your templates**: Save as Template (command palette) keeps the open project's shape as a
+  template of your own: its binder, labels, statuses, keywords, fields, entry types, targets and
+  export settings, every item's synopsis and notes, and the text of front matter, back matter,
+  notes and research. The book's own chapters and scenes stay empty, and its bible entries,
+  pictures, comments and snapshots are not kept. Your templates live on this computer, beside the
+  app's preferences, and appear under Your Templates; each new project made from one is its own.
 
 Picking a template makes a new project folder in your Documents folder (File › New lets you choose
 where). A project is a folder ending in `.wsm`; you can also open its `project.toml`, or a packed

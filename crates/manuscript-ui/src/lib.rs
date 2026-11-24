@@ -40,6 +40,7 @@ pub mod table;
 pub mod texts;
 pub mod tree;
 pub mod typing;
+pub mod user_templates;
 pub mod view;
 
 use std::path::{Path, PathBuf};
@@ -129,6 +130,10 @@ pub struct Manuscript {
     pub showing: Option<String>,
     /// Where writing histories are kept on this computer (the app's settings folder), if anywhere.
     pub history_dir: Option<std::path::PathBuf>,
+    /// Where the writer's own project templates are kept on this computer, if anywhere.
+    pub templates_dir: Option<std::path::PathBuf>,
+    /// Saving the project as a template: the name and description being typed.
+    pub save_template: Option<(String, String)>,
     /// The entry types window (BIB-2).
     pub entry_types: entry_types::TypesView,
     /// The writing history window (PRG-3).
@@ -213,6 +218,8 @@ impl Manuscript {
             history_dir: None,
             history_view: history::HistoryView::default(),
             entry_types: entry_types::TypesView::default(),
+            templates_dir: None,
+            save_template: None,
             showing: None,
             media_view: media::MediaView::default(),
             board: board::BoardView::default(),
@@ -335,7 +342,11 @@ impl Manuscript {
     /// Make a new project from a template at `root` and open it.
     pub fn new_from_template(&mut self, template: &str, root: &Path) -> Result<(), String> {
         let title = root.file_stem().map_or("Untitled".into(), |n| n.to_string_lossy().into_owned());
-        let project = templates::build(template, &title, &mut ItemId::new).ok_or_else(|| format!("no template `{template}`"))?;
+        let project = match (template.strip_prefix("user:"), self.templates_dir.as_ref()) {
+            (Some(slug), Some(dir)) => user_templates::build(dir, slug, &title)?,
+            (Some(slug), None) => return Err(format!("there is no template `{slug}`")),
+            (None, _) => templates::build(template, &title, &mut ItemId::new).ok_or_else(|| format!("no template `{template}`"))?,
+        };
         self.close()?;
         let s = Session::create(root, project)?;
         self.session = Some(s);
@@ -540,6 +551,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.unsplit", "One Pane", ""));
         v.push(CommandInfo::new("view.history", "Writing History", ""));
         v.push(CommandInfo::new("view.entryTypes", "Entry Types", ""));
+        v.push(CommandInfo::new("file.saveTemplate", "Save as Template", ""));
         v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
@@ -582,7 +594,14 @@ impl App for Manuscript {
     }
 
     fn templates(&self) -> Vec<jcj_shell::TemplateSpec> {
-        templates::TEMPLATES.iter().map(|t| jcj_shell::TemplateSpec::new(t.id, t.name, t.about).in_group("Fiction")).collect()
+        let mut out: Vec<jcj_shell::TemplateSpec> =
+            templates::TEMPLATES.iter().map(|t| jcj_shell::TemplateSpec::new(t.id, t.name, t.about).in_group("Fiction")).collect();
+        if let Some(dir) = self.templates_dir.as_ref() {
+            for t in user_templates::list(dir) {
+                out.push(jcj_shell::TemplateSpec::new(user_templates::id_of(&t.slug), t.name, t.about).in_group("Your Templates"));
+            }
+        }
+        out
     }
 
     fn document_path(&self) -> Option<String> {
@@ -1026,6 +1045,27 @@ impl Manuscript {
             }
             _ => {}
         }
+        if cmd.id == "file.saveTemplate" {
+            let dir = self.templates_dir.clone().ok_or("templates cannot be kept on this computer")?;
+            let s = self.session.as_ref().ok_or("open a project to make a template of it")?;
+            match cmd.params.get("name").and_then(|n| n.as_str()) {
+                Some(name) => {
+                    let about = cmd.params.get("about").and_then(|n| n.as_str()).unwrap_or("");
+                    self.write_back();
+                    let s = self.session.as_ref().ok_or("no project is open")?;
+                    user_templates::save(&dir, name, about, &s.project)?;
+                    self.status = format!("Kept “{}” as a template: File › New offers it.", name.trim());
+                }
+                None => self.save_template = Some((s.project.settings.book.title.clone(), String::new())),
+            }
+            return Ok(());
+        }
+        if cmd.id == "file.deleteTemplate" {
+            let dir = self.templates_dir.clone().ok_or("templates cannot be kept on this computer")?;
+            let t = cmd.params.get("template").and_then(|n| n.as_str()).ok_or("`template` is required")?;
+            user_templates::delete(&dir, t.strip_prefix("user:").unwrap_or(t))?;
+            return Ok(());
+        }
         if cmd.id == "view.entryTypes" {
             self.entry_types.open = true;
             return Ok(());
@@ -1188,6 +1228,7 @@ impl Manuscript {
         if let Some(p) = self.progress.as_ref() {
             history::window(ui.ctx(), &p.writing.history, &mut self.history_view, progress::today());
         }
+        self.save_template_ui(ui.ctx(), _shell);
         if std::mem::take(&mut self.binder.open_types) {
             self.entry_types.open = true;
         }
@@ -1437,6 +1478,32 @@ impl Manuscript {
             self.binder.selected = Some(id);
             self.open_item(id);
             self.mode = ViewMode::Editor;
+        }
+    }
+
+    fn save_template_ui(&mut self, ctx: &egui::Context, shell: &mut Shell) {
+        let Some((name, about)) = self.save_template.as_mut() else { return };
+        let mut go = false;
+        let mut cancel = false;
+        egui::Window::new("Save as Template").collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
+            ui.label("A template keeps this project's binder, lists, fields, entry types, targets, notes and front matter. The book's own text and its bible entries are not kept.");
+            let l = ui.label("Name");
+            ui.add(egui::TextEdit::singleline(name).desired_width(320.0)).labelled_by(l.id);
+            let l = ui.label("What it is for");
+            ui.add(egui::TextEdit::singleline(about).desired_width(320.0)).labelled_by(l.id);
+            ui.horizontal(|ui| {
+                go = ui.button("Save Template").clicked();
+                cancel = ui.button("Cancel").clicked();
+            });
+        });
+        if go {
+            let (n, a) = (name.clone(), about.clone());
+            match self.run(&Cmd::with("file.saveTemplate", json!({ "name": n, "about": a })), shell) {
+                Ok(()) => self.save_template = None,
+                Err(e) => self.status = e,
+            }
+        } else if cancel {
+            self.save_template = None;
         }
     }
 
