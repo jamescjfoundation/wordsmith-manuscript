@@ -11,6 +11,7 @@ pub mod brand;
 pub mod commands;
 pub mod cork;
 pub mod editor;
+pub mod exports;
 pub mod filter;
 pub mod find;
 pub mod findbar;
@@ -80,6 +81,13 @@ pub struct Manuscript {
     import_path: String,
     /// The last import's report.
     pub import_report: String,
+    /// The Export page's path, format and options.
+    export_path: String,
+    export_format: String,
+    /// The export options on the Export page.
+    pub export_options: wordsmith_manuscript_io::compile::Options,
+    /// The last export's report.
+    pub export_report: String,
     /// The import rules on the Import page.
     pub import_rules: wordsmith_manuscript_io::mapping::Rules,
     import_join: bool,
@@ -139,6 +147,10 @@ impl Manuscript {
             recovered: None,
             import_path: String::new(),
             import_report: String::new(),
+            export_path: docs.join("Manuscript.docx").to_string_lossy().into_owned(),
+            export_format: "manuscript-docx".into(),
+            export_options: wordsmith_manuscript_io::compile::Options::default(),
+            export_report: String::new(),
             import_rules: wordsmith_manuscript_io::mapping::Rules::default(),
             import_join: true,
             editor: None,
@@ -593,6 +605,7 @@ impl App for Manuscript {
                 });
             }
             Page::App(id) if id == "import" => self.import_page(ui),
+            Page::Export => self.export_page(ui),
             _ => {}
         }
     }
@@ -1111,4 +1124,76 @@ fn preview_text(v: &serde_json::Value) -> String {
     }
     out.push_str(&format!("\nWord check: {}\nNotes: {}\nNot kept: {}\n", v["word_check"], v["notes_check"], v["dropped"]));
     out
+}
+
+impl Manuscript {
+    fn export_page(&mut self, ui: &mut egui::Ui) {
+        use wordsmith_manuscript_io::compile::Titles;
+        ui.label("Write the manuscript to a file. Export never changes the project.");
+        let l = ui.label("File");
+        ui.text_edit_singleline(&mut self.export_path).labelled_by(l.id);
+        let formats = [
+            ("manuscript-docx", "Standard manuscript (DOCX)"),
+            ("manuscript-pdf", "Standard manuscript (PDF)"),
+            ("docx", "Word processor (DOCX)"),
+            ("odt", "OpenDocument (ODT)"),
+            ("rtf", "Rich text (RTF)"),
+            ("markdown", "Markdown"),
+            ("text", "Plain text"),
+            ("html", "Web page (HTML)"),
+            ("book", "Book package for Wordsmith Book (.wsmz)"),
+        ];
+        let current = formats.iter().find(|f| f.0 == self.export_format).map_or("", |f| f.1);
+        let c = egui::ComboBox::from_id_salt("export-format").selected_text(current).show_ui(ui, |ui| {
+            for (k, label) in formats {
+                ui.selectable_value(&mut self.export_format, k.to_owned(), label);
+            }
+        });
+        c.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Format"));
+        let o = &mut self.export_options;
+        let titles = [
+            (Titles::Title, "Their titles"),
+            (Titles::Numbered, "Chapter 1"),
+            (Titles::Words, "Chapter One"),
+            (Titles::WordOnly, "One"),
+            (Titles::NumberedWithTitle, "Chapter 1: Title"),
+            (Titles::None, "No heading"),
+        ];
+        let pick = |ui: &mut egui::Ui, label: &str, v: &mut Titles| {
+            ui.horizontal(|ui| {
+                ui.label(label);
+                let name = titles.iter().find(|t| t.0 == *v).map_or("", |t| t.1);
+                egui::ComboBox::from_id_salt(label).selected_text(name).show_ui(ui, |ui| {
+                    for (t, n) in titles {
+                        ui.selectable_value(v, t, n);
+                    }
+                });
+            });
+        };
+        pick(ui, "Chapters", &mut o.chapters);
+        pick(ui, "Parts", &mut o.parts);
+        ui.checkbox(&mut o.scene_titles, "Scene titles as headings");
+        ui.horizontal(|ui| {
+            let l = ui.label("Scene break");
+            ui.add(egui::TextEdit::singleline(&mut o.scene_break).desired_width(60.0)).labelled_by(l.id);
+        });
+        ui.checkbox(&mut o.front_matter, "Front matter");
+        ui.checkbox(&mut o.back_matter, "Back matter");
+        ui.checkbox(&mut o.end_mark, "END after the last line");
+        if ui.button("Export").clicked() {
+            self.write_back();
+            let params = json!({ "path": self.export_path, "format": self.export_format, "options": self.export_options });
+            self.export_report = match self.session.as_mut() {
+                None => "Open a project first.".into(),
+                Some(s) => match s.run("export.file", &params) {
+                    Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
+                    Err(e) => e,
+                },
+            };
+        }
+        if !self.export_report.is_empty() {
+            ui.separator();
+            ui.monospace(&self.export_report);
+        }
+    }
 }

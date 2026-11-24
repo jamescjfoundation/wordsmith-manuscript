@@ -16,7 +16,7 @@ pub fn words(text: &str) -> Vec<String> {
 
 /// A paragraph's words (inline objects left out).
 pub fn paragraph_words(p: &Paragraph) -> Vec<String> {
-    words(&p.text.replace(jcj_doc::para::OBJ, " "))
+    words(&p.text.replace(jcj_doc::para::OBJ, ""))
 }
 
 /// The words of a document's main text in reading order (table cells row by row).
