@@ -9,5 +9,9 @@ Windows Registry Editor Version 5.00
 [HKEY_CURRENT_USER\Software\Classes\WordsmithManuscript.Packed]
 @="Wordsmith Manuscript Packed Project"
 
+; The file type shows the icon embedded in the program (its first icon).
+[HKEY_CURRENT_USER\Software\Classes\WordsmithManuscript.Packed\DefaultIcon]
+@="\"INSTALL_DIR\\wordsmith-manuscript.exe\",0"
+
 [HKEY_CURRENT_USER\Software\Classes\WordsmithManuscript.Packed\shell\open\command]
 @="\"INSTALL_DIR\\wordsmith-manuscript.exe\" \"%1\""

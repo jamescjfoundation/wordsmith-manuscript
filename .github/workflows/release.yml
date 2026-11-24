@@ -46,6 +46,22 @@ jobs:
         run: cargo test --release -p wordsmith-manuscript-ui --test v01
       - name: Build
         run: cargo build --release --locked -p wordsmith-manuscript -p wordsmith-manuscript-cli
+      - name: The icon is in the program
+        if: runner.os == 'Windows'
+        shell: bash
+        # Every image of assets/brand/icon.ico must appear, byte for byte, in the executable's
+        # resources (apps/manuscript/build.rs embeds it).
+        run: |
+          python3 - <<'PY'
+          import struct
+          ico = open('assets/brand/icon.ico', 'rb').read()
+          exe = open('target/release/wordsmith-manuscript.exe', 'rb').read()
+          count = struct.unpack('<H', ico[4:6])[0]
+          for i in range(count):
+              w, _, _, _, _, _, size, offset = struct.unpack('<BBBBHHII', ico[6 + 16 * i:22 + 16 * i])
+              assert ico[offset:offset + size] in exe, f'the {w or 256} px icon is not in the program'
+          print(f'all {count} icon images are embedded')
+          PY
       - name: Package
         shell: bash
         run: |
