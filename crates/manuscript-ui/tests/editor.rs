@@ -183,3 +183,15 @@ fn smart_typing_follows_the_project_settings() {
     s.undo();
     assert!(wordsmith_manuscript_ui::typing::Smart::of(&s.project.settings).quotes);
 }
+
+#[test]
+fn typing_is_undoable() {
+    let mut ed = editor(&["Start"]);
+    ed.set_caret(0, 5, false);
+    for c in " more words".chars() {
+        ed.type_text(&c.to_string()).unwrap();
+    }
+    assert_eq!(ed.paragraph(0).unwrap().text, "Start more words");
+    ed.run("edit.undo", &json!({})).unwrap();
+    assert_eq!(ed.paragraph(0).unwrap().text, "Start");
+}

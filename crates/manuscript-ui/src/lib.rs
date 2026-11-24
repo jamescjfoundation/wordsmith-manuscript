@@ -192,6 +192,31 @@ impl Manuscript {
         self.editor = Some(ed);
     }
 
+    /// Open a stitched view (ED-2): of the given items, of the selected item and what is under
+    /// it, or of the whole included manuscript.
+    pub fn stitch(&mut self, cmd: &Cmd) -> Result<(), String> {
+        self.write_back();
+        let s = self.session.as_ref().ok_or("no project is open")?;
+        let items: Vec<ItemId> = if cmd.id == "view.stitchManuscript" {
+            s.project.included_manuscript().into_iter().filter(|i| s.project.binder.get(*i).is_some_and(|it| stitch::shows(&s.project, it))).collect()
+        } else if let Some(list) = cmd.params.get("items").and_then(|v| v.as_array()) {
+            list.iter().filter_map(|v| v.as_str()).filter_map(|v| v.parse().ok()).collect()
+        } else {
+            let root = match cmd.params.get("id").and_then(|v| v.as_str()) {
+                Some(id) => id.parse().map_err(|e: wordsmith_manuscript_model::BadId| e.to_string())?,
+                None => self.binder.selected.ok_or("select a chapter, part or folder to read as one text")?,
+            };
+            stitch::items_under(&s.project, root)
+        };
+        let ed = stitch::open(&s.project, &items, self.registry.clone()).ok_or("there is no text to show")?;
+        self.editor = Some(ed);
+        if let Some(e) = self.editor.as_mut() {
+            e.smart = typing::Smart::of(&s.project.settings);
+        }
+        self.status = format!("{} documents as one text.", items.len());
+        Ok(())
+    }
+
     /// After a project command: an editor whose item's text changed in the project reloads, and
     /// one whose item left the binder closes.
     fn sync_editor(&mut self) {
@@ -243,6 +268,8 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        v.push(CommandInfo::new("view.stitch", "Read as One Text", "Mod+Alt+R"));
+        v.push(CommandInfo::new("view.stitchManuscript", "Read the Whole Manuscript", "Mod+Alt+Shift+R"));
         for spec in editor::styles::specs() {
             v.push(CommandInfo::new(spec.id, spec.label, spec.key));
         }
@@ -464,6 +491,9 @@ impl Manuscript {
 
 impl Manuscript {
     fn run_cmd(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
+        if cmd.id == "view.stitch" || cmd.id == "view.stitchManuscript" {
+            return self.stitch(cmd);
+        }
         if cmd.id.starts_with("write.") {
             let ed = self.editor.as_mut().ok_or("open a document to style its text")?;
             return ed.command(&cmd.id, &cmd.params);

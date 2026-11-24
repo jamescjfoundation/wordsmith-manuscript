@@ -92,8 +92,8 @@ pub fn split(doc: &Document) -> Vec<(ItemId, Text)> {
     }
     out.into_iter()
         .map(|(id, ps)| {
-            let blank =
-                ps.len() == 1 && ps.first().is_some_and(|p| p.text.is_empty() && !mdoc::BLOCK.is_set(p) && BLANK.get_or_none(p) == Some(true));
+            // One empty body paragraph is an empty text (an item whose words were all deleted).
+            let blank = ps.len() == 1 && ps.first().is_some_and(|p| p.text.is_empty() && !mdoc::BLOCK.is_set(p));
             if blank || ps.is_empty() {
                 return (id, Text::new());
             }
@@ -130,4 +130,30 @@ pub fn write_back(ed: &Editor, project: &mut Project) -> bool {
 /// The dividers of a document, in order (to check an edit kept them).
 pub fn dividers(doc: &Document) -> Vec<ItemId> {
     doc.body.iter().filter_map(|b| b.as_para()).filter(|p| is_divider(p)).filter_map(|p| SOURCE.get_or_none(p)).collect()
+}
+
+/// Whether an item belongs in a stitched view: text documents always, folders only when they
+/// hold text of their own.
+pub fn shows(project: &Project, item: &wordsmith_manuscript_model::Item) -> bool {
+    match item.kind {
+        wordsmith_manuscript_model::Kind::Text => true,
+        wordsmith_manuscript_model::Kind::Folder => project.text(item.id).is_some_and(|t| !t.body.is_empty()),
+        _ => false,
+    }
+}
+
+/// The items a stitched view of `root` shows: the item and everything under it with text, in
+/// binder order (an item left out of export included: the writer chose it).
+pub fn items_under(project: &Project, root: ItemId) -> Vec<ItemId> {
+    project.binder.get(root).map_or_else(Vec::new, |i| i.walk().into_iter().filter(|c| shows(project, c)).map(|c| c.id).collect())
+}
+
+/// Open a stitched view of `items` in a new editor.
+pub fn open(project: &Project, items: &[ItemId], registry: Arc<jcj_engine::Registry>) -> Option<Editor> {
+    let first = *items.first()?;
+    let doc = build(project, items);
+    let mut ed = Editor::on_document(first, doc, registry);
+    // The caret starts in the first item's text, after its divider.
+    ed.set_caret(1, 0, false);
+    Some(ed)
 }

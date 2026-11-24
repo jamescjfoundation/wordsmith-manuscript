@@ -5463,6 +5463,7 @@ dependencies = [
  "jcj-layout",
  "jcj-shell",
  "jcj-theme",
+ "proptest",
  "serde",
  "serde_json",
  "wordsmith-manuscript-format",

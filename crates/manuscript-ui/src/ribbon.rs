@@ -33,6 +33,10 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
         widgets::small(ui, shell, cmds, &Control::new("write.strike").label("Strikethrough"));
         widgets::small(ui, shell, cmds, &Control::new("write.plain").label("Plain"));
     });
+    widgets::group(ui, shell, "Read", |ui, shell| {
+        widgets::small(ui, shell, cmds, &Control::new("view.stitch").label("As One Text"));
+        widgets::small(ui, shell, cmds, &Control::new("view.stitchManuscript").label("Whole Manuscript"));
+    });
     widgets::group(ui, shell, "Insert", |ui, shell| {
         widgets::big(ui, shell, cmds, &Control::new("write.sceneBreak").label("Scene Break"));
         widgets::small(ui, shell, cmds, &Control::new("write.lineBreak").label("Line Break"));

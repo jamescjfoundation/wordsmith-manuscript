@@ -141,10 +141,41 @@ impl Editor {
         }
     }
 
+    /// Keep the caret and the selection's ends out of dividers: an end on a divider moves to the
+    /// start of the text after it.
+    pub fn fix_caret(&mut self) {
+        let n = self.paragraphs().len();
+        let mut fix = |p: &Pos, ed: &Editor| -> Option<Pos> {
+            let mut i = para_index(p);
+            if !ed.paragraph(i).is_some_and(crate::stitch::is_divider) {
+                return None;
+            }
+            while i < n && ed.paragraph(i).is_some_and(crate::stitch::is_divider) {
+                i += 1;
+            }
+            Some(if i < n {
+                pos(i, 0)
+            } else {
+                pos(para_index(p).saturating_sub(1), ed.paragraph(para_index(p).saturating_sub(1)).map_or(0, |q| q.text.len()))
+            })
+        };
+        let (a, f) = (self.session.sel.anchor.clone(), self.session.sel.focus.clone());
+        if let Some(na) = fix(&a, self) {
+            self.session.sel.anchor = na;
+        }
+        if let Some(nf) = fix(&f, self) {
+            self.session.sel.focus = nf;
+        }
+    }
+
     /// Run an engine command; a change bumps the revision.
     pub fn run(&mut self, id: &str, params: &Value) -> Result<Value, String> {
-        if self.read_only && self.session.registry.get(id).is_some_and(|c| c.mutates) {
+        let mutates = self.session.registry.get(id).is_some_and(|c| c.mutates);
+        if self.read_only && mutates {
             return Err("this text is being edited in a stitched view".into());
+        }
+        if mutates {
+            self.fix_caret();
         }
         let before = self.session.doc.body.clone();
         let guard = crate::stitch::is_stitched(self).then(|| crate::stitch::dividers(&self.session.doc));
@@ -175,12 +206,18 @@ impl Editor {
         paste: bool,
         f: &dyn Fn(&mut Session, &str) -> Result<(), jcj_engine::CmdError>,
     ) -> Result<(), String> {
-        let guard = crate::stitch::is_stitched(self).then(|| crate::stitch::dividers(&self.session.doc));
+        self.fix_caret();
+        let guard = crate::stitch::is_stitched(self)
+            .then(|| (crate::stitch::dividers(&self.session.doc), self.session.doc.clone(), self.session.sel.clone()));
+        // Typing joins the open typing step; a paste is a step of its own.
+        self.session.checkpoint(if paste { "Paste" } else { "Typing" });
         f(&mut self.session, insert).map_err(|e| format!("{e:?}"))?;
-        if let Some(dividers) = guard
+        if let Some((dividers, doc, sel)) = guard
             && crate::stitch::dividers(&self.session.doc) != dividers
         {
-            self.session.run("edit.undo", &json!({})).map_err(|e| format!("{e:?}"))?;
+            self.session.doc = doc;
+            self.session.sel = sel;
+            self.session.close_typing();
             self.across_dividers(Some(insert), paste)?;
         }
         self.changed();
