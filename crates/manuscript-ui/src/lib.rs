@@ -12,11 +12,13 @@ pub mod editor;
 pub mod find;
 pub mod findbar;
 pub mod inspector;
+pub mod outline;
 pub mod ribbon;
 pub mod session;
 pub mod snapshots;
 pub mod spelling;
 pub mod stitch;
+pub mod table;
 pub mod texts;
 pub mod tree;
 pub mod typing;
@@ -41,6 +43,18 @@ pub const NAME: &str = "Wordsmith Manuscript";
 pub const BINDER_PANEL: &str = "manuscript.binder";
 /// The inspector panel's id.
 pub const INSPECTOR_PANEL: &str = "manuscript.inspector";
+
+/// What the central area shows.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ViewMode {
+    /// The text editor.
+    #[default]
+    Editor,
+    /// Index cards of a folder's children.
+    Corkboard,
+    /// The outline table.
+    Outline,
+}
 
 /// The desktop app's state: what the shell draws around.
 pub struct Manuscript {
@@ -68,6 +82,10 @@ pub struct Manuscript {
     pub find: findbar::FindBar,
     /// The inspector panel.
     pub inspector: inspector::InspectorView,
+    /// What the central area shows.
+    pub mode: ViewMode,
+    /// The outline's state.
+    pub outline: outline::OutlineView,
     /// The view preferences.
     pub view: view::ViewPrefs,
     /// Focus mode: the chrome it hid, while on.
@@ -104,6 +122,8 @@ impl Manuscript {
             editor_focused: false,
             find: findbar::FindBar::default(),
             inspector: inspector::InspectorView::default(),
+            mode: ViewMode::Editor,
+            outline: outline::OutlineView::default(),
             view: view::ViewPrefs::default(),
             focus: None,
             fullscreen: None,
@@ -315,6 +335,9 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
+        v.push(CommandInfo::new("view.corkboard", "Corkboard", "Mod+2"));
+        v.push(CommandInfo::new("view.outline", "Outline", "Mod+3"));
         v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
         v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
         v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
@@ -574,6 +597,23 @@ impl Manuscript {
         if let Some(r) = self.view_command(cmd, shell) {
             return r;
         }
+        match cmd.id.as_str() {
+            "view.editor" => {
+                self.mode = ViewMode::Editor;
+                return Ok(());
+            }
+            "view.outline" => {
+                self.write_back();
+                self.mode = ViewMode::Outline;
+                return Ok(());
+            }
+            "view.corkboard" => {
+                self.write_back();
+                self.mode = ViewMode::Corkboard;
+                return Ok(());
+            }
+            _ => {}
+        }
         if cmd.id == "find.show" {
             self.find.show();
             return Ok(());
@@ -712,6 +752,17 @@ impl Manuscript {
         self.look = self.view.look(ui.visuals().dark_mode, self.focus.is_some());
         if let Some(ed) = self.editor.as_mut() {
             ed.typewriter = typewriter;
+        }
+        match self.mode {
+            ViewMode::Outline => {
+                self.outline_ui(ui);
+                return;
+            }
+            ViewMode::Corkboard => {
+                self.corkboard_ui(ui);
+                return;
+            }
+            ViewMode::Editor => {}
         }
         if self.focus.is_none() {
             findbar::ui(self, ui);
@@ -861,5 +912,39 @@ impl Manuscript {
         if let Some(ed) = self.editor.as_mut() {
             ed.relayout();
         }
+    }
+}
+
+impl Manuscript {
+    fn apply_asks(&mut self, asks: Vec<outline::Ask>) {
+        for a in asks {
+            match a {
+                outline::Ask::Select(id) => {
+                    self.binder.selected = Some(id);
+                    self.binder.tree.reveal = true;
+                }
+                outline::Ask::Open(id) => {
+                    self.binder.selected = Some(id);
+                    self.open_item(id);
+                    self.mode = ViewMode::Editor;
+                }
+            }
+        }
+    }
+
+    fn outline_ui(&mut self, ui: &mut egui::Ui) {
+        let Some(s) = self.session.as_mut() else { return };
+        let root = outline::root_of(&s.project, self.binder.selected);
+        let hidden = self.binder.hidden.clone();
+        let (asks, errors) = outline::view(ui, s, &mut self.outline, root, &hidden, self.binder.selected);
+        if let Some(e) = errors.into_iter().last() {
+            self.status = e;
+        }
+        self.apply_asks(asks);
+        self.sync_editor();
+    }
+
+    fn corkboard_ui(&mut self, ui: &mut egui::Ui) {
+        ui.label("The corkboard comes in the next step.");
     }
 }

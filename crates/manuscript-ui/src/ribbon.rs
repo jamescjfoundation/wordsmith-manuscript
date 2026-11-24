@@ -50,6 +50,13 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let typewriter = app.view.typewriter;
     let dim = app.view.dim_in_focus;
     let cmds: &dyn Commands = &*app;
+    let mode = app.mode;
+    let cmds: &dyn Commands = &*app;
+    widgets::group(ui, shell, "Show", |ui, shell| {
+        widgets::small(ui, shell, cmds, &Control::new("view.editor").label("Editor").on(mode == crate::ViewMode::Editor));
+        widgets::small(ui, shell, cmds, &Control::new("view.corkboard").label("Corkboard").on(mode == crate::ViewMode::Corkboard));
+        widgets::small(ui, shell, cmds, &Control::new("view.outline").label("Outline").on(mode == crate::ViewMode::Outline));
+    });
     widgets::group(ui, shell, "Focus", |ui, shell| {
         widgets::big(ui, shell, cmds, &Control::new("view.focus").label("Focus Mode").on(focus));
         widgets::small(ui, shell, cmds, &Control::new("view.typewriter").label("Typewriter Scrolling").on(typewriter));
