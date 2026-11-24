@@ -3,6 +3,46 @@
 What changed in each release of Wordsmith Manuscript. The book view's own versions, and what
 Wordsmith Book must do when one changes, are in `docs/book-handoff.md`.
 
+## 0.2.0 (prepared 2026-11-24; released when a maintainer approves it)
+
+Daily-work completeness. **Projects saved by 0.2 use schema 2 and do not open in 0.1**
+(decision 0005); 0.1 projects open in 0.2 unchanged.
+
+### Writing
+
+- Split the editor side by side or top and bottom; a document is editable in one pane at a time.
+- Comments on selected words, written in the inspector, exported as real comments to DOCX, ODT and
+  RTF when asked.
+- Revision passes: what you type during a pass shows in its color until you clear it.
+- The page view: the text as standard manuscript pages with the page count.
+- Grammar hints, offline and off unless you turn them on.
+
+### Planning and finding
+
+- Custom fields (text, date, checkbox, list) in the inspector and as outline columns.
+- Compare a snapshot with the current text word by word.
+- Collections: hand-picked lists and saved searches beside the binder. Bookmarks above it.
+- The freeform board: cards anywhere, lines between them, cards that stand for documents.
+- A writing history calendar, kept on this computer.
+
+### Story bible, templates, research
+
+- Your own bible entry types; renaming a field keeps every value.
+- Your own project templates (Save as Template).
+- Pictures, PDFs and web links in Research, shown in the editor area.
+
+### Import, export, files
+
+- Web pages (their article only) and OPML outlines import.
+- An EPUB reading copy (notes as numbered notes at each chapter's end).
+- Safe in synced folders: outside changes are read in, both versions kept when both sides
+  changed, and nothing is written over unseen without a copy in `conflicts/`.
+- The "Offered fixes" inbox for fixes Wordsmith Book offers back (`docs/book-handoff.md`).
+
+### Accessibility
+
+- The editor and every view are named for screen readers.
+
 ## 0.1.0 (prepared 2026-11-24; released when a maintainer approves it)
 
 The first usable release: plan, draft, revise and finish a novel in one project.
