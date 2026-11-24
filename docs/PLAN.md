@@ -591,7 +591,7 @@ with the Wordsmith Book plan and written up as `docs/book-handoff.md` in step M6
 | M5 Import | 0.1 | All 0.1 imports, document sets, verification | Done 2026-11-24 |
 | M6 Export | 0.1 | Standard manuscript DOCX and PDF, plain exports, book view | Done 2026-11-24 (contract awaits Book review) |
 | M7 Progress | 0.1 | Counts, targets, snapshots, project search | Done 2026-11-24 |
-| M8 Release | 0.1 | CLI, agent tools, guide, installers, release | Not started |
+| M8 Release | 0.1 | CLI, agent tools, guide, installers, release | Done 2026-11-24 (release awaits a maintainer's approval and tag) |
 | R2 | 0.2 | Daily-work completeness | Not started |
 | R3 | 0.3 | Drafts and finish | Not started |
 | R4 | 1.0 | Series, sharing with Script, lanes, timeline | Not started |

@@ -8,8 +8,9 @@ It is built on [open-source-core](https://github.com/jamescjfoundation/open-sour
 foundation's shared base, alongside
 [Wordsmith Script](https://github.com/jamescjfoundation/wordsmith-script).
 
-**Status:** in development toward 0.1. The build plan is [docs/PLAN.md](docs/PLAN.md); progress is
-recorded in [docs/progress.md](docs/progress.md).
+**Status:** 0.1 prepared (see [CHANGELOG.md](CHANGELOG.md)); work continues toward 0.2. The build
+plan is [docs/PLAN.md](docs/PLAN.md); progress is recorded in [docs/progress.md](docs/progress.md);
+the user guide is [docs/guide/](docs/guide/README.md).
 
 ## License
 

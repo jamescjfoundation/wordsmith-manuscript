@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The project types of Wordsmith Manuscript (decision 0002). -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-wordsmith-manuscript">
+    <comment>Wordsmith Manuscript project</comment>
+    <glob pattern="*.wsm"/>
+    <icon name="org.jcjfoundation.manuscript"/>
+  </mime-type>
+  <mime-type type="application/x-wordsmith-manuscript-packed">
+    <comment>Wordsmith Manuscript packed project</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.wsmz"/>
+    <icon name="org.jcjfoundation.manuscript"/>
+  </mime-type>
+</mime-info>

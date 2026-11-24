@@ -49,7 +49,18 @@ impl eframe::App for Window {
 
 fn main() -> ExitCode {
     let mut shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens())
-        .with_options(jcj_shell::ShellOptions { start_window: true, ..jcj_shell::ShellOptions::default() });
+        .with_options(jcj_shell::ShellOptions { start_window: true, ..jcj_shell::ShellOptions::default() })
+        .with_updates(jcj_shell::updates::desktop::ReleaseSource {
+            id: "wordsmith-manuscript",
+            name: NAME,
+            tagline: "Write novels and other long work",
+            repo: "jamescjfoundation/wordsmith-manuscript",
+            developer: "The J. C. J. Foundation",
+            version: env!("CARGO_PKG_VERSION"),
+            // Updates are installed in place on Linux and Windows; on macOS the update check
+            // offers the download.
+            installs_in_place: !cfg!(target_os = "macos"),
+        });
     let mut app = Manuscript::new();
     let mut prefs = None;
     if let Some(dir) = jcj_shell::prefs::settings_dir("wordsmith-manuscript", NAME) {

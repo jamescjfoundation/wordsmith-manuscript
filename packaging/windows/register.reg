@@ -1,0 +1,13 @@
+Windows Registry Editor Version 5.00
+
+; Open packed projects (.wsmz) and project files (project.toml inside a .wsm folder) with
+; Wordsmith Manuscript, for the current user. Edit INSTALL_DIR to where the program is, then run.
+
+[HKEY_CURRENT_USER\Software\Classes\.wsmz]
+@="WordsmithManuscript.Packed"
+
+[HKEY_CURRENT_USER\Software\Classes\WordsmithManuscript.Packed]
+@="Wordsmith Manuscript Packed Project"
+
+[HKEY_CURRENT_USER\Software\Classes\WordsmithManuscript.Packed\shell\open\command]
+@="\"INSTALL_DIR\\wordsmith-manuscript.exe\" \"%1\""
