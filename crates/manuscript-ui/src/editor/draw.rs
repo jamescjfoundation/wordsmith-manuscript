@@ -239,9 +239,13 @@ impl Editor {
 
     /// Draw the editor in `ui`. Returns the response of the text area.
     pub fn ui(&mut self, ui: &mut Ui, look: &EditorLook) -> egui::Response {
+        // The column never runs wider than the space it has (a narrow window, or panels open on
+        // both sides): it narrows to fit, keeping the margins and room for the scroll bar.
+        let fitted = EditorLook { width: look.width.min(ui.available_width() - 2.0 * 40.0 - 16.0).max(200.0), ..look.clone() };
+        let look = &fitted;
         let colors = look.colors();
         if !install_fonts(ui.ctx()) {
-            let area = ui.max_rect();
+            let area = ui.available_rect_before_wrap();
             ui.painter().rect_filled(area, 0.0, colors.page);
             let resp = ui.interact(area, ui.make_persistent_id("manuscript-editor"), Sense::hover());
             self.describe(ui, &resp);
@@ -253,7 +257,7 @@ impl Editor {
             self.cache.retain(|k, _| *k < n);
         }
         let id = ui.make_persistent_id("manuscript-editor");
-        let area = ui.max_rect();
+        let area = ui.available_rect_before_wrap();
         ui.painter().rect_filled(area, 0.0, colors.page);
         let margin = 40.0;
         let total: f32 = self.heights.iter().sum::<f32>() + margin * 2.0 + if self.typewriter { area.height() * 0.5 } else { 0.0 };
