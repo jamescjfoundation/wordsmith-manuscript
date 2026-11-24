@@ -107,6 +107,74 @@ pub fn read_text(root: &Path, rel: &str, limit: u64) -> Result<Option<(String, H
     String::from_utf8(bytes).map(|s| Some((s, h))).map_err(|_| Error::Damaged { file: rel.into(), why: "not UTF-8 text".into() })
 }
 
+/// Where a project is read from: a folder on disk or the files of a packed project in memory.
+pub trait Source {
+    /// The text of a file inside the project, with the hash of its bytes; `None` when missing.
+    fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error>;
+}
+
+/// A folder on disk as a source.
+pub struct DiskSource<'a>(pub &'a Path);
+
+impl Source for DiskSource<'_> {
+    fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error> {
+        read_text(self.0, rel, limit)
+    }
+}
+
+/// Files in memory (an unpacked `.wsmz`) as a source.
+pub struct MemorySource<'a>(pub &'a BTreeMap<String, Vec<u8>>);
+
+impl Source for MemorySource<'_> {
+    fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error> {
+        let Some(bytes) = self.0.get(rel) else { return Ok(None) };
+        if bytes.len() as u64 > limit {
+            return Err(Error::TooLarge { what: rel.into(), limit });
+        }
+        let h = hash(bytes);
+        std::str::from_utf8(bytes).map(|s| Some((s.to_owned(), h))).map_err(|_| Error::Damaged { file: rel.into(), why: "not UTF-8 text".into() })
+    }
+}
+
+/// Read a project from a source, with what each file held.
+pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Error> {
+    let mut index = BTreeMap::new();
+    let (text, h) = src.read("project.toml", limits::MAX_PROJECT_FILE)?.ok_or(Error::NotAProject)?;
+    let settings = files::read_project(&text)?;
+    index.insert("project.toml".to_owned(), Stamp { disk: h, model: hash(files::write_project(&settings)?.as_bytes()) });
+    let (text, h) = src.read("binder.toml", limits::MAX_BINDER_FILE)?.ok_or(Error::Damaged { file: "binder.toml".into(), why: "missing".into() })?;
+    let binder = files::read_binder(&text)?;
+    index.insert("binder.toml".to_owned(), Stamp { disk: h, model: hash(files::write_binder(&binder)?.as_bytes()) });
+    let mut project = Project { settings, binder, ..Project::default() };
+    let mut total = 0u64;
+    let rows: Vec<_> = project.binder.rows().into_iter().map(|r| (r.item.id, r.item.kind)).collect();
+    for (id, kind) in rows {
+        let rel = match kind {
+            Kind::Text | Kind::Folder => format!("text/{id}.md"),
+            Kind::Entry => format!("bible/{id}.md"),
+            _ => continue,
+        };
+        let Some((text, h)) = src.read(&rel, limits::MAX_TEXT_FILE)? else { continue };
+        total += text.len() as u64;
+        if total > limits::MAX_PROJECT_TEXT {
+            return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
+        }
+        let model = if kind == Kind::Entry {
+            let e = files::read_entry(&text, &rel)?;
+            let m = hash(files::write_entry(&e)?.as_bytes());
+            project.entries.insert(id, e);
+            m
+        } else {
+            let t = files::read_item(&text, &rel)?;
+            let m = if t.is_empty() { hash(b"") } else { hash(files::write_item(&t)?.as_bytes()) };
+            project.texts.insert(id, t);
+            m
+        };
+        index.insert(rel, Stamp { disk: h, model });
+    }
+    Ok((index, project))
+}
+
 impl Folder {
     /// The folder's path.
     pub fn root(&self) -> &Path {
@@ -120,41 +188,7 @@ impl Folder {
 
     /// Open the project in `root`.
     pub fn open(root: &Path) -> Result<(Folder, Project), Error> {
-        let mut index = BTreeMap::new();
-        let (text, h) = read_text(root, "project.toml", limits::MAX_PROJECT_FILE)?.ok_or(Error::NotAProject)?;
-        let settings = files::read_project(&text)?;
-        index.insert("project.toml".to_owned(), Stamp { disk: h, model: hash(files::write_project(&settings)?.as_bytes()) });
-        let (text, h) =
-            read_text(root, "binder.toml", limits::MAX_BINDER_FILE)?.ok_or(Error::Damaged { file: "binder.toml".into(), why: "missing".into() })?;
-        let binder = files::read_binder(&text)?;
-        index.insert("binder.toml".to_owned(), Stamp { disk: h, model: hash(files::write_binder(&binder)?.as_bytes()) });
-        let mut project = Project { settings, binder, ..Project::default() };
-        let mut total = 0u64;
-        let rows: Vec<_> = project.binder.rows().into_iter().map(|r| (r.item.id, r.item.kind)).collect();
-        for (id, kind) in rows {
-            let rel = match kind {
-                Kind::Text | Kind::Folder => format!("text/{id}.md"),
-                Kind::Entry => format!("bible/{id}.md"),
-                _ => continue,
-            };
-            let Some((text, h)) = read_text(root, &rel, limits::MAX_TEXT_FILE)? else { continue };
-            total += text.len() as u64;
-            if total > limits::MAX_PROJECT_TEXT {
-                return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
-            }
-            let model = if kind == Kind::Entry {
-                let e = files::read_entry(&text, &rel)?;
-                let m = hash(files::write_entry(&e)?.as_bytes());
-                project.entries.insert(id, e);
-                m
-            } else {
-                let t = files::read_item(&text, &rel)?;
-                let m = if t.is_empty() { hash(b"") } else { hash(files::write_item(&t)?.as_bytes()) };
-                project.texts.insert(id, t);
-                m
-            };
-            index.insert(rel, Stamp { disk: h, model });
-        }
+        let (index, project) = load(&DiskSource(root))?;
         Ok((Folder { root: root.to_path_buf(), index }, project))
     }
 

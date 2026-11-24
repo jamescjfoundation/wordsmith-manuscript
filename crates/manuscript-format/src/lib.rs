@@ -11,6 +11,7 @@ pub mod dialect;
 pub mod files;
 pub mod folder;
 pub mod limits;
+pub mod pack;
 
 /// The schema version this build writes and the newest it reads.
 pub const SCHEMA: u32 = 1;
