@@ -10,6 +10,7 @@ pub mod brand;
 pub mod commands;
 pub mod cork;
 pub mod editor;
+pub mod filter;
 pub mod find;
 pub mod findbar;
 pub mod inspector;
@@ -91,6 +92,9 @@ pub struct Manuscript {
     pub cork: cork::CorkView,
     /// The folder the corkboard and outline show (follows the binder's selection).
     pub view_root: Option<ItemId>,
+    /// The filter on binder, corkboard and outline.
+    pub filter: filter::Filter,
+    filtered_at: u64,
     /// The view preferences.
     pub view: view::ViewPrefs,
     /// Focus mode: the chrome it hid, while on.
@@ -131,6 +135,8 @@ impl Manuscript {
             outline: outline::OutlineView::default(),
             cork: cork::CorkView::default(),
             view_root: None,
+            filter: filter::Filter::default(),
+            filtered_at: u64::MAX,
             view: view::ViewPrefs::default(),
             focus: None,
             fullscreen: None,
@@ -342,6 +348,8 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        v.push(CommandInfo::new("filter.set", "Filter", ""));
+        v.push(CommandInfo::new("filter.clear", "Show All Items", ""));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
         v.push(CommandInfo::new("view.corkboard", "Corkboard", "Mod+2"));
         v.push(CommandInfo::new("view.outline", "Outline", "Mod+3"));
@@ -465,6 +473,11 @@ impl App for Manuscript {
         };
         let before = self.binder.selected;
         let rev = s.revision();
+        if filter::bar(ui, &s.project, &mut self.filter) || self.filtered_at != rev {
+            self.binder.hidden = filter::hidden(&s.project, &self.filter);
+            self.filtered_at = rev;
+        }
+        ui.separator();
         let errors = binder::panel(ui, s, &mut self.binder);
         if let Some(e) = errors.into_iter().last() {
             self.status = e;
@@ -602,6 +615,24 @@ impl Manuscript {
 
 impl Manuscript {
     fn run_cmd(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
+        if cmd.id == "filter.set" || cmd.id == "filter.clear" {
+            let list = |k: &str| {
+                cmd.params
+                    .get(k)
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect())
+                    .unwrap_or_default()
+            };
+            self.filter = if cmd.id == "filter.clear" {
+                filter::Filter::default()
+            } else {
+                filter::Filter { labels: list("labels"), statuses: list("statuses"), keywords: list("keywords"), povs: list("povs") }
+            };
+            if let Some(s) = self.session.as_ref() {
+                self.binder.hidden = filter::hidden(&s.project, &self.filter);
+            }
+            return Ok(());
+        }
         if let Some(r) = self.view_command(cmd, shell) {
             return r;
         }

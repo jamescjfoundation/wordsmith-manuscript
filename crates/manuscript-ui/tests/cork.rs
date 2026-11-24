@@ -96,3 +96,19 @@ fn the_corkboard_draws_and_adds_cards() {
     assert_eq!(kids.len(), 4);
     assert_eq!(kids[3].role, Role::Scene, "a new card is a new item with the role the binder would give it");
 }
+
+#[test]
+fn a_filter_applies_to_binder_corkboard_and_outline_together() {
+    let mut app = wordsmith_manuscript_ui::Manuscript::with_session(Session::new(project()));
+    let mut sh = jcj_shell::Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    jcj_shell::App::run(&mut app, &jcj_shell::Cmd::with("filter.set", json!({ "labels": ["Action"] })), &mut sh).unwrap();
+    let s = app.session.as_ref().unwrap();
+    let hidden = &app.binder.hidden;
+    let binder_titles: Vec<String> = binder::rows(&s.project, &app.binder).iter().map(|r| r.label.clone()).collect();
+    assert!(binder_titles.contains(&"Storm".to_owned()) && !binder_titles.contains(&"Arrival".to_owned()));
+    assert!(binder_titles.contains(&"Chapter".to_owned()), "the ancestor stays as context");
+    assert_eq!(cork::items(&s.project, Some(id(1)), hidden), [id(3)]);
+    assert_eq!(outline::items(&s.project, Some(id(1)), hidden), [(id(3), 0)]);
+    jcj_shell::App::run(&mut app, &jcj_shell::Cmd::new("filter.clear"), &mut sh).unwrap();
+    assert!(app.binder.hidden.is_empty());
+}

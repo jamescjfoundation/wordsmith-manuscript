@@ -586,7 +586,7 @@ with the Wordsmith Book plan and written up as `docs/book-handoff.md` in step M6
 | M0 Foundations | – | Repository from the template, rules, spec, brand | Done 2026-11-24 (spec awaits review) |
 | M1 Project | 0.1 | Format, binder, saving, templates | Done 2026-11-24 |
 | M2 Editor | 0.1 | Manuscript styles, stitched view, find, spelling, focus | Done 2026-11-24 |
-| M3 Plan | 0.1 | Inspector, corkboard, outline, filters | Not started |
+| M3 Plan | 0.1 | Inspector, corkboard, outline, filters | Done 2026-11-24 |
 | M4 Bible | 0.1 | Entries, templates, links, backlinks, notes-folder import | Not started |
 | M5 Import | 0.1 | All 0.1 imports, document sets, verification | Not started |
 | M6 Export | 0.1 | Standard manuscript DOCX and PDF, plain exports, book view | Not started |
