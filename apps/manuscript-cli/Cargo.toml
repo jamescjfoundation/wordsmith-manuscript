@@ -15,6 +15,10 @@ workspace = true
 wordsmith-manuscript-model = { workspace = true }
 wordsmith-manuscript-format = { workspace = true }
 wordsmith-manuscript-io = { workspace = true }
+wordsmith-manuscript-ui = { workspace = true }
+jcj-interchange = { workspace = true }
+jcj-agents = { workspace = true }
+serde_json = { workspace = true }
 
 [[bin]]
 name = "manuscript-cli"

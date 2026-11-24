@@ -5405,9 +5405,13 @@ dependencies = [
 name = "wordsmith-manuscript-cli"
 version = "0.1.0"
 dependencies = [
+ "jcj-agents",
+ "jcj-interchange",
+ "serde_json",
  "wordsmith-manuscript-format",
  "wordsmith-manuscript-io",
  "wordsmith-manuscript-model",
+ "wordsmith-manuscript-ui",
 ]
 
 [[package]]
