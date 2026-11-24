@@ -145,7 +145,7 @@ line to `docs/progress.md`.
 
 | Crate | Layer | Holds | May depend on |
 | --- | --- | --- | --- |
-| `manuscript-model` | 1 | Project, binder, roles, metadata, targets, bible entries, links, the semantic text of an item | `jcj-doc` |
+| `manuscript-model` | 1 | Project, binder, roles, metadata, targets, bible entries, links, the semantic text of an item | `jcj-doc`, `jcj-entries` |
 | `manuscript-format` | 2 | The project folder, the text dialect, migrations, limits, packing, the read-only book view | model, `jcj-doc`, `jcj-project` |
 | `manuscript-io` | 3 | Import mapping, document sets, the verifier, exports, the standard manuscript layout | format, model, `jcj-interchange`, `jcj-layout`, `jcj-output`, `jcj-features`, `jcj-proof` |
 | `manuscript-ui` | 4 | Views, commands, ribbon tabs, panels, agent tools | everything below, `jcj-engine`, `jcj-shell`, `jcj-theme`, `jcj-board`, `jcj-agents` |

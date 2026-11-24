@@ -1,127 +1,30 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Entries: typed records with fields from a template, a body, links, backlinks and names.
 //!
-//! core-candidate: open-source-core issue #14 (C13). This module is the general layer of the
-//! story bible (decision 0004): it names no manuscript concept. Entry types and their templates
-//! are data. Entries are stored as Markdown files with front matter (`manuscript-format`). It
-//! moves to the core when a second app uses it (plan section 5.6).
-
-use std::collections::BTreeMap;
-
-use serde::{Deserialize, Serialize};
+//! The general layer of the story bible (decision 0004) is the core's `jcj-entries` (promoted
+//! from here, core issue #14, C13): entry types and templates, names, lookup by name, whole-word
+//! mentions and backlinks. This module gives it Manuscript's ids and text, and adds what reads
+//! Manuscript's text: the `wsm:` links in it.
 
 use crate::{Inline, ItemId, Text};
 
-/// One entry: a record of some type with fields, a body and names.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Entry {
-    /// The type's key (any type a template defines).
-    pub kind: String,
-    /// The entry's name.
-    pub name: String,
-    /// Other names the entry goes by.
-    pub aliases: Vec<String>,
-    /// Field values by field name.
-    pub fields: BTreeMap<String, String>,
-    /// Typed links to other entries: (relation, entry).
-    pub relations: Vec<(String, ItemId)>,
-    /// The free body.
-    pub body: Text,
-}
+pub use jcj_entries::{FieldType, Template, TemplateField, find_mentions, mentions};
 
-impl Entry {
-    /// A new entry of a type, with a name.
-    pub fn new(kind: &str, name: &str) -> Entry {
-        Entry { kind: kind.into(), name: name.into(), ..Entry::default() }
-    }
+/// One entry: a record of some type with fields, a body (Manuscript's text) and names.
+pub type Entry = jcj_entries::Entry<ItemId, Text>;
 
-    /// The name and the aliases, without empties.
-    pub fn names(&self) -> Vec<&str> {
-        std::iter::once(self.name.as_str()).chain(self.aliases.iter().map(String::as_str)).filter(|n| !n.trim().is_empty()).collect()
-    }
-}
-
-/// The kind of a template field.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum FieldType {
-    /// One line of text.
-    #[default]
-    Text,
-    /// Several lines of text.
-    LongText,
-    /// A list of short values, one per line.
-    List,
-    /// A picture from the project's media (its path).
-    Image,
-    /// A link to another entry (its id).
-    Link,
-}
-
-/// One field of a template.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TemplateField {
-    /// The field's name.
-    pub name: String,
-    /// Its type.
-    #[serde(default)]
-    pub kind: FieldType,
-}
-
-/// A template: the fields an entry type has, in order.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Template {
-    /// The type's key.
-    pub kind: String,
-    /// The type's name as shown (singular).
-    pub title: String,
-    /// The type's name for a group of entries (plural), as a folder is named.
-    #[serde(default)]
-    pub plural: String,
-    /// The fields.
-    pub fields: Vec<TemplateField>,
-}
-
-impl Template {
-    /// A template of fields of the given types.
-    pub fn new(kind: &str, title: &str, plural: &str, fields: &[(&str, FieldType)]) -> Template {
-        Template {
-            kind: kind.into(),
-            title: title.into(),
-            plural: plural.into(),
-            fields: fields.iter().map(|(n, k)| TemplateField { name: (*n).into(), kind: *k }).collect(),
-        }
-    }
-
-    /// The fields of an entry in this template's order, then any others the entry has.
-    pub fn ordered<'a>(&self, e: &'a Entry) -> Vec<(String, &'a str)> {
-        let mut out: Vec<(String, &str)> = self.fields.iter().map(|f| (f.name.clone(), e.fields.get(&f.name).map_or("", String::as_str))).collect();
-        for (k, v) in &e.fields {
-            if !self.fields.iter().any(|f| &f.name == k) {
-                out.push((k.clone(), v.as_str()));
-            }
-        }
-        out
-    }
-}
+/// Who refers to an entry.
+pub type Backlinks = jcj_entries::Backlinks<ItemId>;
 
 /// Every name and alias with its entry, longest first (so a longer name wins over a shorter one
 /// inside it).
 pub fn name_list<'a>(entries: impl IntoIterator<Item = (&'a ItemId, &'a Entry)>) -> Vec<(String, ItemId)> {
-    let mut out: Vec<(String, ItemId)> = entries.into_iter().flat_map(|(id, e)| e.names().into_iter().map(|n| (n.trim().to_owned(), *id))).collect();
-    out.sort_by(|a, b| b.0.chars().count().cmp(&a.0.chars().count()).then_with(|| a.0.cmp(&b.0)));
-    out
+    jcj_entries::name_list(entries)
 }
 
 /// The entry a name refers to: an exact name or alias first, then one that differs only in case.
 pub fn find_by_name<'a>(entries: impl IntoIterator<Item = (&'a ItemId, &'a Entry)> + Clone, name: &str) -> Option<ItemId> {
-    let name = name.trim();
-    entries
-        .clone()
-        .into_iter()
-        .find(|(_, e)| e.names().iter().any(|n| n.trim() == name))
-        .or_else(|| entries.into_iter().find(|(_, e)| e.names().iter().any(|n| n.trim().to_lowercase() == name.to_lowercase())))
-        .map(|(id, _)| *id)
+    jcj_entries::find_by_name(entries, name)
 }
 
 /// The scheme of a link to an item or entry.
@@ -152,52 +55,10 @@ pub fn links_in(text: &Text) -> Vec<ItemId> {
     out
 }
 
-/// Whether `name` appears in `text` as a whole word (names starting with a capital letter match
-/// only with the same case; others match in any case).
-pub fn mentions(text: &str, name: &str) -> bool {
-    let name = name.trim();
-    if name.is_empty() {
-        return false;
-    }
-    let case = name.chars().next().is_some_and(char::is_uppercase);
-    let (hay, needle) = if case { (text.to_owned(), name.to_owned()) } else { (text.to_lowercase(), name.to_lowercase()) };
-    let word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
-    let mut from = 0;
-    while let Some(at) = hay.get(from..).and_then(|h| h.find(&needle)) {
-        let start = from + at;
-        let end = start + needle.len();
-        if !word(hay[..start].chars().next_back()) && !word(hay[end..].chars().next()) {
-            return true;
-        }
-        from = end;
-    }
-    false
-}
-
-/// Who refers to an entry.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Backlinks {
-    /// Documents that link to it, in the order given.
-    pub linked: Vec<ItemId>,
-    /// Documents that mention a name or alias of it without linking.
-    pub mentioned: Vec<ItemId>,
-}
-
 /// The backlinks of `entry` among `documents` (each a document's id and text).
 pub fn backlinks<'a>(target: ItemId, entry: &Entry, documents: impl IntoIterator<Item = (ItemId, &'a Text)>) -> Backlinks {
-    let names = entry.names();
-    let mut out = Backlinks::default();
-    for (id, text) in documents {
-        if id == target {
-            continue;
-        }
-        if links_in(text).contains(&target) {
-            out.linked.push(id);
-        } else if text.plain_paragraphs().iter().any(|p| names.iter().any(|n| mentions(p, n))) {
-            out.mentioned.push(id);
-        }
-    }
-    out
+    let docs: Vec<(ItemId, Vec<ItemId>, Vec<String>)> = documents.into_iter().map(|(id, t)| (id, links_in(t), t.plain_paragraphs())).collect();
+    jcj_entries::backlinks(target, &entry.names(), docs.iter().map(|(id, links, paragraphs)| jcj_entries::Document { id: *id, links, paragraphs }))
 }
 
 #[cfg(test)]

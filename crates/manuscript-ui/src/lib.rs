@@ -1312,7 +1312,10 @@ impl Manuscript {
 }
 
 impl Manuscript {
-    fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+    /// The work done every frame before the document: outside changes, revision passes,
+    /// grammar hints, and the windows (snapshot compare, history, offered fixes, drafts, series,
+    /// entry types, save as template).
+    fn background_and_windows(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
         if self.outside_checked.is_none_or(|t| t.elapsed() >= OUTSIDE_EVERY) {
             self.outside_checked = Some(Instant::now());
             self.check_outside();
@@ -1391,6 +1394,10 @@ impl Manuscript {
                 self.entry = Default::default();
             }
         }
+    }
+
+    fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+        self.background_and_windows(ui, _shell);
         if self.recovered.is_some() {
             ui.horizontal(|ui| {
                 ui.label(crate::i18n::tr("Unsaved work from a session that did not end cleanly was found."));

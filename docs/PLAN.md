@@ -238,7 +238,7 @@ pull request in Script.
 | C10 | Grammar hints (Harper) beside spelling | Core (`jcj-proof`) | v0.2 (ED-9) | [#11](https://github.com/jamescjfoundation/open-source-core/issues/11) |
 | C11 | Story board lanes | Promote from Script | v1.0 (PLN-4) | [#12](https://github.com/jamescjfoundation/open-source-core/issues/12) |
 | C12 | EPUB import (known core gap) | Core | v1.0 (IMP-9) | [#13](https://github.com/jamescjfoundation/open-source-core/issues/13) |
-| C13 | Entries: typed records with field templates, links, backlinks and a name list, stored as Markdown files with front matter (the story bible's general part, section 5.6) | Build in app first, `core-candidate`; promote when Script uses it | M4.1; promoted in R4 | [#14](https://github.com/jamescjfoundation/open-source-core/issues/14) |
+| C13 | Entries: typed records with field templates, links, backlinks and a name list, stored as Markdown files with front matter (the story bible's general part, section 5.6) | Build in app first, `core-candidate`; promote when Script uses it | M4.1; promoted in R4 (core 0.1.4, `jcj-entries`; the entry file format stays here until Script shares folders) | [#14](https://github.com/jamescjfoundation/open-source-core/issues/14) |
 
 "Build in app first" items are marked `// core-candidate:` in code with a core issue labelled
 `core-candidate`, and move once they work and a second app wants them.

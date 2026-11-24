@@ -196,7 +196,7 @@ fn check_licenses(root: &Path) -> TaskResult {
 /// Wordsmith Manuscript's layers (plan section 5.2): which of the app's own crates and which core
 /// crates each package may use directly. Anything else that is ours or the core's is a failure.
 const APP_LAYERS: &[(&str, &[&str])] = &[
-    ("wordsmith-manuscript-model", &["jcj-doc"]),
+    ("wordsmith-manuscript-model", &["jcj-doc", "jcj-entries"]),
     ("wordsmith-manuscript-format", &["wordsmith-manuscript-model", "jcj-doc", "jcj-project"]),
     (
         "wordsmith-manuscript-io",
