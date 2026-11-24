@@ -17,6 +17,8 @@ pub struct Project {
     pub texts: BTreeMap<ItemId, ItemText>,
     /// Bible entries, by id (the binder's `Entry` items).
     pub entries: BTreeMap<ItemId, Entry>,
+    /// Snapshots of items' texts, oldest first, by item.
+    pub snapshots: BTreeMap<ItemId, Vec<crate::Snapshot>>,
 }
 
 impl Project {
@@ -33,6 +35,24 @@ impl Project {
     /// The text of an item, created empty if missing.
     pub fn text_mut(&mut self, id: ItemId) -> &mut ItemText {
         self.texts.entry(id).or_default()
+    }
+
+    /// Take a snapshot of an item's text now. Two in the same second get `-2`, `-3`.
+    pub fn take_snapshot(&mut self, id: ItemId, name: &str, at: std::time::SystemTime) -> Option<String> {
+        let text = self.texts.get(&id).map(|t| t.body.clone()).unwrap_or_default();
+        let list = self.snapshots.entry(id).or_default();
+        let base = crate::snapshot::stamp(at);
+        let mut taken = base.clone();
+        let mut n = 1;
+        while list.iter().any(|s| s.taken == taken) && n < 9999 {
+            n += 1;
+            taken = format!("{base}-{n}");
+        }
+        list.push(crate::Snapshot { taken: taken.clone(), name: name.to_owned(), text });
+        if list.len() > crate::snapshot::MAX_PER_ITEM {
+            list.remove(0);
+        }
+        Some(taken)
     }
 
     /// The words of one item.
@@ -76,6 +96,7 @@ impl Project {
         let binder = &self.binder;
         self.texts.retain(|id, _| binder.get(*id).is_some_and(|i| i.kind.has_text()));
         self.entries.retain(|id, _| binder.get(*id).is_some_and(|i| i.kind == Kind::Entry));
+        self.snapshots.retain(|id, _| binder.contains(*id));
     }
 }
 

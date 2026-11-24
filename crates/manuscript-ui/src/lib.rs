@@ -9,9 +9,13 @@ pub mod binder;
 pub mod brand;
 pub mod commands;
 pub mod editor;
+pub mod find;
+pub mod findbar;
 pub mod inspector;
 pub mod ribbon;
 pub mod session;
+pub mod snapshots;
+pub mod spelling;
 pub mod stitch;
 pub mod texts;
 pub mod tree;
@@ -57,6 +61,8 @@ pub struct Manuscript {
     pub look: editor::EditorLook,
     /// Whether the editor had the keyboard last (undo goes to it then).
     pub editor_focused: bool,
+    /// The find bar.
+    pub find: findbar::FindBar,
     registry: std::sync::Arc<jcj_engine::Registry>,
 }
 
@@ -85,6 +91,7 @@ impl Manuscript {
             editor: None,
             look: editor::EditorLook::default(),
             editor_focused: false,
+            find: findbar::FindBar::default(),
             registry: editor::registry(),
         }
     }
@@ -189,7 +196,26 @@ impl Manuscript {
         let text = s.project.text(id).map(|t| t.body.clone()).unwrap_or_default();
         let mut ed = editor::Editor::new(id, &text, self.registry.clone());
         ed.smart = typing::Smart::of(&s.project.settings);
+        ed.spell = Some(spelling::SpellCache::new(&s.project));
         self.editor = Some(ed);
+    }
+
+    /// Reload the open editor from the project (after a project-wide change).
+    pub fn reload_editor(&mut self) {
+        let Some(ed) = self.editor.as_ref() else { return };
+        let Some(s) = self.session.as_ref() else { return };
+        let fresh = if stitch::is_stitched(ed) {
+            let items: Vec<ItemId> = stitch::split(&ed.session.doc).into_iter().map(|(i, _)| i).collect();
+            stitch::open(&s.project, &items, self.registry.clone())
+        } else {
+            let text = s.project.text(ed.item).map(|t| t.body.clone()).unwrap_or_default();
+            Some(editor::Editor::new(ed.item, &text, self.registry.clone()))
+        };
+        if let Some(mut f) = fresh {
+            f.smart = typing::Smart::of(&s.project.settings);
+            f.spell = Some(spelling::SpellCache::new(&s.project));
+            self.editor = Some(f);
+        }
     }
 
     /// Open a stitched view (ED-2): of the given items, of the selected item and what is under
@@ -212,6 +238,7 @@ impl Manuscript {
         self.editor = Some(ed);
         if let Some(e) = self.editor.as_mut() {
             e.smart = typing::Smart::of(&s.project.settings);
+            e.spell = Some(spelling::SpellCache::new(&s.project));
         }
         self.status = format!("{} documents as one text.", items.len());
         Ok(())
@@ -225,8 +252,12 @@ impl Manuscript {
             return;
         };
         let smart = typing::Smart::of(&s.project.settings);
+        let words = spelling::project_words(&s.project);
         if let Some(ed) = self.editor.as_mut() {
             ed.smart = smart;
+            if let Some(sp) = ed.spell.as_mut() {
+                sp.set_words(words);
+            }
         }
         let Some(ed) = self.editor.as_ref() else { return };
         if crate::stitch::is_stitched(ed) {
@@ -268,6 +299,9 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        v.push(CommandInfo::new("find.show", "Find and Replace", "Mod+F"));
+        v.push(CommandInfo::new("find.next", "Find Next", "Mod+G"));
+        v.push(CommandInfo::new("find.previous", "Find Previous", "Mod+Shift+G"));
         v.push(CommandInfo::new("view.stitch", "Read as One Text", "Mod+Alt+R"));
         v.push(CommandInfo::new("view.stitchManuscript", "Read the Whole Manuscript", "Mod+Alt+Shift+R"));
         for spec in editor::styles::specs() {
@@ -491,6 +525,16 @@ impl Manuscript {
 
 impl Manuscript {
     fn run_cmd(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
+        if cmd.id == "find.show" {
+            self.find.show();
+            return Ok(());
+        }
+        if cmd.id == "find.next" || cmd.id == "find.previous" {
+            let q = self.find.query.clone();
+            let ed = self.editor.as_mut().ok_or("open a document first")?;
+            ed.find_next(&q, cmd.id == "find.previous")?;
+            return Ok(());
+        }
         if cmd.id == "view.stitch" || cmd.id == "view.stitchManuscript" {
             return self.stitch(cmd);
         }
@@ -610,17 +654,81 @@ impl Manuscript {
             return;
         }
         self.look.dark = ui.visuals().dark_mode;
+        findbar::ui(self, ui);
         match self.editor.as_mut() {
             Some(ed) => {
                 let resp = ed.ui(ui, &self.look);
+                ed.menu_ui(ui.ctx());
                 self.editor_focused = resp.has_focus() || (self.editor_focused && !ui.input(|i| i.pointer.any_pressed()));
                 if let Some(e) = ed.error.take() {
                     self.status = e;
+                }
+                let word = ed.add_word.take();
+                let follow = ed.follow.take();
+                let hover = ed.hover_link.clone();
+                if let Some(w) = word {
+                    let r = self.session.as_mut().map(|s| s.run("spelling.addWord", &json!({ "word": w })).map(|_| ()));
+                    if let Some(Err(e)) = r {
+                        self.status = e;
+                    }
+                    self.sync_editor();
+                }
+                if let Some((target, at)) = hover {
+                    self.link_preview(ui, &target, at);
+                }
+                if let Some(target) = follow {
+                    self.follow_link(&target);
                 }
             }
             None => {
                 ui.centered_and_justified(|ui| ui.label("Select a document in the binder to write in it."));
             }
+        }
+    }
+}
+
+impl Manuscript {
+    /// The title and synopsis a link points at, for its preview (ED-10).
+    pub fn link_target(&self, target: &str) -> Option<(String, String)> {
+        let s = self.session.as_ref()?;
+        let id: ItemId = target.strip_prefix("wsm:")?.parse().ok()?;
+        let item = s.project.binder.get(id);
+        let Some(item) = item else { return Some(("A deleted item".into(), "This link points at an item no longer in the project.".into())) };
+        let synopsis = match s.project.entries.get(&id) {
+            Some(e) => e.body.plain_paragraphs().into_iter().take(2).collect::<Vec<_>>().join(" "),
+            None => s.project.text(id).map(|t| t.meta.synopsis.clone()).unwrap_or_default(),
+        };
+        Some((item.title.clone(), synopsis))
+    }
+
+    fn link_preview(&self, ui: &egui::Ui, target: &str, at: egui::Pos2) {
+        let (title, about) = self.link_target(target).unwrap_or_else(|| (target.to_owned(), String::new()));
+        egui::Area::new(egui::Id::unique("manuscript-link-preview")).order(egui::Order::Tooltip).fixed_pos(at + egui::vec2(12.0, 16.0)).show(
+            ui.ctx(),
+            |ui| {
+                egui::Frame::popup(ui.style()).show(ui, |ui| {
+                    ui.set_max_width(320.0);
+                    ui.strong(title);
+                    if !about.is_empty() {
+                        ui.label(about);
+                    }
+                });
+            },
+        );
+    }
+
+    /// Follow a link: an item opens in the editor; other addresses are left to the system.
+    pub fn follow_link(&mut self, target: &str) {
+        let Some(id) = target.strip_prefix("wsm:").and_then(|t| t.parse::<ItemId>().ok()) else {
+            self.status = format!("Link to {target}");
+            return;
+        };
+        if self.session.as_ref().is_some_and(|s| s.project.binder.contains(id)) {
+            self.binder.selected = Some(id);
+            self.binder.tree.reveal = true;
+            self.open_item(id);
+        } else {
+            self.status = "This link points at an item no longer in the project.".into();
         }
     }
 }

@@ -68,6 +68,16 @@ pub struct Editor {
     pub smart: crate::typing::Smart,
     /// The last replacement smart typing made, so the next Backspace can undo it.
     pub last_smart: Option<crate::typing::Replaced>,
+    /// Spelling marks (ED-11), when the app turned spelling on.
+    pub spell: Option<crate::spelling::SpellCache>,
+    /// The spelling menu: on which word, and where.
+    pub menu: Option<(usize, std::ops::Range<usize>, egui::Pos2)>,
+    /// A word the writer added to the project's words from the menu (the app runs the command).
+    pub add_word: Option<String>,
+    /// The link under the pointer and where (the app shows its preview).
+    pub hover_link: Option<(String, egui::Pos2)>,
+    /// A link the writer followed (command-click).
+    pub follow: Option<String>,
 }
 
 /// The registry every editor session uses: the engine's commands and the core's features.
@@ -110,6 +120,11 @@ impl Editor {
             caret_rect: None,
             smart: crate::typing::Smart::default(),
             last_smart: None,
+            spell: None,
+            menu: None,
+            add_word: None,
+            hover_link: None,
+            follow: None,
         }
     }
 

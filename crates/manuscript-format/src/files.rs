@@ -212,6 +212,27 @@ pub fn read_entry(text: &str, file: &str) -> Result<Entry, Error> {
     })
 }
 
+#[derive(Serialize, Deserialize)]
+struct SnapshotFront {
+    name: String,
+}
+
+/// A snapshot's file: its name in front matter, the text below.
+pub fn write_snapshot(snap: &wordsmith_manuscript_model::Snapshot) -> Result<String, Error> {
+    let fm = toml::to_string(&SnapshotFront { name: snap.name.clone() }).map_err(|e| Error::Write(format!("snapshot: {e}")))?;
+    Ok(join_front_matter(&fm, &dialect::write(&snap.text)))
+}
+
+/// Read a snapshot's file taken at `taken`.
+pub fn read_snapshot(text: &str, taken: &str, file: &str) -> Result<wordsmith_manuscript_model::Snapshot, Error> {
+    let (fm, body) = split_front_matter(text).map_err(|e| e.in_file(file))?;
+    let name = match fm {
+        Some(fm) => toml::from_str::<SnapshotFront>(fm).map_err(|e| Error::Damaged { file: file.into(), why: short(&e) })?.name,
+        None => String::new(),
+    };
+    Ok(wordsmith_manuscript_model::Snapshot { taken: taken.to_owned(), name, text: dialect::parse(body) })
+}
+
 /// The path of an item's file inside the project folder, if it has one.
 pub fn path_of(item: &Item) -> Option<String> {
     match item.kind {
@@ -242,6 +263,16 @@ pub fn render(project: &Project) -> Result<Vec<(String, Vec<u8>)>, Error> {
                 out.push((format!("bible/{}.md", item.id), write_entry(&e)?.into_bytes()));
             }
             Kind::Media | Kind::Link | Kind::Screenplay => {}
+        }
+    }
+    for (id, snaps) in &project.snapshots {
+        if !project.binder.contains(*id) {
+            continue;
+        }
+        for snap in snaps {
+            if wordsmith_manuscript_model::snapshot::is_stamp(&snap.taken) {
+                out.push((format!("snapshots/{id}/{}.md", snap.taken), write_snapshot(snap)?.into_bytes()));
+            }
         }
     }
     out.push(("project.toml".into(), write_project(&project.settings)?.into_bytes()));

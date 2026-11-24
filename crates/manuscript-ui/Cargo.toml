@@ -18,12 +18,14 @@ wordsmith-manuscript-io = { workspace = true }
 jcj-doc = { workspace = true }
 jcj-engine = { workspace = true }
 jcj-layout = { workspace = true }
+jcj-proof = { workspace = true }
 jcj-shell = { workspace = true }
 jcj-theme = { workspace = true }
 jcj-board = { workspace = true }
 jcj-agents = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+regex = "1"
 
 [dev-dependencies]
 egui_kittest = { workspace = true }

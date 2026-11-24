@@ -281,6 +281,16 @@ impl Editor {
                         ui.painter().rect_filled(r.translate(origin.to_vec2()), 0.0, colors.selection);
                     }
                 }
+                let marked: Vec<(usize, usize)> = match self
+                    .paragraph(i)
+                    .map(|p| (p.rev, p.text.clone(), mdoc::is_text(&mdoc::tag_of(p)) && !crate::stitch::is_divider(p)))
+                {
+                    Some((rev, text, true)) => match self.spell.as_mut() {
+                        Some(spell) => spell.of(i, rev, &text).into_iter().map(|r| (char_index(&text, r.start), char_index(&text, r.end))).collect(),
+                        None => Vec::new(),
+                    },
+                    _ => Vec::new(),
+                };
                 let dim = look.dim_others && i != caret_para;
                 let p = self.paragraph(i);
                 let divider = p.is_some_and(crate::stitch::is_divider);
@@ -293,6 +303,11 @@ impl Editor {
                     ui.painter().line_segment([pos2(gx + l.galley.size().x + 8.0, mid), pos2(left + look.width, mid)], Stroke::new(1.0, colors.dim));
                 } else {
                     ui.painter().galley_with_override_text_color(origin, l.galley.clone(), tint);
+                    for (a, b) in &marked {
+                        for rect in selection_rects(&l.galley, *a, *b, false) {
+                            squiggle(ui.painter(), rect.translate(origin.to_vec2()), egui::Color32::from_rgb(0xC0, 0x39, 0x2B));
+                        }
+                    }
                     if p.is_some_and(|p| matches!(mdoc::tag_of(p), BlockTag::Aside { .. } | BlockTag::EmptyFence { verse: false, .. })) {
                         ui.painter().line_segment([pos2(left + l.inset * 0.5, y), pos2(left + l.inset * 0.5, y + h)], Stroke::new(2.0, colors.dim));
                     }
@@ -321,6 +336,21 @@ impl Editor {
             if let Some(p) = resp.interact_pointer_pos() {
                 self.pointer(ui, &resp, p, &hits);
             }
+            self.hover_link = None;
+            if let Some(p) = resp.hover_pos()
+                && let Some((i, off)) = self.hit(p, &hits)
+            {
+                let link = self.paragraph(i).and_then(|q| mdoc::LINK.get_or_none(q.props_of_char(off.min(q.text.len().saturating_sub(1)))));
+                if let Some(l) = link {
+                    if resp.clicked() && ui.input(|inp| inp.modifiers.command) {
+                        self.follow = Some(l.clone());
+                    }
+                    self.hover_link = Some((l, p));
+                }
+                if resp.secondary_clicked() {
+                    self.open_menu(i, off, p);
+                }
+            }
             if resp.clicked() || resp.drag_started() {
                 resp.request_focus();
             }
@@ -337,7 +367,66 @@ impl Editor {
         resp
     }
 
+    /// The paragraph and byte under a point.
+    fn hit(&self, p: Pos2, hits: &[(usize, Rect, Arc<Galley>, f32)]) -> Option<(usize, usize)> {
+        let (i, rect, galley, _) = hits.iter().find(|h| h.1.expand2(vec2(0.0, 2.0)).contains(p))?;
+        let c = galley.cursor_from_pos(p - rect.min);
+        let text = &self.paragraph(*i)?.text;
+        Some((*i, byte_offset(text, c.index.0)))
+    }
+
+    /// Open the spelling menu when the word under the pointer is marked.
+    fn open_menu(&mut self, i: usize, off: usize, at: Pos2) {
+        let Some(p) = self.paragraph(i) else { return };
+        let (rev, text) = (p.rev, p.text.clone());
+        let Some(spell) = self.spell.as_mut() else { return };
+        if let Some(r) = spell.of(i, rev, &text).into_iter().find(|r| r.start <= off && off <= r.end) {
+            self.menu = Some((i, r, at));
+        }
+    }
+
+    /// Draw the spelling menu, if open.
+    pub fn menu_ui(&mut self, ctx: &egui::Context) {
+        let Some((i, range, at)) = self.menu.clone() else { return };
+        let word = self.paragraph(i).and_then(|p| p.text.get(range.clone())).unwrap_or("").to_owned();
+        let lang = self.spell.as_ref().map_or_else(|| "en".to_owned(), |s| s.lang.clone());
+        let mut close = false;
+        let mut pick: Option<String> = None;
+        let area = egui::Area::new(egui::Id::unique("manuscript-spelling-menu")).order(egui::Order::Foreground).fixed_pos(at).show(ctx, |ui| {
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                ui.set_min_width(160.0);
+                for s in jcj_proof::suggestions(&word, 6, Some(&lang)) {
+                    if ui.button(&s).clicked() {
+                        pick = Some(s);
+                    }
+                }
+                ui.separator();
+                if ui.button("Add to Project Words").clicked() {
+                    self.add_word = Some(word.clone());
+                    close = true;
+                }
+                if ui.button("Ignore All").clicked() {
+                    jcj_proof::ignore_word(&word);
+                    close = true;
+                }
+            });
+        });
+        if let Some(s) = pick {
+            self.session.sel = jcj_engine::Selection { anchor: super::pos(i, range.start), focus: super::pos(i, range.end) };
+            if let Err(e) = self.guarded(&s, true, &|sess, t| jcj_engine::cmd::paste_text(sess, t)) {
+                self.error = Some(e);
+            }
+            close = true;
+        }
+        if close || ctx.input(|i| i.key_pressed(egui::Key::Escape)) || (ctx.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer()) {
+            self.menu = None;
+        }
+    }
+
     fn pointer(&mut self, ui: &Ui, resp: &egui::Response, p: Pos2, hits: &[(usize, Rect, Arc<Galley>, f32)]) {
+        if resp.secondary_clicked() {
+            return;
+        }
         let Some((i, rect, galley, _)) = hits.iter().min_by(|a, b| {
             let da = dist_y(a.1, p.y);
             let db = dist_y(b.1, p.y);
@@ -382,6 +471,22 @@ impl Editor {
     /// The colors the editor uses for a look (tests).
     pub fn colors_for(look: &EditorLook) -> PageColors {
         look.colors()
+    }
+}
+
+/// A wavy line under a rectangle (a spelling mark).
+fn squiggle(painter: &egui::Painter, r: Rect, color: egui::Color32) {
+    let y = r.max.y - 1.0;
+    let mut pts = Vec::new();
+    let mut x = r.min.x;
+    let mut up = true;
+    while x < r.max.x {
+        pts.push(pos2(x, if up { y - 1.5 } else { y + 0.5 }));
+        x += 2.5;
+        up = !up;
+    }
+    if pts.len() > 1 {
+        painter.add(egui::Shape::line(pts, Stroke::new(1.0, color)));
     }
 }
 

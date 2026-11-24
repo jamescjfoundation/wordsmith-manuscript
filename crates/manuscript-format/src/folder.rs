@@ -111,6 +111,8 @@ pub fn read_text(root: &Path, rel: &str, limit: u64) -> Result<Option<(String, H
 pub trait Source {
     /// The text of a file inside the project, with the hash of its bytes; `None` when missing.
     fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error>;
+    /// The names of the files directly in a folder inside the project (empty when missing).
+    fn list(&self, dir: &str) -> Vec<String>;
 }
 
 /// A folder on disk as a source.
@@ -119,6 +121,16 @@ pub struct DiskSource<'a>(pub &'a Path);
 impl Source for DiskSource<'_> {
     fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error> {
         read_text(self.0, rel, limit)
+    }
+
+    fn list(&self, dir: &str) -> Vec<String> {
+        let mut out: Vec<String> = std::fs::read_dir(self.0.join(dir))
+            .map(|d| {
+                d.flatten().filter(|e| e.file_type().is_ok_and(|t| t.is_file())).filter_map(|e| e.file_name().to_str().map(str::to_owned)).collect()
+            })
+            .unwrap_or_default();
+        out.sort();
+        out
     }
 }
 
@@ -133,6 +145,11 @@ impl Source for MemorySource<'_> {
         }
         let h = hash(bytes);
         std::str::from_utf8(bytes).map(|s| Some((s.to_owned(), h))).map_err(|_| Error::Damaged { file: rel.into(), why: "not UTF-8 text".into() })
+    }
+
+    fn list(&self, dir: &str) -> Vec<String> {
+        let prefix = format!("{dir}/");
+        self.0.keys().filter_map(|k| k.strip_prefix(&prefix)).filter(|rest| !rest.contains('/')).map(str::to_owned).collect()
     }
 }
 
@@ -171,6 +188,30 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
             m
         };
         index.insert(rel, Stamp { disk: h, model });
+    }
+    let ids: Vec<_> = project.binder.rows().into_iter().map(|r| r.item.id).collect();
+    for id in ids {
+        let dir = format!("snapshots/{id}");
+        let names: Vec<String> =
+            src.list(&dir).into_iter().filter(|n| n.strip_suffix(".md").is_some_and(wordsmith_manuscript_model::snapshot::is_stamp)).collect();
+        if names.len() > wordsmith_manuscript_model::snapshot::MAX_PER_ITEM {
+            return Err(Error::TooLarge { what: dir, limit: wordsmith_manuscript_model::snapshot::MAX_PER_ITEM as u64 });
+        }
+        for name in names {
+            let rel = format!("{dir}/{name}");
+            let Some((text, h)) = src.read(&rel, limits::MAX_TEXT_FILE)? else { continue };
+            total += text.len() as u64;
+            if total > limits::MAX_PROJECT_TEXT {
+                return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
+            }
+            let taken = name.trim_end_matches(".md");
+            let snap = files::read_snapshot(&text, taken, &rel)?;
+            index.insert(rel, Stamp { disk: h, model: hash(files::write_snapshot(&snap)?.as_bytes()) });
+            project.snapshots.entry(id).or_default().push(snap);
+        }
+        if let Some(list) = project.snapshots.get_mut(&id) {
+            list.sort_by_key(|s| wordsmith_manuscript_model::snapshot::order_key(&s.taken));
+        }
     }
     Ok((index, project))
 }
@@ -225,8 +266,12 @@ impl Folder {
             self.index.insert(rel.clone(), Stamp { disk: h, model: h });
             saved.written.push(rel.clone());
         }
-        let stale: Vec<String> =
-            self.index.keys().filter(|k| (k.starts_with("text/") || k.starts_with("bible/")) && !keep.contains(&k.as_str())).cloned().collect();
+        let stale: Vec<String> = self
+            .index
+            .keys()
+            .filter(|k| (k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/")) && !keep.contains(&k.as_str()))
+            .cloned()
+            .collect();
         for rel in stale {
             sink.remove(&rel)?;
             self.index.remove(&rel);

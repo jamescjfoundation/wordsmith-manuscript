@@ -28,6 +28,14 @@ pub fn specs() -> Vec<Spec> {
         spec("write.language", "Language", "", r#"{"lang": string}"#, "Mark the selection as another language (empty to clear)."),
         spec("write.plain", "Plain Text", "Mod+Space", "{}", "Remove the character styles from the selection."),
         spec("write.lineBreak", "Line Break", "", "{}", "A line break inside the paragraph."),
+        spec(
+            "write.link",
+            "Link",
+            "Mod+K",
+            r#"{"target": "wsm:<id>" | url}"#,
+            "Link the selection to a binder item, a bible entry or a web address.",
+        ),
+        spec("write.unlink", "Remove Link", "Mod+Shift+K", "{}", "Remove links from the selection."),
     ]
 }
 
@@ -146,6 +154,36 @@ fn language(ed: &mut Editor, lang: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Link the selection to a target, or remove links (`None`).
+fn link(ed: &mut Editor, target: Option<&str>) -> Result<(), String> {
+    if ed.session.sel.is_collapsed() {
+        return Err("select the words to link first".into());
+    }
+    if let Some(t) = target
+        && (t.trim().is_empty() || t.contains(char::is_whitespace))
+    {
+        return Err("a link needs a target: an item (wsm:<id>) or a web address".into());
+    }
+    let (a, b) = ed.session.sel.ordered();
+    ed.session.checkpoint(if target.is_some() { "Link" } else { "Remove Link" });
+    for i in para_index(&a)..=para_index(&b) {
+        let Some(len) = ed.paragraph(i).map(|p| p.text.len()) else { continue };
+        let from = if i == para_index(&a) { a.off.min(len) } else { 0 };
+        let to = if i == para_index(&b) { b.off.min(len) } else { len };
+        let t = target.map(str::to_owned);
+        if let Some(p) = ed.paragraph_mut(i) {
+            let _ = p.format(from, to, &|c: &mut jcj_doc::CharProps| match &t {
+                Some(t) => {
+                    let _ = mdoc::LINK.set(c, t);
+                }
+                None => mdoc::LINK.remove(c),
+            });
+        }
+    }
+    ed.changed();
+    Ok(())
+}
+
 /// Remove italic, bold, small caps, strikethrough and language from the selection.
 fn plain(ed: &mut Editor) -> Result<(), String> {
     let (a, b) = ed.session.sel.ordered();
@@ -198,6 +236,8 @@ pub fn run(ed: &mut Editor, id: &str, v: &Value) -> Option<Result<(), String>> {
         "write.language" => language(ed, v.get("lang").and_then(Value::as_str).unwrap_or("")),
         "write.plain" => plain(ed),
         "write.lineBreak" => ed.run("text.lineBreak", &json!({})).map(|_| ()),
+        "write.link" => link(ed, Some(v.get("target").and_then(Value::as_str).unwrap_or(""))),
+        "write.unlink" => link(ed, None),
         _ => return None,
     })
 }

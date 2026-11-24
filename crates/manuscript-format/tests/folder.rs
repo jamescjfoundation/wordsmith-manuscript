@@ -255,3 +255,21 @@ fn both_templates_make_valid_projects_that_round_trip() {
         assert!(f.save(&back).unwrap().written.is_empty());
     }
 }
+
+#[test]
+fn snapshots_are_kept_beside_the_text_and_round_trip() {
+    let dir = scratch("snapshots");
+    let mut p = sample();
+    let t0 = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_800_000_000);
+    let a = p.take_snapshot(id(2), "First pass", t0).unwrap();
+    let b = p.take_snapshot(id(2), "Same second", t0).unwrap();
+    assert_eq!(b, format!("{a}-2"));
+    Folder::create(&dir, &p).unwrap();
+    assert!(dir.join(format!("snapshots/{}/{a}.md", id(2))).exists());
+    let (mut f, back) = Folder::open(&dir).unwrap();
+    assert_eq!(back, p);
+    assert!(f.save(&back).unwrap().written.is_empty());
+    // A file in the snapshots folder that is not a stamp is ignored, never read as a snapshot.
+    std::fs::write(dir.join(format!("snapshots/{}/notes.md", id(2))), "x").unwrap();
+    assert_eq!(Folder::open(&dir).unwrap().1, p);
+}
