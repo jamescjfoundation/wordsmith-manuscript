@@ -7,7 +7,7 @@ not match is not made.
 
 ## Documents
 
-DOCX, ODT, RTF, Markdown, HTML and plain text.
+DOCX, ODT, RTF, Markdown, HTML, EPUB and plain text. An EPUB book comes back as an editable manuscript, one chapter per reading page.
 
 - **Headings** become parts, chapters and scenes: with three heading levels, part, chapter and
   scene; with two, part and chapter; with one, chapter.

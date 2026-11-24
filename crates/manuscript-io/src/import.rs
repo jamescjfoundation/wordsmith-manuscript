@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reading a document file into a binder plan: DOCX, ODT, RTF, Markdown, HTML and plain text
-//! (IMP-1, IMP-3, IMP-4, IMP-5, IMP-7), and OPML outlines (IMP-8, [`crate::opml`]). Files go through the core's `jcj-interchange`; plain text is
+//! (IMP-1, IMP-3, IMP-4, IMP-5, IMP-7), EPUB books (IMP-9, one chapter per reading document),
+//! and OPML outlines (IMP-8, [`crate::opml`]). Files go through the core's `jcj-interchange`; plain text is
 //! read here, joining hard-wrapped lines into paragraphs.
 
 use std::path::Path;
@@ -75,7 +76,8 @@ pub fn document(path: &Path, text_rules: &TextRules) -> Result<Document, String>
         let text = String::from_utf8(bytes).map_err(|_| format!("{} is not UTF-8 text", path.display()))?;
         return Ok(text_document(&text, text_rules));
     }
-    if !format.can_import() {
+    // EPUB (IMP-9): the core reads it when asked by name (it is not on its general list).
+    if !format.can_import() && format != Format::Epub {
         return Err(format!("{} files cannot be imported yet", format.label()));
     }
     if format == Format::Html

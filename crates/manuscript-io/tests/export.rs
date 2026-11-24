@@ -155,3 +155,23 @@ fn an_epub_reading_copy_reads_back_word_for_word() {
     assert!(all.contains("1. At dawn."), "the note is in the reading copy");
     assert_eq!(Target::from_extension("EPUB"), Some(Target::Epub));
 }
+
+#[test]
+fn an_epub_comes_back_as_an_editable_manuscript() {
+    // A reading copy made by the export above, read back as a manuscript (IMP-9).
+    let novel = project_from(&fixture("documents/pride-and-prejudice.docx"));
+    let out = export(&novel, &Options::default(), Target::Epub).unwrap();
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("epub-import");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("Pride and Prejudice.epub");
+    std::fs::write(&path, &out.bytes).unwrap();
+    let plan = plan_file(&path, &Rules::default(), &TextRules::default()).unwrap();
+    assert!(plan.report.check.as_ref().is_some_and(|c| c.passed()), "{:?}", plan.report.check);
+    let chapters = plan.items.iter().filter(|i| i.role == Role::Chapter).count();
+    let original = novel.binder.rows_of(Area::Manuscript).iter().filter(|r| r.item.role == Role::Chapter).count();
+    assert_eq!(chapters, original, "every chapter comes back as a chapter");
+    let words = |p: &Project| p.texts.values().map(|t| t.body.word_count()).sum::<usize>();
+    let back: usize = plan.items.iter().map(|i| i.text.body.word_count()).sum::<usize>()
+        + plan.items.iter().filter(|i| i.title_from_source).map(|i| i.title.split_whitespace().count()).sum::<usize>();
+    assert!(back >= words(&novel), "{back} >= {}", words(&novel));
+}
