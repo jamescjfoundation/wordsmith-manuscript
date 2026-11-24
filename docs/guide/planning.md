@@ -30,6 +30,10 @@ project.
 The inspector holds the selected item's synopsis, label, status, custom fields, target, keywords,
 linked bible entries, notes, comments and snapshots. Changes are kept when you leave a field.
 
+**Suggested bible links.** Under the linked bible entries, "Mentioned here" lists the entries
+whose name or alias the item's text uses (as whole words) but which are not linked yet, the most
+mentioned first. Click one to link it, or Link All.
+
 **Custom fields.** Every project starts with a Point of view field. Add your own under Project
 fields at the foot of the inspector: text, a date (written YYYY-MM-DD, so dates sort in order), a
 checkbox, or a list of choices (scene date, location, weather, "needs research"). Each field is a

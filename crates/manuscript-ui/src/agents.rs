@@ -174,6 +174,7 @@ tools!(
     "lanes.get",
     "lanes.move",
     "timeline.get",
+    "item.suggestEntries",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",

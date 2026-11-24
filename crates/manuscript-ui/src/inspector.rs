@@ -30,6 +30,14 @@ pub fn specs() -> Vec<Spec> {
         spec("item.removeKeyword", "Remove Keyword", r#"{"id": id, "keyword": string}"#, "Remove a keyword from an item."),
         spec("item.linkEntry", "Link Bible Entry", r#"{"id": id, "entry": id}"#, "Link a bible entry to an item."),
         spec("item.unlinkEntry", "Unlink Bible Entry", r#"{"id": id, "entry": id}"#, "Unlink a bible entry from an item."),
+        Spec {
+            id: "item.suggestEntries",
+            label: "Suggest Bible Links",
+            key: "",
+            params: r#"{"id": id}"#,
+            about: "The bible entries an item's text mentions by name or alias but does not link yet, most mentioned first.",
+            mutates: false,
+        },
         spec("item.setTarget", "Set Target", r#"{"id": id, "words": n|null}"#, "An item's word target."),
         spec(
             "item.setField",
@@ -193,6 +201,14 @@ fn item_json(p: &Project, id: ItemId) -> Result<Value, String> {
 pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
     let r = match id {
         "item.get" => id_param(v, "id").and_then(|i| item_json(&s.project, i)),
+        "item.suggestEntries" => id_param(v, "id").map(|i| {
+            json!(
+                suggested(&s.project, i)
+                    .into_iter()
+                    .map(|(e, name, n)| json!({ "entry": e.as_text(), "name": name, "mentions": n }))
+                    .collect::<Vec<_>>()
+            )
+        }),
         "item.setSynopsis" | "item.setNotes" => (|| {
             let i = id_param(v, "id")?;
             has_text(&s.project, i)?;
@@ -402,6 +418,29 @@ fn comments_section(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, id: 
     }
 }
 
+/// The entries an item's text mentions by name or alias but does not link yet (INS-4), most
+/// mentioned first: (entry, its name, how many times).
+pub fn suggested(p: &Project, id: ItemId) -> Vec<(ItemId, String, usize)> {
+    let Some(t) = p.text(id) else { return Vec::new() };
+    let paras = t.body.plain_paragraphs();
+    let linked = &t.meta.entries;
+    let mut out: Vec<(ItemId, String, usize)> = p
+        .entries
+        .iter()
+        .filter(|(eid, _)| !linked.contains(eid) && **eid != id && p.binder.area_of(**eid) != Some(Area::Trash))
+        .filter_map(|(eid, e)| {
+            let n: usize = e
+                .names()
+                .iter()
+                .map(|name| paras.iter().map(|para| wordsmith_manuscript_model::entries::find_mentions(para, name).len()).sum::<usize>())
+                .sum();
+            (n > 0).then(|| (*eid, e.name.clone(), n))
+        })
+        .collect();
+    out.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.1.cmp(&b.1)));
+    out
+}
+
 /// The inspector panel's state: text being typed, committed when the field loses focus.
 #[derive(Default)]
 pub struct InspectorView {
@@ -549,6 +588,22 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
                 c.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Link a bible entry"));
             }
         });
+        let hints = suggested(&s.project, id);
+        if !hints.is_empty() {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(crate::i18n::tr("Mentioned here:")).weak());
+                for (e, name, n) in hints.iter().take(8) {
+                    if ui.small_button(format!("+ {name} ({n})")).on_hover_text("Link this entry to the item").clicked() {
+                        run(s, "item.linkEntry", json!({ "id": id.as_text(), "entry": e.as_text() }));
+                    }
+                }
+                if hints.len() > 1 && ui.small_button(crate::i18n::tr("Link All")).clicked() {
+                    for (e, _, _) in &hints {
+                        run(s, "item.linkEntry", json!({ "id": id.as_text(), "entry": e.as_text() }));
+                    }
+                }
+            });
+        }
         ui.add_space(6.0);
         let l = ui.label(crate::i18n::tr("Notes"));
         let r = ui.add(egui::TextEdit::multiline(&mut view.notes).desired_rows(6).desired_width(f32::INFINITY)).labelled_by(l.id);
