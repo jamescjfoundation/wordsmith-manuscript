@@ -185,7 +185,7 @@ pub fn specs() -> Vec<Spec> {
     vec![Spec {
         id: "search.project",
         label: "Search the Project",
-        key: "Mod+Shift+P",
+        key: "Mod+Alt+F",
         params: r#"{"query": string, "case"?: bool, "word"?: bool, "regex"?: bool}"#,
         about: "The items whose text, synopsis, notes or bible entry hold the query, with each match.",
         mutates: false,

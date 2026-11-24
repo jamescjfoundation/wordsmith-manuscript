@@ -1,0 +1,34 @@
+# Exporting
+
+File › Export writes the manuscript to a file. Export never changes the project, and every export is
+read back and checked word for word before the file is kept.
+
+| Format | For |
+| --- | --- |
+| Standard manuscript (DOCX, PDF) | Agents, editors and publishers |
+| Word processor (DOCX), OpenDocument (ODT), rich text (RTF) | Other word processors |
+| Markdown, plain text, web page (HTML) | The web and other tools |
+| Book package (`.wsmz`) | Wordsmith Book |
+
+## Options
+
+Which items (by default every included manuscript item); how chapters and parts are titled (their
+titles, "Chapter 1", "Chapter One", "One", "Chapter 1: Title", or none); scene titles as headings;
+the scene-break symbol; front and back matter; replace-text rules; END after the last line. Save
+options as a preset (`export.savePreset`) to use again.
+
+## The standard manuscript
+
+Letter or A4 paper, 1-inch margins, 12-point serif or monospaced type, double spacing, half-inch
+indents. A title page with your name and contact lines, the word count rounded ("about 82,000
+words"), the title a third down and the name you publish under. From the first page of text, a
+header with your surname, the short title and the page number, counting from 1. Chapters start on
+a new page a third of the way down; scene breaks are a centered `#`; the text ends with END.
+Set your name, pen name, surname and short title for the header, and your contact lines, in the
+book details (`project.setBook`).
+
+## The book package
+
+The book package is the project packed as one file for Wordsmith Book, checked by reading it back
+through the book view. Its report lists the details Book needs that are not set yet (copyright
+year, rights statement, description...).

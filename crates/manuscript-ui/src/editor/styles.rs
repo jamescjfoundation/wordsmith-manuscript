@@ -23,7 +23,7 @@ pub fn specs() -> Vec<Spec> {
         spec("write.sceneBreak", "Scene Break", "Mod+Shift+Enter", "{}", "Insert a scene break at the caret."),
         spec("write.italic", "Italic", "Mod+I", "{}", "Italic on or off."),
         spec("write.bold", "Bold", "Mod+B", "{}", "Bold on or off."),
-        spec("write.smallCaps", "Small Caps", "Mod+Shift+K", "{}", "Small capitals on or off."),
+        spec("write.smallCaps", "Small Caps", "Mod+Alt+K", "{}", "Small capitals on or off."),
         spec("write.strike", "Strikethrough", "", "{}", "Strikethrough on or off."),
         spec("write.language", "Language", "", r#"{"lang": string}"#, "Mark the selection as another language (empty to clear)."),
         spec("write.plain", "Plain Text", "Mod+Space", "{}", "Remove the character styles from the selection."),

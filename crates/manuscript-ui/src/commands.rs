@@ -69,7 +69,7 @@ pub fn specs() -> Vec<Spec> {
             true,
         ),
         spec("binder.setInclude", "Include in Export", "", r#"{"id": id, "include": bool}"#, "Include an item in exports, or leave it out.", true),
-        spec("binder.trash", "Move to Trash", "Mod+Backspace", r#"{"id": id}"#, "Move an item and its children to the Trash.", true),
+        spec("binder.trash", "Move to Trash", "Mod+Shift+Backspace", r#"{"id": id}"#, "Move an item and its children to the Trash.", true),
         spec("binder.restore", "Restore from Trash", "", r#"{"id": id}"#, "Put an item from the Trash back where it came from.", true),
         spec(
             "binder.emptyTrash",
