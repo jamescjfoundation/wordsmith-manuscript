@@ -8,6 +8,7 @@
 pub mod binder;
 pub mod brand;
 pub mod commands;
+pub mod cork;
 pub mod editor;
 pub mod find;
 pub mod findbar;
@@ -86,6 +87,10 @@ pub struct Manuscript {
     pub mode: ViewMode,
     /// The outline's state.
     pub outline: outline::OutlineView,
+    /// The corkboard's state.
+    pub cork: cork::CorkView,
+    /// The folder the corkboard and outline show (follows the binder's selection).
+    pub view_root: Option<ItemId>,
     /// The view preferences.
     pub view: view::ViewPrefs,
     /// Focus mode: the chrome it hid, while on.
@@ -124,6 +129,8 @@ impl Manuscript {
             inspector: inspector::InspectorView::default(),
             mode: ViewMode::Editor,
             outline: outline::OutlineView::default(),
+            cork: cork::CorkView::default(),
+            view_root: None,
             view: view::ViewPrefs::default(),
             focus: None,
             fullscreen: None,
@@ -466,6 +473,7 @@ impl App for Manuscript {
             && let Some(id) = self.binder.selected
         {
             self.open_item(id);
+            self.view_root = self.session.as_ref().and_then(|s| outline::root_of(&s.project, Some(id)));
         }
         if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
             self.sync_editor();
@@ -934,7 +942,7 @@ impl Manuscript {
 
     fn outline_ui(&mut self, ui: &mut egui::Ui) {
         let Some(s) = self.session.as_mut() else { return };
-        let root = outline::root_of(&s.project, self.binder.selected);
+        let root = self.view_root.filter(|r| s.project.binder.contains(*r));
         let hidden = self.binder.hidden.clone();
         let (asks, errors) = outline::view(ui, s, &mut self.outline, root, &hidden, self.binder.selected);
         if let Some(e) = errors.into_iter().last() {
@@ -945,6 +953,14 @@ impl Manuscript {
     }
 
     fn corkboard_ui(&mut self, ui: &mut egui::Ui) {
-        ui.label("The corkboard comes in the next step.");
+        let Some(s) = self.session.as_mut() else { return };
+        let root = self.view_root.filter(|r| s.project.binder.contains(*r));
+        let hidden = self.binder.hidden.clone();
+        let (asks, errors) = cork::view(ui, s, &mut self.cork, root, &hidden, self.binder.selected);
+        if let Some(e) = errors.into_iter().last() {
+            self.status = e;
+        }
+        self.apply_asks(asks);
+        self.sync_editor();
     }
 }
