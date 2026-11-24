@@ -200,39 +200,43 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut TypesView) -> Vec<St
         return errors;
     }
     let mut open = true;
-    egui::Window::new("Entry Types").id(egui::Id::unique("manuscript-entry-types")).open(&mut open).default_size([560.0, 420.0]).show(ctx, |ui| {
-        ui.horizontal_top(|ui| {
-            ui.vertical(|ui| {
-                ui.set_width(170.0);
-                for t in bible::templates(&s.project.settings) {
-                    if ui.selectable_label(v.selected.as_deref() == Some(t.kind.as_str()), &t.title).clicked() {
-                        v.selected = Some(t.kind.clone());
-                        v.draft = Some(t);
-                    }
-                }
-                ui.separator();
-                let r = ui.add(egui::TextEdit::singleline(&mut v.new_type).hint_text("New type (Ship, Spell…)").desired_width(160.0));
-                r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, "New entry type"));
-                if ui.button("Add Type").clicked() && !v.new_type.trim().is_empty() {
-                    let title = v.new_type.trim().to_owned();
-                    let kind = key_of(&title);
-                    match s.run(
-                        "bible.setTemplate",
-                        &json!({ "kind": kind, "title": title, "fields": [{ "name": "Description", "type": "long-text" }] }),
-                    ) {
-                        Ok(_) => {
-                            v.selected = Some(kind.clone());
-                            v.draft = bible::template(&s.project, &kind);
-                            v.new_type.clear();
+    egui::Window::new(crate::i18n::tr("Entry Types"))
+        .id(egui::Id::unique("manuscript-entry-types"))
+        .open(&mut open)
+        .default_size([560.0, 420.0])
+        .show(ctx, |ui| {
+            ui.horizontal_top(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_width(170.0);
+                    for t in bible::templates(&s.project.settings) {
+                        if ui.selectable_label(v.selected.as_deref() == Some(t.kind.as_str()), &t.title).clicked() {
+                            v.selected = Some(t.kind.clone());
+                            v.draft = Some(t);
                         }
-                        Err(e) => errors.push(e),
                     }
-                }
+                    ui.separator();
+                    let r = ui.add(egui::TextEdit::singleline(&mut v.new_type).hint_text("New type (Ship, Spell…)").desired_width(160.0));
+                    r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, "New entry type"));
+                    if ui.button("Add Type").clicked() && !v.new_type.trim().is_empty() {
+                        let title = v.new_type.trim().to_owned();
+                        let kind = key_of(&title);
+                        match s.run(
+                            "bible.setTemplate",
+                            &json!({ "kind": kind, "title": title, "fields": [{ "name": "Description", "type": "long-text" }] }),
+                        ) {
+                            Ok(_) => {
+                                v.selected = Some(kind.clone());
+                                v.draft = bible::template(&s.project, &kind);
+                                v.new_type.clear();
+                            }
+                            Err(e) => errors.push(e),
+                        }
+                    }
+                });
+                ui.separator();
+                ui.vertical(|ui| edit(ui, s, v, &mut errors));
             });
-            ui.separator();
-            ui.vertical(|ui| edit(ui, s, v, &mut errors));
         });
-    });
     if !open {
         v.open = false;
     }

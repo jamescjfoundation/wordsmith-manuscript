@@ -399,7 +399,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
 fn add_media(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<String>) {
     let Some((link, text, inside)) = view.add_media.as_mut() else { return };
     let mut done = false;
-    egui::Window::new(if *link { "Add Web Link" } else { "Add Image or PDF" })
+    egui::Window::new(crate::i18n::tr(if *link { "Add Web Link" } else { "Add Image or PDF" }))
         .collapsible(false)
         .resizable(false)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
@@ -438,24 +438,27 @@ fn confirm_empty(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &m
     }
     let ids: Vec<ItemId> = s.project.binder.rows_of(Area::Trash).iter().map(|r| r.item.id).collect();
     let words: usize = ids.iter().map(|i| s.project.item_words(*i)).sum();
-    egui::Window::new("Empty Trash").collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ui.ctx(), |ui| {
-        ui.label(format!(
-            "Remove {} item{} and {} word{} for good? This cannot be undone once the project is saved.",
-            ids.len(),
-            if ids.len() == 1 { "" } else { "s" },
-            format_words(words),
-            if words == 1 { "" } else { "s" }
-        ));
-        ui.horizontal(|ui| {
-            if ui.button("Empty Trash").clicked() {
-                if let Err(e) = s.run("binder.emptyTrash", &json!({ "confirm": true })) {
-                    errors.push(e);
+    egui::Window::new(crate::i18n::tr("Empty Trash")).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(
+        ui.ctx(),
+        |ui| {
+            ui.label(format!(
+                "Remove {} item{} and {} word{} for good? This cannot be undone once the project is saved.",
+                ids.len(),
+                if ids.len() == 1 { "" } else { "s" },
+                format_words(words),
+                if words == 1 { "" } else { "s" }
+            ));
+            ui.horizontal(|ui| {
+                if ui.button("Empty Trash").clicked() {
+                    if let Err(e) = s.run("binder.emptyTrash", &json!({ "confirm": true })) {
+                        errors.push(e);
+                    }
+                    view.confirm_empty = false;
                 }
-                view.confirm_empty = false;
-            }
-            if ui.button("Cancel").clicked() {
-                view.confirm_empty = false;
-            }
-        });
-    });
+                if ui.button("Cancel").clicked() {
+                    view.confirm_empty = false;
+                }
+            });
+        },
+    );
 }

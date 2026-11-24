@@ -23,11 +23,22 @@ pub struct ViewPrefs {
     pub dim_in_focus: bool,
     /// Show grammar and style hints (ED-9); off unless the writer turns them on.
     pub grammar: bool,
+    /// The interface's language (ACC-4): a code from `i18n::LANGUAGES`, or empty to follow the
+    /// computer.
+    pub language: String,
 }
 
 impl Default for ViewPrefs {
     fn default() -> Self {
-        ViewPrefs { surface: EditorSurface::Theme, size: 17.0, width: 680.0, typewriter: false, dim_in_focus: false, grammar: false }
+        ViewPrefs {
+            surface: EditorSurface::Theme,
+            size: 17.0,
+            width: 680.0,
+            typewriter: false,
+            dim_in_focus: false,
+            grammar: false,
+            language: String::new(),
+        }
     }
 }
 

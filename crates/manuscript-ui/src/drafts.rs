@@ -160,100 +160,104 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut DraftsView) -> Vec<S
     }
     let mut open = true;
     let mut todo: Option<(&str, Value)> = None;
-    egui::Window::new("Drafts").id(egui::Id::unique("manuscript-drafts")).open(&mut open).default_size([620.0, 480.0]).show(ctx, |ui| {
-        let list = run(s, "draft.list", &json!({})).and_then(Result::ok).unwrap_or_default();
-        for d in list["drafts"].as_array().cloned().unwrap_or_default() {
-            let did = d["id"].as_str().unwrap_or("").to_owned();
-            ui.horizontal(|ui| {
-                let name = d["name"].as_str().unwrap_or("");
-                let working = d["working"].as_bool() == Some(true);
-                ui.label(RichText::new(name).strong());
-                ui.label(
-                    RichText::new(format!(
-                        "{} words{}",
-                        crate::binder::format_words(d["words"].as_u64().unwrap_or(0) as usize),
-                        if working { ", being written" } else { "" }
-                    ))
-                    .weak(),
-                );
-                if d["exports"].as_bool() == Some(true) {
-                    ui.label(RichText::new("exports").weak());
-                } else if ui.small_button("Export This").on_hover_text("Export this draft").clicked() {
-                    todo = Some(("draft.setExport", json!({ "id": did })));
-                }
-                if !working {
-                    if ui.small_button("Compare").on_hover_text("Compare with the draft being written, scene by scene").clicked() {
-                        v.compare = Some(did.clone());
+    egui::Window::new(crate::i18n::tr("Drafts")).id(egui::Id::unique("manuscript-drafts")).open(&mut open).default_size([620.0, 480.0]).show(
+        ctx,
+        |ui| {
+            let list = run(s, "draft.list", &json!({})).and_then(Result::ok).unwrap_or_default();
+            for d in list["drafts"].as_array().cloned().unwrap_or_default() {
+                let did = d["id"].as_str().unwrap_or("").to_owned();
+                ui.horizontal(|ui| {
+                    let name = d["name"].as_str().unwrap_or("");
+                    let working = d["working"].as_bool() == Some(true);
+                    ui.label(RichText::new(name).strong());
+                    ui.label(
+                        RichText::new(format!(
+                            "{} words{}",
+                            crate::binder::format_words(d["words"].as_u64().unwrap_or(0) as usize),
+                            if working { ", being written" } else { "" }
+                        ))
+                        .weak(),
+                    );
+                    if d["exports"].as_bool() == Some(true) {
+                        ui.label(RichText::new("exports").weak());
+                    } else if ui.small_button("Export This").on_hover_text("Export this draft").clicked() {
+                        todo = Some(("draft.setExport", json!({ "id": did })));
                     }
-                    if ui.small_button("Write This").on_hover_text("Make it the draft being written").clicked() {
-                        todo = Some(("draft.switch", json!({ "id": did })));
-                    }
-                    if ui.small_button("Delete").clicked() {
-                        todo = Some(("draft.delete", json!({ "id": did })));
-                    }
-                }
-            });
-        }
-        ui.separator();
-        ui.horizontal(|ui| {
-            let r = ui.add(egui::TextEdit::singleline(&mut v.new_name).hint_text("Second Draft").desired_width(180.0));
-            r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, "New draft's name"));
-            if ui.button("New Draft").on_hover_text("Keep this draft as it is, and carry on writing as the new one").clicked()
-                && !v.new_name.trim().is_empty()
-            {
-                todo = Some(("draft.new", json!({ "name": v.new_name.trim() })));
-                v.new_name.clear();
-            }
-        });
-        if let Some(old) = v.compare.clone() {
-            ui.separator();
-            let name = s.project.settings.drafts.iter().find(|d| d.id == old).map(|d| d.name.clone()).unwrap_or_default();
-            ui.label(RichText::new(format!("“{name}” and “{}”, scene by scene", drafts::working_name(&s.project))).strong());
-            let (Some(a), Some(b)) = (drafts::body(&s.project, &old), drafts::body(&s.project, "")) else { return };
-            let changes = drafts::compare(&a, &b);
-            egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                for c in &changes {
-                    let state = match (c.in_old, c.in_new) {
-                        (false, _) => "added".to_owned(),
-                        (_, false) => "cut".to_owned(),
-                        _ if c.diff.is_same() => "same".to_owned(),
-                        _ => format!("+{} −{} words", c.diff.added, c.diff.removed),
-                    };
-                    let open_this = v.expanded == Some(c.id);
-                    if ui.selectable_label(open_this, format!("{}  ·  {state}", c.title)).clicked() {
-                        v.expanded = if open_this { None } else { Some(c.id) };
-                    }
-                    if open_this && !c.diff.is_same() {
-                        let t = jcj_theme::Theme::get(ui.ctx());
-                        for p in &c.diff.paras {
-                            if p.iter().all(|seg| seg.change == Change::Same) {
-                                continue;
-                            }
-                            let mut job = egui::text::LayoutJob::default();
-                            job.wrap.max_width = ui.available_width();
-                            for seg in p {
-                                let mut f = egui::TextFormat { font_id: jcj_theme::regular(t.type_sizes.body), color: t.text, ..Default::default() };
-                                match seg.change {
-                                    Change::Same => {}
-                                    Change::Added => {
-                                        f.underline = egui::Stroke::new(1.5, t.accent);
-                                        f.background = t.accent_soft;
-                                    }
-                                    Change::Removed => {
-                                        f.strikethrough = egui::Stroke::new(1.5, t.danger);
-                                        f.color = t.danger;
-                                    }
-                                }
-                                job.append(&seg.text, 0.0, f);
-                            }
-                            let plain: String = p.iter().map(|x| x.text.as_str()).collect();
-                            ui.label(job).widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &plain));
+                    if !working {
+                        if ui.small_button("Compare").on_hover_text("Compare with the draft being written, scene by scene").clicked() {
+                            v.compare = Some(did.clone());
+                        }
+                        if ui.small_button("Write This").on_hover_text("Make it the draft being written").clicked() {
+                            todo = Some(("draft.switch", json!({ "id": did })));
+                        }
+                        if ui.small_button("Delete").clicked() {
+                            todo = Some(("draft.delete", json!({ "id": did })));
                         }
                     }
+                });
+            }
+            ui.separator();
+            ui.horizontal(|ui| {
+                let r = ui.add(egui::TextEdit::singleline(&mut v.new_name).hint_text("Second Draft").desired_width(180.0));
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, "New draft's name"));
+                if ui.button("New Draft").on_hover_text("Keep this draft as it is, and carry on writing as the new one").clicked()
+                    && !v.new_name.trim().is_empty()
+                {
+                    todo = Some(("draft.new", json!({ "name": v.new_name.trim() })));
+                    v.new_name.clear();
                 }
             });
-        }
-    });
+            if let Some(old) = v.compare.clone() {
+                ui.separator();
+                let name = s.project.settings.drafts.iter().find(|d| d.id == old).map(|d| d.name.clone()).unwrap_or_default();
+                ui.label(RichText::new(format!("“{name}” and “{}”, scene by scene", drafts::working_name(&s.project))).strong());
+                let (Some(a), Some(b)) = (drafts::body(&s.project, &old), drafts::body(&s.project, "")) else { return };
+                let changes = drafts::compare(&a, &b);
+                egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                    for c in &changes {
+                        let state = match (c.in_old, c.in_new) {
+                            (false, _) => "added".to_owned(),
+                            (_, false) => "cut".to_owned(),
+                            _ if c.diff.is_same() => "same".to_owned(),
+                            _ => format!("+{} −{} words", c.diff.added, c.diff.removed),
+                        };
+                        let open_this = v.expanded == Some(c.id);
+                        if ui.selectable_label(open_this, format!("{}  ·  {state}", c.title)).clicked() {
+                            v.expanded = if open_this { None } else { Some(c.id) };
+                        }
+                        if open_this && !c.diff.is_same() {
+                            let t = jcj_theme::Theme::get(ui.ctx());
+                            for p in &c.diff.paras {
+                                if p.iter().all(|seg| seg.change == Change::Same) {
+                                    continue;
+                                }
+                                let mut job = egui::text::LayoutJob::default();
+                                job.wrap.max_width = ui.available_width();
+                                for seg in p {
+                                    let mut f =
+                                        egui::TextFormat { font_id: jcj_theme::regular(t.type_sizes.body), color: t.text, ..Default::default() };
+                                    match seg.change {
+                                        Change::Same => {}
+                                        Change::Added => {
+                                            f.underline = egui::Stroke::new(1.5, t.accent);
+                                            f.background = t.accent_soft;
+                                        }
+                                        Change::Removed => {
+                                            f.strikethrough = egui::Stroke::new(1.5, t.danger);
+                                            f.color = t.danger;
+                                        }
+                                    }
+                                    job.append(&seg.text, 0.0, f);
+                                }
+                                let plain: String = p.iter().map(|x| x.text.as_str()).collect();
+                                ui.label(job).widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &plain));
+                            }
+                        }
+                    }
+                });
+            }
+        },
+    );
     if let Some((cmd, args)) = todo
         && let Err(e) = s.run(cmd, &args)
     {

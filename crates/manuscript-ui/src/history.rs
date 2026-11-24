@@ -88,9 +88,12 @@ pub fn window(ctx: &egui::Context, h: &History, v: &mut HistoryView, today: Day)
     }
     let (year, month) = v.month.unwrap_or((today.year, today.month));
     let mut open = true;
-    egui::Window::new("Writing History").id(egui::Id::unique("manuscript-history")).open(&mut open).resizable(false).show(ctx, |ui| {
-        calendar(ui, h, v, year, month, today);
-    });
+    egui::Window::new(crate::i18n::tr("Writing History")).id(egui::Id::unique("manuscript-history")).open(&mut open).resizable(false).show(
+        ctx,
+        |ui| {
+            calendar(ui, h, v, year, month, today);
+        },
+    );
     if !open {
         v.open = false;
     }

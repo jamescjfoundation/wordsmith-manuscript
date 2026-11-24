@@ -44,3 +44,11 @@ the document ("Text of “Scene One”"); its value is the paragraph with the ca
 it is not body text ("Quote: …", "Heading 1: …"), and the caret and selection are reported as you
 move. In a text read as one, each document's title line reads as "Document: …". Every command is
 also in the command palette and can be given a key (File › Keys).
+
+## Interface language
+
+The interface follows your computer's language when it comes in it, and English otherwise. To
+choose, run Interface Language in the command palette (Interface Language: English, Interface
+Language: Español). The commands, the ribbon, the panels and the windows are translated; anything
+not translated yet shows in English. Your text, its language and its spelling are separate: they
+follow the project's language (File › Book Details).

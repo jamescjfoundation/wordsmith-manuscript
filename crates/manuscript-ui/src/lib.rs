@@ -24,6 +24,7 @@ pub mod filter;
 pub mod find;
 pub mod findbar;
 pub mod history;
+pub mod i18n;
 pub mod imports;
 pub mod inspector;
 pub mod media;
@@ -637,6 +638,12 @@ impl Commands for Manuscript {
             }
             v.push(CommandInfo::new(spec.id, spec.label, spec.key));
         }
+        for (code, name, _) in i18n::LANGUAGES {
+            v.push(CommandInfo::new(format!("view.language.{code}"), format!("{}: {name}", i18n::tr("Interface Language")), ""));
+        }
+        for c in &mut v {
+            c.label = i18n::tr(&c.label);
+        }
         v
     }
 }
@@ -690,14 +697,17 @@ impl App for Manuscript {
         if self.focus.is_some() {
             return Vec::new();
         }
-        vec![PanelSpec::new(BINDER_PANEL, "Binder", "list", Side::Left), PanelSpec::new(INSPECTOR_PANEL, "Inspector", "info", Side::Right)]
+        vec![
+            PanelSpec::new(BINDER_PANEL, i18n::tr("Binder"), "list", Side::Left),
+            PanelSpec::new(INSPECTOR_PANEL, i18n::tr("Inspector"), "info", Side::Right),
+        ]
     }
 
     fn ribbon_tabs(&self) -> Vec<jcj_shell::TabSpec> {
         vec![
-            jcj_shell::TabSpec::new("write", "Write", "W"),
-            jcj_shell::TabSpec::new("bible", "Bible", "B"),
-            jcj_shell::TabSpec::new("view", "View", "V"),
+            jcj_shell::TabSpec::new("write", i18n::tr("Write"), "W"),
+            jcj_shell::TabSpec::new("bible", i18n::tr("Bible"), "B"),
+            jcj_shell::TabSpec::new("view", i18n::tr("View"), "V"),
         ]
     }
 
@@ -1132,6 +1142,11 @@ impl Manuscript {
             let dir = self.templates_dir.clone().ok_or("templates cannot be kept on this computer")?;
             let t = cmd.params.get("template").and_then(|n| n.as_str()).ok_or("`template` is required")?;
             user_templates::delete(&dir, t.strip_prefix("user:").unwrap_or(t))?;
+            return Ok(());
+        }
+        if let Some(code) = cmd.id.strip_prefix("view.language.") {
+            self.view.language = code.to_owned();
+            i18n::set_language(code);
             return Ok(());
         }
         if cmd.id == "view.drafts" {
@@ -1593,7 +1608,7 @@ impl Manuscript {
         let Some((name, about)) = self.save_template.as_mut() else { return };
         let mut go = false;
         let mut cancel = false;
-        egui::Window::new("Save as Template").collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
+        egui::Window::new(i18n::tr("Save as Template")).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
             ui.label("A template keeps this project's binder, lists, fields, entry types, targets, notes and front matter. The book's own text and its bible entries are not kept.");
             let l = ui.label("Name");
             ui.add(egui::TextEdit::singleline(name).desired_width(320.0)).labelled_by(l.id);

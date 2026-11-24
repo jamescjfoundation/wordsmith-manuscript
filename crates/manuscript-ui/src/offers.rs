@@ -159,72 +159,76 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut InboxView) -> (Vec<S
         None => Err("Save the project first: offers come from a file beside its folder.".into()),
     };
     let mut open = true;
-    egui::Window::new("Offered Fixes").id(egui::Id::unique("manuscript-offers")).open(&mut open).default_size([560.0, 440.0]).show(ctx, |ui| {
-        let file = match file {
-            Ok(f) => f,
-            Err(e) => {
-                ui.label(e);
-                return;
-            }
-        };
-        ui.label(RichText::new("Fixes Wordsmith Book offers back. Nothing changes until you accept one.").weak());
-        ui.checkbox(&mut v.all, "Show decided fixes too");
-        let mut todo: Option<(&str, String)> = None;
-        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-            let shown: Vec<&Offer> = file.offers.iter().filter(|o| v.all || matches!(state(&s.project, o), "pending" | "stale")).collect();
-            if shown.is_empty() {
-                ui.label("No fixes are waiting.");
-            }
-            for o in shown {
-                let st = state(&s.project, o);
-                ui.group(|ui| {
-                    ui.horizontal(|ui| {
-                        let title = s.project.binder.get(o.item).map_or_else(|| "(an item no longer in the project)".to_owned(), |i| i.title.clone());
-                        ui.label(RichText::new(title).strong());
-                        ui.label(RichText::new(st).weak());
-                    });
-                    if !o.note.is_empty() {
-                        ui.label(&o.note);
-                    }
-                    let t = jcj_theme::Theme::get(ui.ctx());
-                    let mut job = egui::text::LayoutJob::default();
-                    for seg in diff::paragraph(&o.find, &o.replace) {
-                        let mut f = egui::TextFormat { font_id: jcj_theme::regular(t.type_sizes.body), color: t.text, ..Default::default() };
-                        match seg.change {
-                            Change::Same => {}
-                            Change::Added => {
-                                f.underline = egui::Stroke::new(1.5, t.accent);
-                                f.background = t.accent_soft;
+    egui::Window::new(crate::i18n::tr("Offered Fixes")).id(egui::Id::unique("manuscript-offers")).open(&mut open).default_size([560.0, 440.0]).show(
+        ctx,
+        |ui| {
+            let file = match file {
+                Ok(f) => f,
+                Err(e) => {
+                    ui.label(e);
+                    return;
+                }
+            };
+            ui.label(RichText::new("Fixes Wordsmith Book offers back. Nothing changes until you accept one.").weak());
+            ui.checkbox(&mut v.all, "Show decided fixes too");
+            let mut todo: Option<(&str, String)> = None;
+            egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                let shown: Vec<&Offer> = file.offers.iter().filter(|o| v.all || matches!(state(&s.project, o), "pending" | "stale")).collect();
+                if shown.is_empty() {
+                    ui.label("No fixes are waiting.");
+                }
+                for o in shown {
+                    let st = state(&s.project, o);
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            let title =
+                                s.project.binder.get(o.item).map_or_else(|| "(an item no longer in the project)".to_owned(), |i| i.title.clone());
+                            ui.label(RichText::new(title).strong());
+                            ui.label(RichText::new(st).weak());
+                        });
+                        if !o.note.is_empty() {
+                            ui.label(&o.note);
+                        }
+                        let t = jcj_theme::Theme::get(ui.ctx());
+                        let mut job = egui::text::LayoutJob::default();
+                        for seg in diff::paragraph(&o.find, &o.replace) {
+                            let mut f = egui::TextFormat { font_id: jcj_theme::regular(t.type_sizes.body), color: t.text, ..Default::default() };
+                            match seg.change {
+                                Change::Same => {}
+                                Change::Added => {
+                                    f.underline = egui::Stroke::new(1.5, t.accent);
+                                    f.background = t.accent_soft;
+                                }
+                                Change::Removed => {
+                                    f.strikethrough = egui::Stroke::new(1.5, t.danger);
+                                    f.color = t.danger;
+                                }
                             }
-                            Change::Removed => {
-                                f.strikethrough = egui::Stroke::new(1.5, t.danger);
-                                f.color = t.danger;
+                            job.append(&seg.text, 0.0, f);
+                        }
+                        let shown = format!("{} → {}", o.find, o.replace);
+                        ui.label(job).widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &shown));
+                        ui.horizontal(|ui| {
+                            if st == "pending" && ui.button("Accept").clicked() {
+                                todo = Some(("offers.accept", o.id.clone()));
                             }
-                        }
-                        job.append(&seg.text, 0.0, f);
-                    }
-                    let shown = format!("{} → {}", o.find, o.replace);
-                    ui.label(job).widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &shown));
-                    ui.horizontal(|ui| {
-                        if st == "pending" && ui.button("Accept").clicked() {
-                            todo = Some(("offers.accept", o.id.clone()));
-                        }
-                        if matches!(st, "pending" | "stale") && ui.button("Reject").clicked() {
-                            todo = Some(("offers.reject", o.id.clone()));
-                        }
-                        if s.project.binder.contains(o.item) && ui.button("Open").clicked() {
-                            open_item = Some(o.item);
-                        }
+                            if matches!(st, "pending" | "stale") && ui.button("Reject").clicked() {
+                                todo = Some(("offers.reject", o.id.clone()));
+                            }
+                            if s.project.binder.contains(o.item) && ui.button("Open").clicked() {
+                                open_item = Some(o.item);
+                            }
+                        });
                     });
-                });
+                }
+            });
+            if let Some((cmd, oid)) = todo
+                && let Err(e) = s.run(cmd, &json!({ "id": oid }))
+            {
+                errors.push(e);
             }
-        });
-        if let Some((cmd, oid)) = todo
-            && let Err(e) = s.run(cmd, &json!({ "id": oid }))
-        {
-            errors.push(e);
-        }
-    });
+        },
+    );
     if !open {
         v.open = false;
     }
