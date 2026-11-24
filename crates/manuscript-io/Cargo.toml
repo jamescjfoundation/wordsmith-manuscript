@@ -20,3 +20,6 @@ jcj-layout = { workspace = true }
 jcj-output = { workspace = true }
 jcj-features = { workspace = true }
 jcj-proof = { workspace = true }
+
+[dev-dependencies]
+jcj-interchange = { workspace = true }
