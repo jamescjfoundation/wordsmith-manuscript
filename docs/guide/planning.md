@@ -9,7 +9,7 @@ the end; double-click a card to edit its title and synopsis.
 ## The outline
 
 View › Outline (Mod+3) shows everything under the selected folder as a table: title and synopsis,
-label, status, words, target with progress, point of view and keywords. Click a heading to sort
+label, status, words, target with progress, one column for each custom field, and keywords. Click a heading to sort
 (sorting only changes the view; "Apply This Order to the Binder" makes it real, as one undo step).
 Double-click a cell to edit it. Drag rows to move items when the table is in binder order.
 
@@ -17,8 +17,14 @@ The binder, the corkboard and the outline always show the same order.
 
 ## The inspector
 
-The inspector holds the selected item's synopsis, label, status, point of view, target, keywords,
-linked bible entries, notes and snapshots. Changes are kept when you leave a field.
+The inspector holds the selected item's synopsis, label, status, custom fields, target, keywords,
+linked bible entries, notes, comments and snapshots. Changes are kept when you leave a field.
+
+**Custom fields.** Every project starts with a Point of view field. Add your own under Project
+fields at the foot of the inspector: text, a date (written YYYY-MM-DD, so dates sort in order), a
+checkbox, or a list of choices (scene date, location, weather, "needs research"). Each field is a
+column in the outline, where it can be edited and sorted. Renaming a field keeps every value
+(`project.renameField`); removing one in use asks first (`project.setFields`).
 
 Labels, statuses and keywords come from the project's lists; removing a name in use asks first and
 then clears it from the items (`project.setLabels`, `project.setStatuses`, `project.setKeywords`).

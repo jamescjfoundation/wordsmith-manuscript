@@ -121,6 +121,8 @@ tools!(
     "comment.set",
     "comment.remove",
     "comment.list",
+    "project.setFields",
+    "project.renameField",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",

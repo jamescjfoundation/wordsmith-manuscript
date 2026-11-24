@@ -7,14 +7,22 @@ use std::collections::HashSet;
 
 use jcj_shell::egui::Ui;
 use serde_json::{Value, json};
-use wordsmith_manuscript_model::{Area, ItemId, POV_FIELD, Place, Project};
+use wordsmith_manuscript_model::{Area, FieldKind, ItemId, Place, Project};
 
 use crate::commands::{Spec, id_param};
 use crate::session::{Outcome, Session};
 use crate::table::{Cell, Column, Edit, Sort, TableEvent, TableRow, TableState, sorted, table};
 
-/// The outline's columns, in order.
-pub const COLUMNS: [&str; 7] = ["Title", "Label", "Status", "Words", "Target", POV_FIELD, "Keywords"];
+/// The outline's columns, in order: the fixed ones, one per custom field (INS-6), then keywords.
+pub fn column_names(p: &Project) -> Vec<String> {
+    let mut v: Vec<String> = ["Title", "Label", "Status", "Words", "Target"].iter().map(|s| (*s).to_owned()).collect();
+    v.extend(p.settings.fields.iter().map(|f| f.name.clone()));
+    v.push("Keywords".into());
+    v
+}
+
+/// The first custom field's column.
+const FIRST_FIELD: usize = 5;
 
 /// Where an outline or corkboard starts: the item when it holds children, else its parent; the
 /// Manuscript area when there is neither.
@@ -82,9 +90,14 @@ pub fn rows(p: &Project, list: &[(ItemId, usize)]) -> Vec<TableRow<ItemId>> {
                         progress: target.filter(|t| *t > 0).map(|t| words as f32 / t as f32),
                         ..Cell::default()
                     },
-                    Cell::text(meta.fields.get(POV_FIELD).cloned().unwrap_or_default()),
-                    Cell::text(meta.keywords.join(", ")),
-                ],
+                ]
+                .into_iter()
+                .chain(p.settings.fields.iter().map(|f| {
+                    let v = meta.fields.get(&f.name).cloned().unwrap_or_default();
+                    Cell::text(if f.kind == FieldKind::Checkbox && !v.is_empty() { "✓".to_owned() } else { v })
+                }))
+                .chain(std::iter::once(Cell::text(meta.keywords.join(", "))))
+                .collect(),
             })
         })
         .collect()
@@ -101,9 +114,18 @@ fn columns(p: &Project) -> Vec<Column> {
         Column::new("Status", 120.0).edit(Edit::Choice(statuses)),
         Column::new("Words", 70.0).numeric(),
         Column::new("Target", 80.0).numeric().edit(Edit::Text),
-        Column::new(POV_FIELD, 110.0).edit(Edit::Text),
-        Column::new("Keywords", 160.0),
     ]
+    .into_iter()
+    .chain(p.settings.fields.iter().map(|f| {
+        let edit = match f.kind {
+            FieldKind::Text | FieldKind::Date => Edit::Text,
+            FieldKind::Checkbox => Edit::Choice(vec![String::new(), crate::fields::YES.to_owned()]),
+            FieldKind::List => Edit::Choice(std::iter::once(String::new()).chain(f.choices.iter().cloned()).collect()),
+        };
+        Column::new(&f.name, 110.0).edit(edit)
+    }))
+    .chain(std::iter::once(Column::new("Keywords", 160.0)))
+    .collect()
 }
 
 /// The outline's state.
@@ -189,7 +211,10 @@ fn edit(s: &mut Session, id: ItemId, column: usize, value: String) -> Result<(),
             }
             s.run("item.setTarget", &json!({ "id": i, "words": words }))
         }
-        5 => s.run("item.setField", &json!({ "id": i, "field": POV_FIELD, "value": value })),
+        n if n >= FIRST_FIELD && n < FIRST_FIELD + s.project.settings.fields.len() => {
+            let field = s.project.settings.fields[n - FIRST_FIELD].name.clone();
+            s.run("item.setField", &json!({ "id": i, "field": field, "value": value }))
+        }
         _ => Ok(json!({})),
     };
     r.map(|_| ())
@@ -234,12 +259,13 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 .and_then(Value::as_u64)
                 .map(|c| Sort { column: c as usize, descending: v.get("descending").and_then(Value::as_bool).unwrap_or(false) });
             let rows = sorted(&rows(&s.project, &list), &columns(&s.project), sort);
+            let names = column_names(&s.project);
             Ok(Value::Array(
                 rows.iter()
                     .map(|row| {
                         let mut o = json!({ "id": row.key.as_text(), "depth": row.depth, "synopsis": row.cells.first().map(|c| c.second.clone()) });
-                        for (n, name) in COLUMNS.iter().enumerate() {
-                            o[*name] = json!(row.cells.get(n).map(|c| c.text.clone()).unwrap_or_default());
+                        for (n, name) in names.iter().enumerate() {
+                            o[name.as_str()] = json!(row.cells.get(n).map(|c| c.text.clone()).unwrap_or_default());
                         }
                         o
                     })

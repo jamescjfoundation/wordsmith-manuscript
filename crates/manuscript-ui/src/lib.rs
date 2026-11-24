@@ -14,6 +14,7 @@ pub mod comments;
 pub mod cork;
 pub mod editor;
 pub mod exports;
+pub mod fields;
 pub mod filter;
 pub mod find;
 pub mod findbar;

@@ -29,6 +29,22 @@ document's title separates them. Edit freely: each document gets its own words b
 project is saved. A paragraph you type at the end of a document belongs to it; documents are never
 merged or lost, even when you select across a divider and type.
 
+## Two panes
+
+View › Split (Mod+Alt+\\) shows two editors side by side; Split Top and Bottom stacks them. Each pane
+holds a document or a text read as one. Click a pane, its tab or press Mod+Alt+O to make it the
+active one: the binder opens documents there. A document is editable in one pane at a time; if the
+other pane already holds it (alone, or inside a text read as one), it opens read-only and shows the
+other pane's changes when you come back to it. One Pane, or a tab's close button, goes back to one.
+
+## Comments
+
+Select some words and choose Add Comment (Mod+Alt+M): the words get a soft highlight and the
+comment opens in the inspector to write. The inspector lists the document's comments in text
+order; Remove takes a comment away and leaves the words exactly as they were. Exports leave
+comments out unless you tick "Comments as review comments", which makes them real comments in
+DOCX, ODT and RTF files for an editor to answer.
+
 ## Find and replace
 
 Mod+F opens the find bar. Find in the document, the selection or the whole project, with match

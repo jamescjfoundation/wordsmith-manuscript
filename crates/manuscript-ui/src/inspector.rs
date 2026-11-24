@@ -5,7 +5,7 @@
 
 use jcj_shell::egui::{self, RichText, Ui};
 use serde_json::{Value, json};
-use wordsmith_manuscript_model::{Area, ItemId, Kind, Named, POV_FIELD, Project};
+use wordsmith_manuscript_model::{Area, ItemId, Kind, Named, Project};
 
 use crate::commands::{Spec, id_param, opt_str, str_param};
 use crate::session::{Outcome, Session};
@@ -35,7 +35,7 @@ pub fn specs() -> Vec<Spec> {
             "item.setField",
             "Set Field",
             r#"{"id": id, "field": string, "value": string}"#,
-            "A custom field's value (point of view at 0.1); empty clears it.",
+            "A custom field's value, checked against its kind (dates YYYY-MM-DD, checkboxes yes or no, lists one of their choices); empty clears it.",
         ),
         spec(
             "item.get",
@@ -295,10 +295,9 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             let i = id_param(v, "id")?;
             has_text(&s.project, i)?;
             let field = str_param(v, "field")?.to_owned();
-            if !s.project.settings.fields.iter().any(|f| f.name == field) {
-                return Err(format!("`{field}` is not one of the project's fields"));
-            }
-            let value = str_param(v, "value")?.trim().to_owned();
+            let def =
+                s.project.settings.fields.iter().find(|f| f.name == field).ok_or_else(|| format!("`{field}` is not one of the project's fields"))?;
+            let value = crate::fields::checked(def, str_param(v, "value")?)?;
             s.change("Field", &[i], &[], |p| {
                 let f = &mut p.text_mut(i).meta.fields;
                 if value.is_empty() {
@@ -414,7 +413,8 @@ pub struct InspectorView {
     notes: String,
     keyword: String,
     target: String,
-    pov: String,
+    fields: std::collections::BTreeMap<String, String>,
+    fields_editor: crate::fields::FieldsEditor,
 }
 
 impl InspectorView {
@@ -425,7 +425,7 @@ impl InspectorView {
         self.synopsis = meta.synopsis;
         self.notes = meta.notes;
         self.target = meta.target.map(|t| t.to_string()).unwrap_or_default();
-        self.pov = meta.fields.get(POV_FIELD).cloned().unwrap_or_default();
+        self.fields = meta.fields.clone();
         self.keyword.clear();
         self.comments = meta.comments.into_iter().map(|(k, c)| (k, c.text)).collect();
     }
@@ -492,13 +492,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             });
             c.response.labelled_by(l.id);
         });
-        ui.horizontal(|ui| {
-            let l = ui.label(POV_FIELD);
-            let r = ui.text_edit_singleline(&mut view.pov).labelled_by(l.id);
-            if r.lost_focus() && s.project.text(id).and_then(|t| t.meta.fields.get(POV_FIELD)).map(String::as_str).unwrap_or("") != view.pov.trim() {
-                run(s, "item.setField", json!({ "id": id.as_text(), "field": POV_FIELD, "value": view.pov }));
-            }
-        });
+        crate::fields::item_section(ui, s, id, &mut view.fields, &mut errs.borrow_mut());
         ui.horizontal(|ui| {
             let l = ui.label("Target");
             let r = ui.add(egui::TextEdit::singleline(&mut view.target).desired_width(80.0).hint_text("words")).labelled_by(l.id);
@@ -561,6 +555,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             run(s, "item.setNotes", json!({ "id": id.as_text(), "notes": view.notes }));
         }
         comments_section(ui, s, view, id, &mut errs.borrow_mut());
+        crate::fields::project_section(ui, s, &mut view.fields_editor, &mut errs.borrow_mut());
         crate::snapshots::panel_section(ui, s, id, &mut errs.borrow_mut());
     });
     errors.extend(errs.into_inner());
