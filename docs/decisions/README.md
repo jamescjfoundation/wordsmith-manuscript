@@ -9,3 +9,4 @@ Decisions about interfaces shared by the foundation's apps go in open-source-cor
 | --- | --- |
 | [0001](0001-built-on-open-source-core.md) | Built on open-source-core |
 | [0002](0002-name-and-extensions.md) | The name and the file extensions |
+| [0003](0003-the-text-dialect-parser.md) | Our own reader for the text dialect |

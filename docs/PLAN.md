@@ -869,7 +869,7 @@ Besides open-source-core and what it brings in. Licenses are re-checked before e
 
 | Project | Use | License | When |
 | --- | --- | --- | --- |
-| [pulldown-cmark](https://crates.io/crates/pulldown-cmark) | CommonMark parsing for the text dialect | MIT | M1.1 |
+| [pulldown-cmark](https://crates.io/crates/pulldown-cmark) | Not used: the dialect has its own reader (decision 0003) | MIT | – |
 | [toml](https://crates.io/crates/toml) | `project.toml`, `binder.toml`, front matter (already in the core's lock file) | MIT OR Apache-2.0 | M1.1 |
 | [uuid](https://crates.io/crates/uuid) | Version 7 ids (already in the core's lock file) | MIT OR Apache-2.0 | M1.1 |
 | [zip](https://crates.io/crates/zip) | `.wsmz` packing, at the core's version and with its reading rules | MIT | M1.2 |

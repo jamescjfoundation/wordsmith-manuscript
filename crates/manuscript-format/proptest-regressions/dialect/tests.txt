@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 31223a4fddbb817065fd6726dc6d502a1e14599873706af2e4fce590c927ab61 # shrinks to t = Text { blocks: [], notes: [Note { label: "a", paras: [[Span { text: "^a", marks: Marks { italic: false, bold: false, small_caps: false, strike: false, lang: None, link: None, comment: Some("c0") } }]] }] }

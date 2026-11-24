@@ -4,3 +4,20 @@
 
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
+
+mod binder;
+pub mod entries;
+mod id;
+mod meta;
+mod project;
+mod settings;
+pub mod text;
+pub mod words;
+
+pub use binder::{Area, Binder, BinderError, Item, Kind, MAX_DEPTH, Place, Role, Row};
+pub use entries::Entry;
+pub use id::{BadId, ItemId};
+pub use meta::{Comment, ItemMeta, ItemText};
+pub use project::Project;
+pub use settings::{BookInfo, DAYS, FieldDef, FieldKind, Named, POV_FIELD, Settings, Targets};
+pub use text::{Block, Fence, ImageRole, Inline, Inlines, Marks, Note, Text};
