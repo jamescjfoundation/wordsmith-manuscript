@@ -39,3 +39,11 @@ series' and it sees all of them. Every book of the series now reads and writes t
 what one book saves appears in the others (the status bar says so), and if two books change the
 same entry at once, both versions are kept. The Series window lists the books with Open buttons.
 Leave the Series keeps a copy of the bible in the book as its own.
+
+## Relationships
+
+An entry's Relationships section says how it stands to other entries: sibling of, married to,
+friend of, rival of, parent of, works for, member of, lives in, owns, part of. Choose the relation
+and the other entry, then Relate. The other entry shows it too, read its way ("child of" for
+"parent of", "employs" for "works for"). Relations of your own wording can be added with
+`entry.relate`. × removes a relation from either side.

@@ -214,6 +214,7 @@ pub struct EntryView {
     aliases: String,
     fields: Vec<(String, String, FieldType)>,
     new_field: String,
+    relations: crate::relations::RelationsEdit,
 }
 
 impl EntryView {
@@ -307,6 +308,10 @@ pub fn form(ui: &mut Ui, s: &mut Session, v: &mut EntryView, id: ItemId) -> (Vec
             v.new_field.clear();
         }
     });
+    // Relationships (BIB-4).
+    let (more, open) = crate::relations::section(ui, &s.project, id, &mut v.relations);
+    todo.extend(more);
+    asks.extend(open.into_iter().map(Ask::Open));
     // Backlinks (BIB-3).
     let b = entries::backlinks(id, &e, documents(&s.project));
     ui.collapsing(RichText::new(format!("Linked from {} · mentioned in {}", b.linked.len(), b.mentioned.len())), |ui| {

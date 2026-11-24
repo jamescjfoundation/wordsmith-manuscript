@@ -32,6 +32,7 @@ pub mod offers;
 pub mod outline;
 pub mod pages;
 pub mod progress;
+pub mod relations;
 pub mod revisions;
 pub mod ribbon;
 pub mod search;
