@@ -11,4 +11,5 @@ pub mod export;
 pub mod import;
 pub mod mapping;
 pub mod notes;
+pub mod standard;
 pub mod verify;

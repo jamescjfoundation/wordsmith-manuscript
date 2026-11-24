@@ -260,7 +260,6 @@ pub fn as_text(c: &Compiled, o: &Options) -> wordsmith_manuscript_model::Text {
                     }
                 }
             }
-            Piece::Para { .. } => {}
         }
     }
     flush(&mut open, &mut t);

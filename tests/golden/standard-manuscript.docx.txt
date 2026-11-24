@@ -1,0 +1,86 @@
+page 612x792 margins 72 72 72 72
+None align=None indent=None before=Some(0.0) spacing=Some(Multiple(1.0)) break=None section=false | Ada Q. Writer about 2,000 words
+None align=None indent=None before=Some(0.0) spacing=Some(Multiple(1.0)) break=None section=false | 12 Harbor Road
+None align=None indent=None before=Some(0.0) spacing=Some(Multiple(1.0)) break=None section=false | Port Town
+None align=Some(Center) indent=None before=Some(192.0) spacing=Some(Multiple(2.0)) break=None section=false | The Lighthouse Keeper
+None align=Some(Center) indent=None before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | by
+None align=Some(Center) indent=None before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=true | Ada Q. Writer
+Some("Heading2") align=Some(Center) indent=None before=Some(192.0) spacing=Some(Multiple(2.0)) break=Some(true) section=false | Chapter 1
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=Some(Center) indent=None before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | #
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+Some("Heading2") align=Some(Center) indent=None before=Some(192.0) spacing=Some(Multiple(2.0)) break=Some(true) section=false | Chapter 2
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=Some(Center) indent=None before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | #
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+Some("Heading2") align=Some(Center) indent=None before=Some(192.0) spacing=Some(Multiple(2.0)) break=Some(true) section=false | Chapter 3
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=Some(Center) indent=None before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | #
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=None indent=Some(36.0) before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | The keeper climbed the long stair
+None align=Some(Center) indent=None before=Some(0.0) spacing=Some(Multiple(2.0)) break=None section=false | END

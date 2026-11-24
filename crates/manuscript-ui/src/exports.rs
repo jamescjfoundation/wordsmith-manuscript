@@ -7,6 +7,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use wordsmith_manuscript_io::compile::Options;
 use wordsmith_manuscript_io::export::{self, Target};
+use wordsmith_manuscript_io::standard;
 
 use crate::commands::{Spec, opt_str, str_param};
 use crate::session::{Outcome, Session};
@@ -18,7 +19,7 @@ pub fn specs() -> Vec<Spec> {
             id: "export.file",
             label: "Export",
             key: "Mod+E",
-            params: r#"{"path": string, "format"?: "docx"|"odt"|"rtf"|"markdown"|"text"|"html"|"manuscript-docx"|"manuscript-pdf"|"book", "options"?: {...}, "preset"?: string}"#,
+            params: r#"{"path": string, "format"?: "docx"|"odt"|"rtf"|"markdown"|"text"|"html"|"manuscript-docx"|"manuscript-pdf"|"book", "options"?: {...}, "preset"?: string, "standard"?: {"paper"?: "letter"|"a4", "face"?: "serif"|"mono", "title_page"?: bool, "underline_italic"?: bool}}"#,
             about: "Write the manuscript to a file (format from the extension when not given), checked word for word.",
             mutates: false,
         },
@@ -64,7 +65,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             let format = opt_str(v, "format")
                 .map(str::to_owned)
                 .unwrap_or_else(|| path.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default());
-            if let Some(out) = crate::exports::special(s, &format, &path, &options) {
+            if let Some(out) = special(s, &format, &path, &options, v) {
                 return out;
             }
             let target = Target::from_extension(&format)
@@ -97,8 +98,31 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
     })
 }
 
+/// The standard manuscript settings: given (`standard`), else the project's, else the defaults.
+fn standard_of(s: &Session, v: &Value) -> Result<standard::Standard, String> {
+    match v.get("standard").or_else(|| s.project.settings.extra.get("manuscript_format")) {
+        Some(x) => serde_json::from_value(x.clone()).map_err(|e| format!("standard manuscript settings: {e}")),
+        None => Ok(standard::Standard::default()),
+    }
+}
+
 /// Exports with their own writers (the standard manuscript layout, the book package): `None` for
 /// formats handled by [`export::export`].
-pub fn special(_s: &mut Session, _format: &str, _path: &Path, _o: &Options) -> Option<Outcome> {
-    None
+pub fn special(s: &mut Session, format: &str, path: &Path, o: &Options, v: &Value) -> Option<Outcome> {
+    let run = |s: &mut Session| -> Outcome {
+        let std = standard_of(s, v)?;
+        let out = match format {
+            "manuscript-pdf" | "pdf" => standard::pdf(&s.project, o, &std)?,
+            _ => standard::docx(&s.project, o, &std)?,
+        };
+        if !out.check.passed() {
+            return Err(format!("the export was not written: its words do not match the manuscript ({})", out.check));
+        }
+        write(path, &out.bytes)?;
+        Ok(json!({ "path": path.to_string_lossy(), "bytes": out.bytes.len(), "pages": out.pages, "check": out.check.to_string() }))
+    };
+    match format {
+        "manuscript-docx" | "manuscript-pdf" | "pdf" => Some(run(s)),
+        _ => None,
+    }
 }
