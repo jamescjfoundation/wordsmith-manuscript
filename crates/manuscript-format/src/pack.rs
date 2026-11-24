@@ -144,6 +144,18 @@ impl Default for PackLimits {
     }
 }
 
+/// Pack a project held in memory with the media (and other files) of its folder, if it has one:
+/// the folder's files, with the project's text files as they are now.
+pub fn pack_current(project: &Project, root: Option<&Path>) -> Result<Vec<u8>, Error> {
+    let mut files = match root {
+        Some(r) => folder_files(r)?,
+        None => BTreeMap::new(),
+    };
+    files.retain(|k, _| !(k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/")));
+    files.extend(files::render(project)?);
+    pack_files(&files)
+}
+
 /// Read a packed project's files into memory, checking every bound and name.
 pub fn unpack(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>, Error> {
     unpack_with(bytes, &PackLimits::default())

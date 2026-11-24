@@ -30,7 +30,12 @@ fn exports_write_checked_files_and_presets_are_kept() {
     assert!(text.contains("Chapter One") && text.trim_end().ends_with("END"));
     assert!(s.run("export.file", &json!({ "path": dir.join("x.xyz").to_string_lossy() })).is_err());
     s.project.settings.book.author = "Test Author".into();
-    let out = s.run("export.file", &json!({ "path": dir.join("std.pdf").to_string_lossy(), "format": "manuscript-pdf", "standard": { "paper": "a4", "face": "mono" } })).unwrap();
+    let out = s
+        .run(
+            "export.file",
+            &json!({ "path": dir.join("std.pdf").to_string_lossy(), "format": "manuscript-pdf", "standard": { "paper": "a4", "face": "mono" } }),
+        )
+        .unwrap();
     assert!(out["pages"].as_u64().unwrap() > 300, "{out}");
     assert!(out["check"].as_str().unwrap().starts_with("every word matches"));
     let out = s.run("export.file", &json!({ "path": dir.join("std.docx").to_string_lossy(), "format": "manuscript-docx" })).unwrap();

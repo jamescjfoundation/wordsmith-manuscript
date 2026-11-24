@@ -123,6 +123,33 @@ pub fn special(s: &mut Session, format: &str, path: &Path, o: &Options, v: &Valu
     };
     match format {
         "manuscript-docx" | "manuscript-pdf" | "pdf" => Some(run(s)),
+        "book" | "wsmz" => Some(book_package(s, path)),
         _ => None,
     }
+}
+
+/// The book package (EXP-5): the project packed as `.wsmz` for Wordsmith Book, checked by reading
+/// it back through the book view; the metadata Book needs and the writer has not set is listed.
+fn book_package(s: &mut Session, path: &Path) -> Outcome {
+    use wordsmith_manuscript_format::book;
+    let bytes = wordsmith_manuscript_format::pack::pack_current(&s.project, s.root()).map_err(|e| e.to_string())?;
+    let mine = book::from_project(&s.project);
+    let theirs = book::open_packed(&bytes).map_err(|e| e.to_string())?;
+    let check = wordsmith_manuscript_io::verify::Check::of(&book::words(&mine), &book::words(&theirs));
+    if !check.passed() || book::outline(&mine) != book::outline(&theirs) {
+        return Err(format!("the book package was not written: it does not read back as the project ({check})"));
+    }
+    let mut path = path.to_path_buf();
+    if path.extension().is_none_or(|e| e != "wsmz") {
+        path.set_extension("wsmz");
+    }
+    write(&path, &bytes)?;
+    Ok(json!({
+        "path": path.to_string_lossy(),
+        "bytes": bytes.len(),
+        "check": check.to_string(),
+        "book_view": book::VERSION,
+        "sections": book::counts(&theirs),
+        "missing_metadata": book::missing_metadata(&theirs),
+    }))
 }
