@@ -8,3 +8,4 @@ Decisions about interfaces shared by the foundation's apps go in open-source-cor
 | Number | Title |
 | --- | --- |
 | [0001](0001-built-on-open-source-core.md) | Built on open-source-core |
+| [0002](0002-name-and-extensions.md) | The name and the file extensions |
