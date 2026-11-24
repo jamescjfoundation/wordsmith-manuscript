@@ -17,6 +17,7 @@ Add the entry in the same commit as the asset.
 | `assets/brand/icon-1024.png` | The app icon, 1024 px | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |
 | `assets/brand/icon-512.png` | The app icon, 512 px, made from `icon-1024.png` by `tools/brand-icons.py` | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |
 | `assets/brand/icon-256.png` | The app icon, 256 px, made the same way | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |
+| `assets/brand/icon.ico` | The Windows program's icon (16 to 256 px), made by `tools/brand-icons.py --ico`: the small sizes from `favicon.svg`, the large from `icon-1024.png` | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |
 | `assets/brand/icon-32.png` | The app icon, 32 px, made the same way | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |
 | `assets/brand/wordsmith-manuscript-mark-ink.svg` | The mark (M and cursor), dark | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |
 | `assets/brand/wordsmith-manuscript-mark-paper.svg` | The mark, light | Ours | Trademark of The J. C. J. Foundation; use unmodified (`assets/brand/README.md`) | 2026-11-24 |

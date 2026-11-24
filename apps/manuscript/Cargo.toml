@@ -16,6 +16,10 @@ wordsmith-manuscript-ui = { workspace = true }
 jcj-shell = { workspace = true }
 eframe = { workspace = true }
 
+# Embeds the Windows icon (build.rs); the build script does nothing for other targets.
+[build-dependencies]
+winresource = { workspace = true }
+
 [[bin]]
 name = "wordsmith-manuscript"
 path = "src/main.rs"

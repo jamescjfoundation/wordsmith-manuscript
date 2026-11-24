@@ -168,8 +168,132 @@ mod tests {
         assert_eq!(sepia.page, Color32::from_rgb(0xF4, 0xEC, 0xD8));
     }
 
+    use jcj_shell::theme::Mode;
+
+    const INK: Color32 = Color32::from_rgb(0x1C, 0x23, 0x40);
+    const PAPER: Color32 = Color32::from_rgb(0xFA, 0xFA, 0xF7);
+    const CARD_RED: Color32 = Color32::from_rgb(0xD2, 0x4B, 0x3E);
+    const MARGIN_BLUE: Color32 = Color32::from_rgb(0x3B, 0x4F, 0xA8);
+    const SLATE: Color32 = Color32::from_rgb(0x5A, 0x60, 0x80);
+    const NIGHT: Color32 = Color32::from_rgb(0x12, 0x16, 0x2B);
+    const MODES: [Mode; 3] = [Mode::Light, Mode::Dark, Mode::ExtraDark];
+
+    /// WCAG 2.x relative luminance.
+    fn luminance(c: Color32) -> f32 {
+        let lin = |v: u8| {
+            let v = f32::from(v) / 255.0;
+            if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+        };
+        0.2126 * lin(c.r()) + 0.7152 * lin(c.g()) + 0.0722 * lin(c.b())
+    }
+
+    /// WCAG 2.x contrast ratio, 1 to 21.
+    fn contrast(a: Color32, b: Color32) -> f32 {
+        let (x, y) = (luminance(a), luminance(b));
+        (x.max(y) + 0.05) / (x.min(y) + 0.05)
+    }
+
+    /// The hue in degrees (0 to 360).
+    fn hue(c: Color32) -> f32 {
+        let [r, g, b] = [c.r(), c.g(), c.b()].map(|v| f32::from(v) / 255.0);
+        let (max, min) = (r.max(g).max(b), r.min(g).min(b));
+        let d = max - min;
+        if d == 0.0 {
+            return 0.0;
+        }
+        let h = if max == r {
+            ((g - b) / d).rem_euclid(6.0)
+        } else if max == g {
+            (b - r) / d + 2.0
+        } else {
+            (r - g) / d + 4.0
+        };
+        h * 60.0
+    }
+
+    #[test]
+    fn the_light_theme_is_the_brand_palette() {
+        let t = tokens().theme(Mode::Light);
+        assert_eq!(t.text, INK);
+        assert_eq!(t.surface, PAPER);
+        assert_eq!(t.text_dim, SLATE);
+        assert_eq!(t.accent, MARGIN_BLUE);
+        assert_eq!((t.brand, t.on_brand), (INK, PAPER));
+        assert_eq!(t.highlight, CARD_RED);
+        assert_eq!(tokens().theme(Mode::Dark).canvas, NIGHT);
+        assert_eq!(tokens().theme(Mode::Dark).on_brand, PAPER);
+    }
+
+    /// Card Red is the one small accent (the File page's current-entry mark), so problems must not
+    /// look like it: danger is a cooler crimson in every theme.
+    #[test]
+    fn danger_stays_apart_from_card_red() {
+        for mode in MODES {
+            let t = tokens().theme(mode);
+            let apart = (hue(t.danger) - hue(t.highlight)).rem_euclid(360.0);
+            assert!(apart.min(360.0 - apart) >= 15.0, "{mode:?}: danger {:?} is too close to {:?}", t.danger, t.highlight);
+        }
+    }
+
+    /// WCAG AA in every theme: 4.5:1 for text (secondary text, links, problems and the File
+    /// column's text included) on every surface it sits on, and 3:1 for the focus ring and the
+    /// current-entry mark (non-text contrast).
+    #[test]
+    fn text_and_focus_meet_wcag_aa() {
+        for mode in MODES {
+            let t = tokens().theme(mode);
+            let grounds = [t.canvas, t.surface, t.surface_high, t.input, t.hover];
+            for (name, fg) in [("text", t.text), ("text_dim", t.text_dim), ("accent", t.accent), ("danger", t.danger)] {
+                for bg in grounds {
+                    let r = contrast(fg, bg);
+                    assert!(r >= 4.5, "{mode:?}: {name} {fg:?} on {bg:?} is {r:.2}:1");
+                }
+            }
+            for (name, fg, bg, need) in [
+                ("text on accent_soft", t.text, t.accent_soft, 4.5),
+                ("accent on accent_soft", t.accent, t.accent_soft, 4.5),
+                ("on_brand on brand", t.on_brand, t.brand, 4.5),
+                ("highlight on brand", t.highlight, t.brand, 3.0),
+            ] {
+                let r = contrast(fg, bg);
+                assert!(r >= need, "{mode:?}: {name} is {r:.2}:1");
+            }
+        }
+    }
+
+    #[test]
+    fn editor_pages_are_readable() {
+        for (surface, dark) in [(EditorSurface::Sepia, false), (EditorSurface::Theme, false), (EditorSurface::Theme, true)] {
+            let p = page_colors(surface, dark);
+            assert!(contrast(p.text, p.page) >= 7.0, "{surface:?} {dark}: text");
+            assert!(contrast(p.text, p.selection) >= 4.5, "{surface:?} {dark}: selected text");
+            assert!(contrast(p.dim, p.page) >= 3.0, "{surface:?} {dark}: dim marks");
+        }
+        assert_eq!(page_colors(EditorSurface::Theme, false).page, PAPER);
+        assert_eq!(page_colors(EditorSurface::Theme, false).text, INK);
+    }
+
     #[test]
     fn the_icon_is_a_png() {
         assert_eq!(&ICON_256[..8], b"\x89PNG\r\n\x1a\n");
+    }
+
+    /// The Windows program's icon (embedded by `apps/manuscript/build.rs`, made by
+    /// `tools/brand-icons.py --ico`) holds every size Windows asks for, each a 32-bit image.
+    #[test]
+    fn the_windows_icon_has_every_size() {
+        let ico: &[u8] = include_bytes!("../../../assets/brand/icon.ico");
+        let word = |at: usize| ico.get(at..at + 2).map_or(0, |b| u16::from_le_bytes([b[0], b[1]]));
+        let long = |at: usize| ico.get(at..at + 4).map_or(0, |b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])) as usize;
+        assert_eq!((word(0), word(2)), (0, 1), "an icon file");
+        let mut sizes = Vec::new();
+        for i in 0..usize::from(word(4)) {
+            let e = 6 + 16 * i;
+            let side = ico.get(e).map_or(0, |&b| if b == 0 { 256 } else { u32::from(b) });
+            assert_eq!(word(e + 6), 32, "{side} px is 32-bit");
+            assert!(long(e + 12) + long(e + 8) <= ico.len(), "{side} px lies inside the file");
+            sizes.push(side);
+        }
+        assert_eq!(sizes, [16, 24, 32, 48, 64, 128, 256]);
     }
 }

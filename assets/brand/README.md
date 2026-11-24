@@ -12,6 +12,7 @@ Wordsmith Manuscript is a free, open-source writing app for novels and long work
 | --- | --- | --- |
 | `favicon.svg` | The app icon, tuned for small sizes: a paper M and the cursor on an ink tile | Website favicon, browser tabs, small UI icons |
 | `icon-1024.png` | The full app icon, 1024 x 1024 px, rounded ink tile | App stores, social avatars, presentations, anywhere a raster icon is needed |
+| `icon.ico` | The app icon for Windows, 16 to 256 px in one file (16 to 48 px from `favicon.svg`, larger from `icon-1024.png`), made by `tools/brand-icons.py --ico` | The Windows program and its file types |
 | `wordsmith-manuscript-mark-ink.svg` | The mark: the letter M and the cursor, no tile | Avatars, watermarks and tight spaces on light backgrounds |
 | `wordsmith-manuscript-mark-paper.svg` | The mark, light version | The same on dark backgrounds |
 | `wordsmith-manuscript-stacked-ink.svg` | The name on two lines, cursor after the second | Splash screens, posters, social cards and square or narrow spaces, on light backgrounds |
