@@ -19,11 +19,24 @@ impl eframe::App for Window {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.shell.ui(ui, &mut self.app);
     }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // Save and make the closing backup (FIL-2).
+        if let Err(e) = self.app.close() {
+            eprintln!("could not save on close: {e}");
+        }
+    }
 }
 
 fn main() -> ExitCode {
     let shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens());
-    let window = Window { shell, app: Manuscript::new() };
+    let mut app = Manuscript::new();
+    if let Some(path) = std::env::args_os().nth(1) {
+        if let Err(e) = app.open(std::path::Path::new(&path)) {
+            app.status = e;
+        }
+    }
+    let window = Window { shell, app };
     let mut viewport = egui::ViewportBuilder::default().with_title(NAME).with_app_id("org.jcjfoundation.manuscript");
     if let Ok(icon) = eframe::icon_data::from_png_bytes(brand::ICON_256) {
         viewport = viewport.with_icon(icon);

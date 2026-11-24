@@ -23,3 +23,6 @@ jcj-board = { workspace = true }
 jcj-agents = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+egui_kittest = { workspace = true }

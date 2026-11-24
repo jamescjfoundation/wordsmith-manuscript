@@ -17,6 +17,15 @@ pub fn tokens() -> Tokens {
     Tokens::from_json(TOKENS_JSON).unwrap_or_default()
 }
 
+/// Install the brand's fonts and theme in a context the shell does not manage (tests, offscreen
+/// pictures). The shell does this itself for the app's window.
+pub fn apply(ctx: &egui::Context, mode: jcj_shell::theme::Mode) {
+    let tokens = tokens();
+    let (names, faces) = jcj_shell::theme::with_defaults(&tokens.fonts, &[]);
+    jcj_shell::theme::install_fonts(ctx, &names, &faces);
+    jcj_shell::theme::apply(ctx, &tokens.theme(mode));
+}
+
 /// The editor's page colors for one theme.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PageColors {
