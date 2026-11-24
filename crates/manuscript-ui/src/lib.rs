@@ -14,6 +14,7 @@ pub mod editor;
 pub mod filter;
 pub mod find;
 pub mod findbar;
+pub mod imports;
 pub mod inspector;
 pub mod outline;
 pub mod ribbon;
@@ -75,6 +76,10 @@ pub struct Manuscript {
     save_path: String,
     /// Unsaved work found in the project's recovery folder, waiting for the writer's choice.
     pub recovered: Option<Project>,
+    /// Path typed on the Import page.
+    import_path: String,
+    /// The last import's report.
+    pub import_report: String,
     /// The open editor, if an item is open.
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
@@ -129,6 +134,8 @@ impl Manuscript {
             open_path: String::new(),
             save_path: String::new(),
             recovered: None,
+            import_path: String::new(),
+            import_report: String::new(),
             editor: None,
             look: editor::EditorLook::default(),
             editor_focused: false,
@@ -528,7 +535,7 @@ impl App for Manuscript {
     }
 
     fn file_pages(&self) -> Vec<PageSpec> {
-        Vec::new()
+        vec![PageSpec::new("import", "Import", "import")]
     }
 
     fn file_page_ui(&mut self, page: &Page, ui: &mut egui::Ui, shell: &mut Shell) {
@@ -580,6 +587,7 @@ impl App for Manuscript {
                     }
                 });
             }
+            Page::App(id) if id == "import" => self.import_page(ui),
             _ => {}
         }
     }
@@ -1033,5 +1041,37 @@ impl Manuscript {
         }
         self.apply_asks(asks);
         self.sync_editor();
+    }
+}
+
+impl Manuscript {
+    fn import_page(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Import");
+        ui.label("A file or folder to bring into the open project:");
+        let l = ui.label("Path");
+        ui.text_edit_singleline(&mut self.import_path).labelled_by(l.id);
+        let mut run: Option<&str> = None;
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Notes Folder into the Story Bible").clicked() {
+                run = Some("import.notes");
+            }
+        });
+        if let Some(cmd) = run {
+            self.write_back();
+            let path = self.import_path.clone();
+            self.import_report = match self.session.as_mut() {
+                None => "Open or create a project first.".into(),
+                Some(s) => match s.run(cmd, &json!({ "path": path })) {
+                    Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
+                    Err(e) => e,
+                },
+            };
+            self.sync_editor();
+        }
+        if !self.import_report.is_empty() {
+            ui.separator();
+            ui.label("Report");
+            egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| ui.monospace(&self.import_report));
+        }
     }
 }

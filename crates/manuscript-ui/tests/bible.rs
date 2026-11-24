@@ -114,3 +114,28 @@ fn a_link_to_a_deleted_entry_shows_as_broken_and_stays() {
     let app = Manuscript::with_session(s);
     assert_eq!(app.link_target(&format!("wsm:{id}")).map(|x| x.0), Some("A deleted item".into()));
 }
+
+#[test]
+fn a_notes_folder_of_200_entries_imports_with_every_link_resolved_or_reported() {
+    let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/notes-folder");
+    let p = wordsmith_manuscript_model::templates::build("novel", "Town", &mut ItemId::new).unwrap();
+    let mut s = Session::new(p);
+    let out = s.run("import.notes", &json!({ "path": folder.to_string_lossy() })).unwrap();
+    assert_eq!(out["notes"], 200);
+    assert_eq!(out["word_check"], "every word arrived");
+    let unresolved = out["links_unresolved"].as_array().unwrap();
+    assert_eq!(unresolved.len(), 3, "{out}");
+    assert!(unresolved.iter().all(|u| u["name"].as_str().unwrap().starts_with("Nobody Called")));
+    // 2 links in each note plus the 3 unresolved ones: every other link found its entry.
+    assert_eq!(out["links_resolved"], 400);
+    assert_eq!(s.project.entries.len(), 200);
+    // Notes landed in the bible's type folders (the novel template's, not new ones).
+    let characters = s.project.binder.area(Area::Bible).iter().find(|i| i.title == "Characters").unwrap();
+    assert_eq!(characters.children.len(), 120);
+    assert_eq!(s.project.binder.area(Area::Bible).iter().filter(|i| i.title == "Characters").count(), 1);
+    let any = s.project.entries.values().find(|e| e.kind == "character" && e.fields.contains_key("age")).unwrap();
+    assert!(!any.body.is_empty());
+    // One undo step takes it all back.
+    s.undo();
+    assert!(s.project.entries.is_empty());
+}

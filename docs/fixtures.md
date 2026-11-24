@@ -44,3 +44,9 @@ name from the files' generator metadata before committing.
 
 Small inputs written for one test live beside that test's fixtures and are listed here as they are
 added.
+
+### Notes folder (`tests/fixtures/notes-folder/`)
+
+Written for the test by `tools/make-notes-fixture.py` (deterministic): 200 Markdown notes about an
+invented coastal town in `Characters/`, `Places/` and `Lore/`, with YAML front matter, aliases,
+two `[[links]]` each (one with display text) and three links that name no note.
