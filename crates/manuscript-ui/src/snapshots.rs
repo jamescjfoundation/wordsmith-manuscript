@@ -49,6 +49,14 @@ pub fn specs() -> Vec<Spec> {
             mutates: true,
         },
         Spec {
+            id: "snapshot.rename",
+            label: "Rename Snapshot",
+            key: "",
+            params: r#"{"id": id, "taken": string, "name": string}"#,
+            about: "Give a snapshot another name.",
+            mutates: true,
+        },
+        Spec {
             id: "snapshot.delete",
             label: "Delete Snapshot",
             key: "",
