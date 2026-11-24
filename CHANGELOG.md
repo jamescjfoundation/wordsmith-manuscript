@@ -3,6 +3,23 @@
 What changed in each release of Wordsmith Manuscript. The book view's own versions, and what
 Wordsmith Book must do when one changes, are in `docs/book-handoff.md`.
 
+## 1.0.0 (prepared 2026-11-24; released when a maintainer approves it)
+
+Beyond the single book. No format change: 1.0 reads and writes schema 3.
+
+- Series: several books share one Story Bible kept in its own folder; what one book saves reaches
+  the others; a book can leave with a copy.
+- The story bible's general layer now comes from the core (`jcj-entries`, core 0.1.4), ready for
+  Wordsmith Script's characters.
+- Screenplays in a project: Wordsmith Script files kept as Script wrote them, shown read-only
+  with their counts, opened in Script to edit.
+- Relationships between bible entries, read from both sides.
+- Thread lanes (plot threads or points of view) and a timeline of the story's own dates.
+- Suggested bible links from the names a scene mentions.
+- EPUB books come back as editable manuscripts.
+- Export to other formats through a document converter you installed yourself.
+- Not yet: a web version (the core has no web build).
+
 ## 0.3.0 (prepared 2026-11-24; released when a maintainer approves it)
 
 Drafts and finish. **Projects saved by 0.3 use schema 3 and do not open in 0.2** (decision 0006);

@@ -13,14 +13,14 @@ fn mentioned_entries_are_suggested() {
     p.binder.insert(Place::end_of(Area::Manuscript), Item::with_id(scene, Kind::Text, "Scene")).unwrap();
     p.texts.insert(scene, ItemText::with_body(Text::from_paragraphs(&["Mara met Jon at the Anchor.", "Mara laughed; Annabel did not."])));
     let mut s = Session::new(p);
-    let mut entry = |s: &mut Session, kind: &str, name: &str| -> String {
+    let entry = |s: &mut Session, kind: &str, name: &str| -> String {
         s.run("bible.new", &json!({ "kind": kind, "name": name })).unwrap()["id"].as_str().unwrap().to_owned()
     };
     let mara = entry(&mut s, "character", "Mara");
     let jon = entry(&mut s, "character", "Jonathan");
     s.run("entry.set", &json!({ "id": jon, "aliases": ["Jon"] })).unwrap();
     entry(&mut s, "character", "Anna");
-    let inn = entry(&mut s, "place", "The Anchor");
+    entry(&mut s, "place", "The Anchor");
     let names = |s: &mut Session| -> Vec<(String, u64)> {
         s.run("item.suggestEntries", &json!({ "id": scene.as_text() }))
             .unwrap()
@@ -30,7 +30,6 @@ fn mentioned_entries_are_suggested() {
             .map(|x| (x["name"].as_str().unwrap().to_owned(), x["mentions"].as_u64().unwrap()))
             .collect()
     };
-    let _ = inn;
     assert_eq!(
         names(&mut s),
         [("Mara".into(), 2), ("Jonathan".into(), 1)],

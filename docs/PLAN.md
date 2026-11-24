@@ -594,7 +594,7 @@ with the Wordsmith Book plan and written up as `docs/book-handoff.md` in step M6
 | M8 Release | 0.1 | CLI, agent tools, guide, installers, release | Done 2026-11-24 (release awaits a maintainer's approval and tag) |
 | R2 | 0.2 | Daily-work completeness | Done 2026-11-24 (release tag awaits approval) |
 | R3 | 0.3 | Drafts and finish | Done 2026-11-24 (release tag awaits approval) |
-| R4 | 1.0 | Series, sharing with Script, lanes, timeline | Not started |
+| R4 | 1.0 | Beyond | Done 2026-11-24 except the web build, which waits for the core (release tag awaits approval) |
 
 **The test of v0.1**: a public-domain novel of at least 150,000 words, split across six DOCX files
 named as a document set, imports as a structured project with every word verified; it can be
