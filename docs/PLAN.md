@@ -642,6 +642,10 @@ suite's brand style, fonts chosen from OFL fonts already bundled or added with l
 different word processors (not by this app), recorded with source, edition and tool. A six-file
 document set of one novel for the v0.1 test. Done when: every fixture's provenance is recorded and
 `cargo xtask privacy` passes.
+- Changed 2026-11-24: the build machine has no word processor, so the DOCX, ODT and RTF fixtures
+  are first written by a small standard-library script (`tools/make-fixtures.py`, not this app);
+  versions saved by two word processors are added by a person who has them, as `docs/fixtures.md`
+  describes. Importers are tested on both once they exist.
 
 **M0.6 `m0/core-issues`** (no branch needed; can run in parallel): open one core issue for each
 change C1 to C13 in section 5.4, each describing the general need without Manuscript's features,
