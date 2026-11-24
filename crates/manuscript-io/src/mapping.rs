@@ -282,7 +282,7 @@ impl Reader<'_> {
             let Some(text) = p.text.get(range.clone()) else { continue };
             let base = marks(props, self.rules, self.main_lang.as_deref(), &mut self.dropped);
             let mut buf = String::new();
-            let mut flush = |buf: &mut String, out: &mut Inlines, comment: Option<u32>| {
+            let flush = |buf: &mut String, out: &mut Inlines, comment: Option<u32>| {
                 if !buf.is_empty() {
                     let mut m = base.clone();
                     m.comment = comment.map(|c| format!("c{c}"));

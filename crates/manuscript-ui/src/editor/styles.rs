@@ -184,6 +184,28 @@ fn link(ed: &mut Editor, target: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
+/// Anchor a comment (its id) to the selection: one undo step.
+pub fn mark_comment(ed: &mut Editor, key: &str) -> Result<(), String> {
+    if ed.session.sel.is_collapsed() {
+        return Err("select the words to comment on first".into());
+    }
+    let (a, b) = ed.session.sel.ordered();
+    ed.session.checkpoint("Add Comment");
+    for i in para_index(&a)..=para_index(&b) {
+        let Some(len) = ed.paragraph(i).map(|p| p.text.len()) else { continue };
+        let from = if i == para_index(&a) { a.off.min(len) } else { 0 };
+        let to = if i == para_index(&b) { b.off.min(len) } else { len };
+        let k = key.to_owned();
+        if let Some(p) = ed.paragraph_mut(i) {
+            let _ = p.format(from, to, &|c: &mut jcj_doc::CharProps| {
+                let _ = mdoc::COMMENT.set(c, &k);
+            });
+        }
+    }
+    ed.changed();
+    Ok(())
+}
+
 /// Remove italic, bold, small caps, strikethrough and language from the selection.
 fn plain(ed: &mut Editor) -> Result<(), String> {
     let (a, b) = ed.session.sel.ordered();

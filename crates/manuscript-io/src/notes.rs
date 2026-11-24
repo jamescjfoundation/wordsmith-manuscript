@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use wordsmith_manuscript_format::dialect;
 use wordsmith_manuscript_model::entries::{self, SCHEME};
-use wordsmith_manuscript_model::{Block, Entry, Inline, ItemId, Text};
+use wordsmith_manuscript_model::{Block, Entry, Inline, ItemId};
 
 /// The most note files read.
 pub const MAX_NOTES: usize = 20_000;

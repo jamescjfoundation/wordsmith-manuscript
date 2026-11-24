@@ -160,7 +160,7 @@ impl Editor {
     /// start of the text after it.
     pub fn fix_caret(&mut self) {
         let n = self.paragraphs().len();
-        let mut fix = |p: &Pos, ed: &Editor| -> Option<Pos> {
+        let fix = |p: &Pos, ed: &Editor| -> Option<Pos> {
             let mut i = para_index(p);
             if !ed.paragraph(i).is_some_and(crate::stitch::is_divider) {
                 return None;

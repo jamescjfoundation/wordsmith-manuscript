@@ -5461,6 +5461,7 @@ dependencies = [
 name = "wordsmith-manuscript-ui"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "egui_kittest",
  "jcj-agents",
  "jcj-board",

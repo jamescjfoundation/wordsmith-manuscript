@@ -87,7 +87,22 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
         }
     }
     let mut next_part = 1u32;
-    for piece in &c.pieces {
+    let mut comment_ids: BTreeMap<(ItemId, String), u32> = BTreeMap::new();
+    // Each comment's range: from the first inline marked with it to the last (a comment may run
+    // over several paragraphs, or over words split by unmarked ones).
+    let mut spans: BTreeMap<(ItemId, String), ((usize, usize), (usize, usize))> = BTreeMap::new();
+    if o.comments {
+        for (pi, piece) in c.pieces.iter().enumerate() {
+            if let Piece::Para { content, item, .. } = piece {
+                for (n, i) in content.iter().enumerate() {
+                    if let Some(k) = &i.marks().comment {
+                        spans.entry((*item, k.clone())).and_modify(|r| r.1 = (pi, n)).or_insert(((pi, n), (pi, n)));
+                    }
+                }
+            }
+        }
+    }
+    for (pi, piece) in c.pieces.iter().enumerate() {
         let para = match piece {
             Piece::Heading { level, text, .. } => {
                 let mut p = styled(Paragraph::with_text(text, CharProps::default()), &format!("Heading{level}"));
@@ -96,7 +111,27 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
             }
             Piece::Para { content, kind, item } => {
                 let mut p = Paragraph::new();
-                for i in content {
+                for (n, i) in content.iter().enumerate() {
+                    let here = (pi, n);
+                    for (key, &(first, _)) in &spans {
+                        if first == here
+                            && let Some(com) = c.comments.get(key)
+                        {
+                            let id = next_part;
+                            next_part += 1;
+                            comment_ids.insert(key.clone(), id);
+                            let blocks = com
+                                .text
+                                .split("\n\n")
+                                .map(|t| Arc::new(jcj_doc::Block::Para(Paragraph::with_text(t, CharProps::default()))))
+                                .collect();
+                            doc.parts.insert(id, Part { kind: PartKind::Comment, blocks, body: Default::default() });
+                            doc.comments
+                                .insert(id, jcj_doc::Comment { author: com.by.clone(), date: com.date.clone(), part: id, ..Default::default() });
+                            let at = p.text.len();
+                            let _ = p.insert_object(at, InlineObject::CommentStart { id }, &CharProps::default());
+                        }
+                    }
                     let end = p.text.len();
                     match i {
                         Inline::Span { text, marks } => {
@@ -122,6 +157,14 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
                                 InlineObject::NoteRef { kind: Default::default(), id, custom: String::new() },
                                 &CharProps::default(),
                             );
+                        }
+                    }
+                    for (key, &(_, last)) in &spans {
+                        if last == here
+                            && let Some(&id) = comment_ids.get(key)
+                        {
+                            let at = p.text.len();
+                            let _ = p.insert_object(at, InlineObject::CommentEnd { id }, &CharProps::default());
                         }
                     }
                 }

@@ -354,9 +354,60 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
     Some(r)
 }
 
+/// The item's comments in text order, each editable and removable (ED-7).
+fn comments_section(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, id: ItemId, errors: &mut Vec<String>) {
+    let Ok(list) = s.run("comment.list", &json!({ "id": id.as_text() })) else { return };
+    let rows = list["comments"].as_array().cloned().unwrap_or_default();
+    if rows.is_empty() {
+        return;
+    }
+    ui.add_space(6.0);
+    ui.label(format!("Comments ({})", rows.len()));
+    for row in rows {
+        let key = row["comment"].as_str().unwrap_or("").to_owned();
+        let words = row["words"].as_str().unwrap_or("");
+        ui.group(|ui| {
+            if row["anchored"].as_bool() == Some(true) {
+                let short: String = words.chars().take(60).collect();
+                ui.label(RichText::new(format!("“{short}{}”", if words.chars().count() > 60 { "…" } else { "" })).italics().weak());
+            } else {
+                ui.label(RichText::new("Its words are no longer in the text").weak());
+            }
+            let buf = view.comments.entry(key.clone()).or_default();
+            let r = ui.add(egui::TextEdit::multiline(buf).desired_rows(2).desired_width(f32::INFINITY).hint_text("Comment"));
+            r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, format!("Comment {key}")));
+            if view.focus_comment.as_deref() == Some(key.as_str()) {
+                r.request_focus();
+                view.focus_comment = None;
+            }
+            if r.lost_focus() && row["text"].as_str() != Some(buf.as_str()) {
+                if let Err(e) = s.run("comment.set", &json!({ "id": id.as_text(), "comment": key, "text": buf.clone() })) {
+                    errors.push(e);
+                }
+            }
+            ui.horizontal(|ui| {
+                let by = row["by"].as_str().unwrap_or("");
+                let date = row["date"].as_str().unwrap_or("");
+                let sign = [by, date].iter().filter(|x| !x.is_empty()).copied().collect::<Vec<_>>().join(" · ");
+                if !sign.is_empty() {
+                    ui.label(RichText::new(sign).small().weak());
+                }
+                if ui.small_button("Remove").on_hover_text("Remove the comment; the words stay").clicked()
+                    && let Err(e) = s.run("comment.remove", &json!({ "id": id.as_text(), "comment": key }))
+                {
+                    errors.push(e);
+                }
+            });
+        });
+    }
+}
+
 /// The inspector panel's state: text being typed, committed when the field loses focus.
 #[derive(Default)]
 pub struct InspectorView {
+    /// A comment just added, whose text field takes the keyboard next.
+    pub focus_comment: Option<String>,
+    comments: std::collections::BTreeMap<String, String>,
     item: Option<ItemId>,
     rev: u64,
     synopsis: String,
@@ -376,6 +427,7 @@ impl InspectorView {
         self.target = meta.target.map(|t| t.to_string()).unwrap_or_default();
         self.pov = meta.fields.get(POV_FIELD).cloned().unwrap_or_default();
         self.keyword.clear();
+        self.comments = meta.comments.into_iter().map(|(k, c)| (k, c.text)).collect();
     }
 }
 
@@ -508,6 +560,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
         if r.lost_focus() && s.project.text(id).map(|t| t.meta.notes.as_str()).unwrap_or("") != view.notes {
             run(s, "item.setNotes", json!({ "id": id.as_text(), "notes": view.notes }));
         }
+        comments_section(ui, s, view, id, &mut errs.borrow_mut());
         crate::snapshots::panel_section(ui, s, id, &mut errs.borrow_mut());
     });
     errors.extend(errs.into_inner());

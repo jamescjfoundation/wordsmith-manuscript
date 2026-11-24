@@ -217,6 +217,34 @@ impl Text {
         self.blocks.is_empty() && self.notes.is_empty()
     }
 
+    /// Every run of inlines in reading order: each paragraph of the blocks, then of the notes.
+    pub fn inline_runs(&self) -> Vec<&Inlines> {
+        let mut out: Vec<&Inlines> = Vec::new();
+        for block in &self.blocks {
+            match block {
+                Block::Para(c) | Block::Heading { content: c, .. } => out.push(c),
+                Block::Quote(ps) | Block::Fenced { paras: ps, .. } => out.extend(ps.iter()),
+                Block::SceneBreak | Block::Image { .. } | Block::Raw { .. } => {}
+            }
+        }
+        out.extend(self.notes.iter().flat_map(|n| n.paras.iter()));
+        out
+    }
+
+    /// Every run of inlines, to change.
+    pub fn inline_runs_mut(&mut self) -> Vec<&mut Inlines> {
+        let mut out: Vec<&mut Inlines> = Vec::new();
+        for block in &mut self.blocks {
+            match block {
+                Block::Para(c) | Block::Heading { content: c, .. } => out.push(c),
+                Block::Quote(ps) | Block::Fenced { paras: ps, .. } => out.extend(ps.iter_mut()),
+                Block::SceneBreak | Block::Image { .. } | Block::Raw { .. } => {}
+            }
+        }
+        out.extend(self.notes.iter_mut().flat_map(|n| n.paras.iter_mut()));
+        out
+    }
+
     /// Put the text in canonical form: merge neighbouring spans with equal marks, drop empty
     /// spans, and make empty language, link and comment values absent.
     pub fn normalize(&mut self) {

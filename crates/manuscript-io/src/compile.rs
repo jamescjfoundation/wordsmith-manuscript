@@ -61,6 +61,8 @@ pub struct Options {
     pub replace: Vec<Replace>,
     /// "END" after the last paragraph.
     pub end_mark: bool,
+    /// Comments go into the file as review comments where the format has them (DOCX).
+    pub comments: bool,
 }
 
 impl Default for Options {
@@ -75,6 +77,7 @@ impl Default for Options {
             back_matter: true,
             replace: Vec::new(),
             end_mark: false,
+            comments: false,
         }
     }
 }
@@ -213,6 +216,8 @@ pub struct Compiled {
     pub pieces: Vec<Piece>,
     /// The items exported, in order.
     pub items: Vec<ItemId>,
+    /// The exported items' comments, by item and comment id.
+    pub comments: std::collections::BTreeMap<(ItemId, String), wordsmith_manuscript_model::Comment>,
 }
 
 /// Compile the project for export.
@@ -265,6 +270,9 @@ pub fn compile(p: &Project, o: &Options) -> Compiled {
         }
         out.items.push(id);
         let Some(t) = p.texts.get(&id) else { continue };
+        for (k, c) in &t.meta.comments {
+            out.comments.insert((id, k.clone()), c.clone());
+        }
         let mut body: Text = t.body.clone();
         for b in &mut body.blocks {
             match b {

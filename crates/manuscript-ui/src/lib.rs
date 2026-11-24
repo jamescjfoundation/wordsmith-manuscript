@@ -10,6 +10,7 @@ pub mod bible;
 pub mod binder;
 pub mod brand;
 pub mod commands;
+pub mod comments;
 pub mod cork;
 pub mod editor;
 pub mod exports;
@@ -442,6 +443,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.split", "Split Side by Side", "Mod+Alt+\\"));
         v.push(CommandInfo::new("view.splitStacked", "Split Top and Bottom", ""));
         v.push(CommandInfo::new("view.unsplit", "One Pane", ""));
+        v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
         v.push(CommandInfo::new("view.corkboard", "Corkboard", "Mod+2"));
@@ -823,6 +825,9 @@ impl Manuscript {
             }
             _ => {}
         }
+        if cmd.id == "write.comment" {
+            return self.add_comment();
+        }
         if cmd.id == "view.otherPane" {
             if self.split == jcj_shell::split::Split::None {
                 return Err("the editor is not split".into());
@@ -1125,6 +1130,32 @@ impl Manuscript {
         self.after_editor(ui);
     }
 
+    /// Anchor a new comment to the editor's selection and open it in the inspector to write.
+    pub fn add_comment(&mut self) -> Result<(), String> {
+        let ed = self.editor.as_ref().ok_or("open a document to comment on")?;
+        if ed.read_only {
+            return Err("this document is read-only here".into());
+        }
+        if ed.session.sel.is_collapsed() {
+            return Err("select the words to comment on first".into());
+        }
+        let (a, _) = ed.session.sel.ordered();
+        let item = stitch::item_at(ed, editor::para_index(&a));
+        self.write_back();
+        let key = comments::fresh_id(&self.session.as_ref().ok_or("no project is open")?.project, item);
+        if let Some(ed) = self.editor.as_mut() {
+            editor::styles::mark_comment(ed, &key)?;
+        }
+        self.write_back();
+        if let Some(s) = self.session.as_mut() {
+            s.run("comment.set", &json!({ "id": item.as_text(), "comment": key, "text": "" }))?;
+        }
+        self.inspector.focus_comment = Some(key);
+        self.binder.selected = Some(item);
+        self.status = "Comment added: write it in the inspector.".into();
+        Ok(())
+    }
+
     /// Make the other pane the active one.
     pub fn switch_pane(&mut self) {
         self.write_back();
@@ -1419,6 +1450,7 @@ impl Manuscript {
         ui.checkbox(&mut o.front_matter, "Front matter");
         ui.checkbox(&mut o.back_matter, "Back matter");
         ui.checkbox(&mut o.end_mark, "END after the last line");
+        ui.checkbox(&mut o.comments, "Comments as review comments (DOCX, ODT, RTF)");
         if ui.button("Export").clicked() {
             self.write_back();
             let params = json!({ "path": self.export_path, "format": self.export_format, "options": self.export_options });

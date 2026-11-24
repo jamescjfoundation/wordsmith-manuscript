@@ -5,6 +5,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 
 | Command | Key |
 | --- | --- |
+| Add Comment | `Mod+Alt+M` |
 | Aside | `Mod+Alt+A` |
 | Block Quote | `Mod+Alt+Q` |
 | Body | `Mod+Alt+0` |

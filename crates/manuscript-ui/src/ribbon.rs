@@ -68,10 +68,13 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
             });
         });
         widgets::small(ui, shell, cmds, &Control::new("write.unlink").label("Remove Link"));
+        widgets::small(ui, shell, cmds, &Control::new("write.comment").label("Comment"));
     });
     widgets::group(ui, shell, "Read", |ui, shell| {
         widgets::small(ui, shell, cmds, &Control::new("view.stitch").label("As One Text"));
         widgets::small(ui, shell, cmds, &Control::new("view.stitchManuscript").label("Whole Manuscript"));
+        widgets::small(ui, shell, cmds, &Control::new("view.split").label("Split"));
+        widgets::small(ui, shell, cmds, &Control::new("view.unsplit").label("One Pane"));
     });
     widgets::group(ui, shell, "Insert", |ui, shell| {
         widgets::big(ui, shell, cmds, &Control::new("write.sceneBreak").label("Scene Break"));

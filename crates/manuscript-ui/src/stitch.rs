@@ -32,6 +32,15 @@ use crate::editor::Editor;
 /// On a paragraph: it stands for an item whose text is empty.
 pub const BLANK: ExtKey<bool> = ExtKey::new("manuscript.blank");
 
+/// The item a paragraph of an editor belongs to: the paragraph's source in a stitched view, else
+/// the editor's item.
+pub fn item_at(ed: &Editor, para: usize) -> ItemId {
+    if !is_stitched(ed) {
+        return ed.item;
+    }
+    (0..=para).rev().find_map(|i| ed.paragraph(i).and_then(|p| SOURCE.get_or_none(p))).unwrap_or(ed.item)
+}
+
 /// Whether an editor holds a stitched view.
 pub fn is_stitched(ed: &Editor) -> bool {
     ed.paragraphs().iter().any(|p| is_divider(p))
