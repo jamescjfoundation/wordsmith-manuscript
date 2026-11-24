@@ -256,7 +256,9 @@ pub fn render(project: &Project) -> Result<Vec<(String, Vec<u8>)>, Error> {
     for row in project.binder.rows() {
         let item = row.item;
         match item.kind {
-            Kind::Text | Kind::Folder => {
+            // A screenplay's synopsis and other metadata are kept like a text's (its script is
+            // Wordsmith Script's file in scripts/).
+            Kind::Text | Kind::Folder | Kind::Screenplay => {
                 if let Some(t) = project.texts.get(&item.id)
                     && !t.is_empty()
                 {
@@ -267,7 +269,7 @@ pub fn render(project: &Project) -> Result<Vec<(String, Vec<u8>)>, Error> {
                 let e = project.entries.get(&item.id).cloned().unwrap_or_else(|| Entry::new("", &item.title));
                 out.push((format!("bible/{}.md", item.id), write_entry(&e)?.into_bytes()));
             }
-            Kind::Media | Kind::Link | Kind::Screenplay => {}
+            Kind::Media | Kind::Link => {}
         }
     }
     for (id, snaps) in &project.snapshots {

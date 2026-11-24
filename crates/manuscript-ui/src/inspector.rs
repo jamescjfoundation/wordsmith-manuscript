@@ -73,7 +73,7 @@ pub fn specs() -> Vec<Spec> {
 fn has_text(p: &Project, id: ItemId) -> Result<(), String> {
     match p.binder.get(id) {
         None => Err(format!("no binder item {id}")),
-        Some(i) if !i.kind.has_text() => Err("this item has no text of its own to describe".into()),
+        Some(i) if !i.kind.has_text() && i.kind != Kind::Screenplay => Err("this item has no text of its own to describe".into()),
         Some(_) => Ok(()),
     }
 }
@@ -454,7 +454,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
     egui::ScrollArea::vertical().id_salt("manuscript-inspector").auto_shrink([false, false]).show(ui, |ui| {
         ui.label(RichText::new(&item.title).strong());
         ui.label(RichText::new(format!("{} · {} words", item.role.title(), crate::binder::format_words(s.project.words_under(id)))).weak());
-        if !item.kind.has_text() {
+        if !item.kind.has_text() && item.kind != Kind::Screenplay {
             return;
         }
         ui.add_space(6.0);

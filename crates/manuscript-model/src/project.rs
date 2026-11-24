@@ -96,7 +96,7 @@ impl Project {
     /// Drop texts and entries whose items are no longer in the binder (after emptying the Trash).
     pub fn prune(&mut self) {
         let binder = &self.binder;
-        self.texts.retain(|id, _| binder.get(*id).is_some_and(|i| i.kind.has_text()));
+        self.texts.retain(|id, _| binder.get(*id).is_some_and(|i| i.kind.has_text() || i.kind == Kind::Screenplay));
         self.entries.retain(|id, _| binder.get(*id).is_some_and(|i| i.kind == Kind::Entry));
         self.snapshots.retain(|id, _| binder.contains(*id));
     }

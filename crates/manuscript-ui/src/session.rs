@@ -509,7 +509,7 @@ impl Session {
         self.project
             .binder
             .get(id)
-            .filter(|i| i.kind == wordsmith_manuscript_model::Kind::Media)
+            .filter(|i| matches!(i.kind, wordsmith_manuscript_model::Kind::Media | wordsmith_manuscript_model::Kind::Screenplay))
             .and_then(wordsmith_manuscript_format::files::path_of)
     }
 
@@ -532,7 +532,7 @@ impl Session {
     fn all_media(&self) -> Result<BTreeMap<ItemId, Vec<u8>>, String> {
         let mut out = BTreeMap::new();
         for r in self.project.binder.rows() {
-            if r.item.kind == wordsmith_manuscript_model::Kind::Media {
+            if matches!(r.item.kind, wordsmith_manuscript_model::Kind::Media | wordsmith_manuscript_model::Kind::Screenplay) {
                 match self.media_bytes(r.item.id) {
                     Ok(b) => {
                         out.insert(r.item.id, b);

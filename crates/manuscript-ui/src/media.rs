@@ -16,7 +16,7 @@ use crate::session::{Outcome, Session};
 /// The largest media file kept in a project.
 pub const MAX_BYTES: u64 = 64 << 20;
 /// The image and document types a project keeps.
-pub const TYPES: [&str; 6] = ["png", "jpg", "jpeg", "gif", "webp", "pdf"];
+pub const TYPES: [&str; 7] = ["png", "jpg", "jpeg", "gif", "webp", "pdf", "wss"];
 /// The largest picture shown, in pixels on a side.
 const MAX_SIDE: u32 = 12_000;
 
@@ -95,7 +95,9 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 return Err(format!("{} is larger than {} MB", path.display(), MAX_BYTES >> 20));
             }
             let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
-            if ext == "pdf" {
+            if ext == "wss" {
+                wordsmith_manuscript_io::screenplay::read(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+            } else if ext == "pdf" {
                 if !bytes.starts_with(b"%PDF") {
                     return Err(format!("{} is not a PDF", path.display()));
                 }
@@ -107,9 +109,11 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 .filter(|t| !t.is_empty())
                 .map(str::to_owned)
                 .unwrap_or_else(|| path.file_stem().and_then(|n| n.to_str()).unwrap_or("Picture").to_owned());
-            let at = place(s, v)?;
-            let mut item = Item::new(Kind::Media, title);
-            item.file = Some(if ext == "jpeg" { "jpg".into() } else { ext });
+            // A screenplay goes into the Manuscript (or where asked) as a screenplay item, its
+            // file kept as Wordsmith Script wrote it (SCR-1).
+            let at = if ext == "wss" && opt_str(v, "inside").is_none() { Place::end_of(Area::Manuscript) } else { place(s, v)? };
+            let mut item = if ext == "wss" { Item::new(Kind::Screenplay, title) } else { Item::new(Kind::Media, title) };
+            item.file = if ext == "wss" { None } else { Some(if ext == "jpeg" { "jpg".into() } else { ext }) };
             let new = item.id;
             s.change("Add Media", &[], &[], |p| p.binder.insert(at, item).map(|_| ()).map_err(|e| e.to_string()))?;
             s.media.insert(new, bytes);
@@ -160,6 +164,12 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                         Ok(json!({ "kind": "image", "bytes": bytes.len(), "width": img.size[0], "height": img.size[1] }))
                     }
                 }
+                Kind::Screenplay => {
+                    let sp = wordsmith_manuscript_io::screenplay::read(&s.media_bytes(item)?)?;
+                    Ok(
+                        json!({ "kind": "screenplay", "title": sp.title, "words": sp.words(), "scenes": sp.scenes(), "paragraphs": sp.paragraphs.len() }),
+                    )
+                }
                 _ => Err("this item is not a media file or a link".into()),
             }
         })(),
@@ -172,6 +182,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
 pub struct MediaView {
     pictures: HashMap<ItemId, Result<egui::TextureHandle, String>>,
     pdfs: HashMap<ItemId, Result<Vec<Vec<String>>, String>>,
+    scripts: HashMap<ItemId, (Option<std::time::SystemTime>, Result<wordsmith_manuscript_io::screenplay::Screenplay, String>)>,
     address: String,
     editing: Option<ItemId>,
 }
@@ -181,6 +192,7 @@ impl MediaView {
     pub fn clear(&mut self) {
         self.pictures.clear();
         self.pdfs.clear();
+        self.scripts.clear();
     }
 }
 
@@ -214,6 +226,56 @@ pub fn view(ui: &mut Ui, s: &mut Session, mv: &mut MediaView, id: ItemId) -> Opt
                 }
             });
             ui.label(RichText::new("The page is not fetched or kept; this link only remembers where it is.").weak());
+        }
+        Kind::Screenplay => {
+            // Read again whenever Wordsmith Script has saved the file.
+            let file = s.root().zip(s.media_path(id)).map(|(r, p)| r.join(p));
+            let modified = file.as_ref().and_then(|f| std::fs::metadata(f).ok()).and_then(|m| m.modified().ok());
+            let fresh = mv.scripts.get(&id).is_none_or(|(m, _)| *m != modified);
+            if fresh {
+                let read = s.media_bytes(id).and_then(|b| wordsmith_manuscript_io::screenplay::read(&b));
+                mv.scripts.insert(id, (modified, read));
+            }
+            match mv.scripts.get(&id).map(|(_, r)| r) {
+                Some(Ok(sp)) => {
+                    ui.horizontal(|ui| {
+                        ui.label(format!(
+                            "Screenplay, {} words, {} scene{}",
+                            crate::binder::format_words(sp.words()),
+                            sp.scenes(),
+                            if sp.scenes() == 1 { "" } else { "s" }
+                        ));
+                        open_file_button(ui, s, id);
+                    });
+                    ui.label(RichText::new("Read-only here: Wordsmith Script edits it, and the changes show here when it saves.").weak());
+                    ui.separator();
+                    egui::ScrollArea::vertical().id_salt(("manuscript-script", id.as_text())).auto_shrink([false, false]).show(ui, |ui| {
+                        let w = ui.available_width().min(620.0);
+                        for p in &sp.paragraphs {
+                            let (indent, text) = match p.element.as_str() {
+                                "SceneHeading" => (0.0, RichText::new(p.text.to_uppercase()).strong()),
+                                "Character" => (w * 0.35, RichText::new(p.text.to_uppercase())),
+                                "Dialogue" => (w * 0.2, RichText::new(&p.text)),
+                                "Parenthetical" => (w * 0.28, RichText::new(&p.text).italics()),
+                                "Transition" => (w * 0.7, RichText::new(p.text.to_uppercase())),
+                                _ => (0.0, RichText::new(&p.text)),
+                            };
+                            ui.horizontal_wrapped(|ui| {
+                                ui.add_space(indent);
+                                ui.set_max_width(w);
+                                ui.label(text);
+                            });
+                            if !matches!(p.element.as_str(), "Character" | "Parenthetical") {
+                                ui.add_space(6.0);
+                            }
+                        }
+                    });
+                }
+                Some(Err(e)) => {
+                    ui.label(format!("The screenplay could not be read: {e}"));
+                }
+                None => {}
+            }
         }
         Kind::Media if item.file.as_deref() == Some("pdf") => {
             let pages = mv.pdfs.entry(id).or_insert_with(|| s.media_bytes(id).and_then(|b| wordsmith_manuscript_io::standard::pdf_pages(&b)));
@@ -282,5 +344,5 @@ fn open_file_button(ui: &mut Ui, s: &Session, id: ItemId) {
 
 /// Whether an item is shown by the media viewer.
 pub fn shows(item: &Item) -> bool {
-    matches!(item.kind, Kind::Media | Kind::Link)
+    matches!(item.kind, Kind::Media | Kind::Link | Kind::Screenplay)
 }

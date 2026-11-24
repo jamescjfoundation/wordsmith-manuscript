@@ -51,3 +51,13 @@ the project's `media` folder, so they travel with it, in packed `.wsmz` files an
 Add Web Link… keeps a web address; nothing is downloaded. Select one to see it in the editor
 area: a picture fits the width, a PDF shows the text of each page (Open in Another App shows the
 pages themselves once the project is saved), and a link shows its address with Open in Browser.
+
+## Screenplays
+
+A project can hold screenplays, for an adaptation or a book with a script in it. Add one with
+Add Image or PDF… and choose a Wordsmith Script file (`.wss`): it goes into the Manuscript as a
+screenplay item, its file kept exactly as Wordsmith Script wrote it. Select it to read it here,
+with its word and scene counts; give it a synopsis, label and status like any item, and it shows
+on the corkboard and in the outline. To change it, Open in Another App opens it in Wordsmith
+Script; when Script saves, the changes show here. Screenplays are not part of the manuscript's
+exports.

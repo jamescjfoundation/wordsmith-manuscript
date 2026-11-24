@@ -195,7 +195,7 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
     let rows: Vec<_> = project.binder.rows().into_iter().map(|r| (r.item.id, r.item.kind)).collect();
     for (id, kind) in rows {
         let rel = match kind {
-            Kind::Text | Kind::Folder => format!("text/{id}.md"),
+            Kind::Text | Kind::Folder | Kind::Screenplay => format!("text/{id}.md"),
             Kind::Entry => format!("bible/{id}.md"),
             _ => continue,
         };
