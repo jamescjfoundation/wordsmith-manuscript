@@ -9,6 +9,7 @@ pub mod agents;
 pub mod bible;
 pub mod binder;
 pub mod brand;
+pub mod collections;
 pub mod commands;
 pub mod comments;
 pub mod cork;
@@ -100,6 +101,8 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// The collection shown in place of the binder (SRC-2).
+    pub showing: Option<String>,
     /// The snapshot comparison window (INS-5).
     pub compare: snapshots::CompareView,
     /// The other pane's editor, when the editor is split (ED-6).
@@ -177,6 +180,7 @@ impl Manuscript {
             editor: None,
             other: None,
             compare: snapshots::CompareView::default(),
+            showing: None,
             split: jcj_shell::split::Split::None,
             split_state: jcj_shell::split::SplitState::default(),
             active_pane: 0,
@@ -578,6 +582,64 @@ impl App for Manuscript {
         let before = self.binder.selected;
         let rev = s.revision();
         self.searcher.refresh(&s.project, rev);
+        let cols = collections::all(&s.project);
+        if self.showing.as_ref().is_some_and(|n| !cols.iter().any(|c| &c.name == n)) {
+            self.showing = None;
+        }
+        if !cols.is_empty() {
+            let c = egui::ComboBox::from_id_salt("manuscript-collections")
+                .width(ui.available_width() - 8.0)
+                .selected_text(self.showing.clone().unwrap_or_else(|| "Binder".into()))
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.showing.is_none(), "Binder").clicked() {
+                        self.showing = None;
+                    }
+                    for c in &cols {
+                        let label = if c.search.is_some() { format!("{} (search)", c.name) } else { c.name.clone() };
+                        if ui.selectable_label(self.showing.as_ref() == Some(&c.name), label).clicked() {
+                            self.showing = Some(c.name.clone());
+                        }
+                    }
+                });
+            c.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Show"));
+        }
+        if let Some(c) = self.showing.as_ref().and_then(|n| cols.iter().find(|c| &c.name == n)).cloned() {
+            let items = collections::items_of(&s.project, &c).unwrap_or_default();
+            ui.horizontal(|ui| {
+                ui.label(format!("{} items", items.len()));
+                if ui.small_button("Delete Collection").on_hover_text("The items stay in the binder").clicked() {
+                    match s.run("collection.delete", &json!({ "name": c.name })) {
+                        Ok(_) => self.showing = None,
+                        Err(e) => self.status = e,
+                    }
+                }
+            });
+            let mut open = None;
+            let mut remove = None;
+            egui::ScrollArea::vertical().id_salt("manuscript-collection-items").show(ui, |ui| {
+                for id in &items {
+                    let title = s.project.binder.get(*id).map(|i| i.title.clone()).unwrap_or_default();
+                    ui.horizontal(|ui| {
+                        if ui.selectable_label(self.binder.selected == Some(*id), &title).clicked() {
+                            open = Some(*id);
+                        }
+                        if c.search.is_none() && ui.small_button("×").on_hover_text("Take out of the collection").clicked() {
+                            remove = Some(*id);
+                        }
+                    });
+                }
+            });
+            if let Some(id) = remove
+                && let Err(e) = s.run("collection.remove", &json!({ "name": c.name, "items": [id.as_text()] }))
+            {
+                self.status = e;
+            }
+            if let Some(id) = open {
+                self.binder.selected = Some(id);
+                self.open_item(id);
+            }
+            return;
+        }
         ui.horizontal(|ui| {
             let r = ui.add(egui::TextEdit::singleline(&mut self.search_text).hint_text("Search the project").desired_width(f32::INFINITY));
             r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::SearchInput, true, "Search the project"));
@@ -607,6 +669,16 @@ impl App for Manuscript {
                 ui.label(format!("{} documents", results.len()));
                 if ui.small_button("Back to the Binder").clicked() {
                     self.search_results = None;
+                }
+                if ui.small_button("Save Search").on_hover_text("Keep this search as a collection that stays up to date").clicked() {
+                    let name = self.search_text.trim().to_owned();
+                    match s.run("collection.saveSearch", &json!({ "name": name, "query": name })) {
+                        Ok(_) => {
+                            self.search_results = None;
+                            self.showing = Some(name);
+                        }
+                        Err(e) => self.status = e,
+                    }
                 }
             });
             let mut open = None;

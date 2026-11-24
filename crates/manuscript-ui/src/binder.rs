@@ -310,6 +310,22 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                             close = true;
                         }
                     }
+                    if !in_trash {
+                        ui.menu_button("Add to Collection", |ui| {
+                            for c in crate::collections::all(&s.project).into_iter().filter(|c| c.search.is_none()) {
+                                if ui.button(&c.name).clicked() {
+                                    run("collection.add", json!({ "name": c.name, "items": [id.as_text()] }));
+                                    close = true;
+                                }
+                            }
+                            if ui.button("New Collection").clicked() {
+                                let names: Vec<String> = crate::collections::all(&s.project).into_iter().map(|c| c.name).collect();
+                                let name = (1..).map(|n| format!("Collection {n}")).find(|n| !names.contains(n)).unwrap_or_default();
+                                run("collection.new", json!({ "name": name, "items": [id.as_text()] }));
+                                close = true;
+                            }
+                        });
+                    }
                     ui.separator();
                     if in_trash {
                         if ui.button("Restore").clicked() {

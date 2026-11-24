@@ -47,3 +47,11 @@ words struck through, with a count of each (`snapshot.compare` also compares two
 File › Targets sets the manuscript's word target, a deadline and your writing days, and a target
 for this session. The status bar shows your progress and how many words a writing day the
 deadline needs. Start a timed sprint there too.
+
+## Collections
+
+A collection is a list of items beside the binder; the items stay where they are. Right-click an
+item › Add to Collection to put it in a hand-picked collection (or start a new one). After a
+project search, Save Search keeps the search as a collection that always shows what matches now.
+When the project has collections, the menu above the binder switches between the binder and each
+collection; × takes an item out of a hand-picked collection.
