@@ -41,3 +41,13 @@ back instead of changing your project. The status bar shows how many fixes wait;
 Offered Fixes in the command palette. Each fix shows the document, why, and the words before and
 after. Accept takes it into the text (one undo step); Reject turns it down; Open shows the
 document. A fix whose words you have since changed can only be rejected.
+
+## Other formats, through a converter
+
+For a format Manuscript does not write, you can use a document converter you installed yourself
+(Manuscript never comes with one). On File › Export choose "Another format, through a converter
+you installed", give the converter program and its arguments, with `{input}` where it takes the
+manuscript (Manuscript hands it a DOCX), `{output}` where it writes the file, and `{format}` for
+the file's extension, then Export. The program is run directly, with no command shell, and stopped
+if it runs for more than five minutes. When Manuscript can read the result back it checks every
+word; otherwise the report says it was not checked.

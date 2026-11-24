@@ -23,6 +23,8 @@ pub struct ViewPrefs {
     pub dim_in_focus: bool,
     /// Show grammar and style hints (ED-9); off unless the writer turns them on.
     pub grammar: bool,
+    /// The document converter the writer installed, for other formats (EXP-7).
+    pub converter: wordsmith_manuscript_io::external::Converter,
     /// The interface's language (ACC-4): a code from `i18n::LANGUAGES`, or empty to follow the
     /// computer.
     pub language: String,
@@ -38,6 +40,7 @@ impl Default for ViewPrefs {
             dim_in_focus: false,
             grammar: false,
             language: String::new(),
+            converter: Default::default(),
         }
     }
 }

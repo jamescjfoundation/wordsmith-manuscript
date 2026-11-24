@@ -8,6 +8,7 @@
 pub mod compile;
 pub mod docset;
 pub mod export;
+pub mod external;
 pub mod import;
 pub mod mapping;
 pub mod notes;

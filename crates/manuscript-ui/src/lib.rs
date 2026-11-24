@@ -1986,6 +1986,7 @@ impl Manuscript {
             ("html", "Web page (HTML)"),
             ("epub", "Reading copy (EPUB)"),
             ("book", "Book package for Wordsmith Book (.wsmz)"),
+            ("convert", "Another format, through a converter you installed"),
         ];
         let current = formats.iter().find(|f| f.0 == self.export_format).map_or("", |f| f.1);
         let c = egui::ComboBox::from_id_salt("export-format").selected_text(current).show_ui(ui, |ui| {
@@ -1994,6 +1995,13 @@ impl Manuscript {
             }
         });
         c.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Format"));
+        if self.export_format == "convert" {
+            ui.label(egui::RichText::new("Manuscript writes the manuscript as DOCX and runs a document converter you installed yourself; the file's extension names the format. The converter is not part of Manuscript.").weak());
+            let l = ui.label("Converter program");
+            ui.text_edit_singleline(&mut self.view.converter.program).labelled_by(l.id);
+            let l = ui.label("Its arguments ({input}, {output} and {format} are filled in)");
+            ui.text_edit_singleline(&mut self.view.converter.args).labelled_by(l.id);
+        }
         let o = &mut self.export_options;
         let titles = [
             (Titles::Title, "Their titles"),
@@ -2027,10 +2035,17 @@ impl Manuscript {
         ui.checkbox(&mut o.comments, "Comments as review comments (DOCX, ODT, RTF)");
         if ui.button(crate::i18n::tr("Export")).clicked() {
             self.write_back();
-            let params = json!({ "path": self.export_path, "format": self.export_format, "options": self.export_options });
+            let (cmd, params) = if self.export_format == "convert" {
+                (
+                    "export.convert",
+                    json!({ "path": self.export_path, "program": self.view.converter.program, "args": self.view.converter.args, "options": self.export_options }),
+                )
+            } else {
+                ("export.file", json!({ "path": self.export_path, "format": self.export_format, "options": self.export_options }))
+            };
             self.export_report = match self.session.as_mut() {
                 None => "Open a project first.".into(),
-                Some(s) => match s.run("export.file", &params) {
+                Some(s) => match s.run(cmd, &params) {
                     Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
                     Err(e) => e,
                 },

@@ -16,6 +16,14 @@ use crate::session::{Outcome, Session};
 pub fn specs() -> Vec<Spec> {
     vec![
         Spec {
+            id: "export.convert",
+            label: "Export Through a Converter",
+            key: "",
+            params: r#"{"path": string, "program": string, "args": string, "options"?: {...}, "preset"?: string}"#,
+            about: "Write the manuscript in another format through a document converter installed separately: it is given the manuscript as DOCX ({input}) and writes `path` ({output}; {format} is its extension). Checked word for word when the result can be read back.",
+            mutates: false,
+        },
+        Spec {
             id: "export.file",
             label: "Export",
             key: "Mod+E",
@@ -78,6 +86,23 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             }
             write(&path, &out.bytes)?;
             Ok(json!({ "path": path.to_string_lossy(), "bytes": out.bytes.len(), "check": out.check.to_string(), "left_out": out.left_out }))
+        })(),
+        "export.convert" => (|| {
+            let path = Path::new(str_param(v, "path")?).to_path_buf();
+            let options = options_of(s, v)?;
+            let conv =
+                wordsmith_manuscript_io::external::Converter { program: str_param(v, "program")?.to_owned(), args: str_param(v, "args")?.to_owned() };
+            let out = wordsmith_manuscript_io::external::convert(&wordsmith_manuscript_model::drafts::exported(&s.project), &options, &conv, &path)?;
+            if let Some(c) = &out.check
+                && !c.passed()
+            {
+                return Err(format!("the converter's file does not hold the manuscript's words ({c}); it was written to {}", path.display()));
+            }
+            Ok(json!({
+                "path": out.path.to_string_lossy(),
+                "bytes": out.bytes,
+                "check": out.check.as_ref().map_or_else(|| "not checked: Manuscript cannot read this format back".to_owned(), ToString::to_string),
+            }))
         })(),
         "export.presets" => Ok(s.project.settings.extra.get("export_presets").cloned().unwrap_or_else(|| json!({}))),
         "export.savePreset" => (|| {
