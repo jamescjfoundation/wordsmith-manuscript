@@ -126,3 +126,32 @@ fn front_matter_before_chapters_keeps_its_breaks() {
     assert!(p.items[0].text.body.blocks.contains(&Block::SceneBreak));
     assert!(p.report.check.as_ref().unwrap().passed());
 }
+
+#[test]
+fn the_six_file_set_becomes_one_ordered_manuscript_with_every_word_checked() {
+    use wordsmith_manuscript_io::docset::{SetRules, folder_files, plan_set};
+    let files = folder_files(&fixture("document-set")).unwrap();
+    assert_eq!(files.len(), 6);
+    let set = plan_set(&files, &SetRules::default(), &Rules::default(), &TextRules::default()).unwrap();
+    assert!(set.others.is_empty());
+    assert_eq!(set.draft_name, "First Draft");
+    let m = set.manuscript.unwrap();
+    assert!(m.report.check.as_ref().unwrap().passed(), "{}", m.report.check.as_ref().unwrap());
+    let chapters: Vec<&str> = m.items.iter().filter(|i| i.role == Role::Chapter).map(|i| i.title.as_str()).collect();
+    assert_eq!(chapters.len(), 59, "one ordered manuscript");
+    assert_eq!(chapters.first(), Some(&"Chapter I."));
+    assert_eq!(chapters.last(), Some(&"Chapter LIX."));
+    // The joined words are the six files' words in name order: the whole novel.
+    let txt = text_document(&std::fs::read_to_string(fixture("novels/great-expectations.txt")).unwrap(), &TextRules::default());
+    let novel = wordsmith_manuscript_io::mapping::source_words(&txt, &Rules::default());
+    assert_eq!(wordsmith_manuscript_io::mapping::plan_words(&m.items).len(), novel.len());
+}
+
+#[test]
+fn every_novel_fixture_imports_with_a_passing_check() {
+    for f in ["novels/pride-and-prejudice.txt", "novels/great-expectations.txt", "novels/war-and-peace.txt"] {
+        let plan = plan_file(&fixture(f), &Rules::default(), &TextRules::default()).unwrap();
+        assert!(plan.report.check.as_ref().unwrap().passed(), "{f}: {}", plan.report.check.as_ref().unwrap());
+        assert!(plan.items.len() > 10, "{f}");
+    }
+}

@@ -163,7 +163,7 @@ pub fn is_break(text: &str, centered: bool, extra: &[String]) -> bool {
     one_symbol || (centered && marks.len() <= 5)
 }
 
-fn heading_level(doc: &Document, p: &Paragraph) -> Option<usize> {
+pub(crate) fn heading_level(doc: &Document, p: &Paragraph) -> Option<usize> {
     if let Some(l) = p.props.outline_level.filter(|l| *l < 9) {
         return Some(usize::from(l) + 1);
     }

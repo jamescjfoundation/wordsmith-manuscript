@@ -57,3 +57,36 @@ fn rules_given_once_are_kept_for_the_next_import() {
     let preview = s.run("import.preview", &json!({ "path": path.to_string_lossy() })).unwrap();
     assert!(preview["word_check"].as_str().unwrap().starts_with("every word matches"));
 }
+
+#[test]
+fn a_document_set_places_each_file_by_its_role() {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("doc-set-roles");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Tide (Plan).md"), "A plan for the book.\n").unwrap();
+    std::fs::write(dir.join("Tide (Rough Work).txt"), "Rough notes.\n\n***\n\nMore rough notes.\n").unwrap();
+    std::fs::write(dir.join("Tide (First Draft).txt"), "Chapter 1\n\nOld opening.\n").unwrap();
+    std::fs::write(dir.join("Tide (Second Draft) 2.txt"), "Chapter 2\n\nSecond.\n").unwrap();
+    std::fs::write(dir.join("Tide (Second Draft) 1.txt"), "Chapter 1\n\nNew opening.\n").unwrap();
+    let mut s = Session::new(Project::new());
+    let out = s.run("import.set", &json!({ "folder": dir.to_string_lossy() })).unwrap();
+    let p = &s.project;
+    let chapters: Vec<&str> = p.binder.area(Area::Manuscript).iter().map(|i| i.title.as_str()).collect();
+    assert_eq!(chapters, ["Chapter 1", "Chapter 2"], "the latest draft's files, joined in order");
+    assert_eq!(p.binder.area(Area::Notes)[0].title, "Tide (Plan)");
+    let research: Vec<&str> = p.binder.area(Area::Research).iter().map(|i| i.title.as_str()).collect();
+    assert!(research.contains(&"First Draft"), "an earlier draft is kept in Research: {research:?}");
+    assert!(research.contains(&"Tide (Rough Work)"));
+    assert!(out["checks"].as_array().unwrap().iter().all(|c| c["check"].as_str().unwrap().starts_with("every word matches")));
+    s.undo();
+    assert!(s.project.binder.is_empty());
+}
+
+#[test]
+fn the_six_file_set_imports_into_a_project() {
+    let mut s = Session::new(Project::new());
+    let out = s.run("import.set", &json!({ "folder": fixture("document-set").to_string_lossy() })).unwrap();
+    assert_eq!(out["files"].as_array().unwrap().len(), 6);
+    assert_eq!(s.project.binder.area(Area::Manuscript).len(), 60, "front matter and 59 chapters");
+    assert!(s.project.manuscript_words() > 180_000);
+}

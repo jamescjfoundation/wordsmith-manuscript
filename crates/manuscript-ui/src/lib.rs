@@ -1067,6 +1067,9 @@ impl Manuscript {
             if ui.button("Import into the Manuscript").clicked() {
                 run = Some("import.document");
             }
+            if ui.button("Document Set (a Folder)").clicked() {
+                run = Some("import.set");
+            }
             if ui.button("Notes Folder into the Story Bible").clicked() {
                 run = Some("import.notes");
             }
@@ -1074,7 +1077,7 @@ impl Manuscript {
         if let Some(cmd) = run {
             self.write_back();
             let path = self.import_path.clone();
-            let params = json!({ "path": path, "rules": self.import_rules, "join_lines": self.import_join });
+            let params = json!({ "path": path, "folder": path, "rules": self.import_rules, "join_lines": self.import_join });
             self.import_report = match self.session.as_mut() {
                 None => "Open or create a project first.".into(),
                 Some(s) => match s.run(cmd, &params) {

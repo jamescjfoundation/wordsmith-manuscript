@@ -6,7 +6,7 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 use wordsmith_manuscript_io::import::{self, TextRules};
-use wordsmith_manuscript_io::{mapping, notes};
+use wordsmith_manuscript_io::{docset, mapping, notes};
 use wordsmith_manuscript_model::{Area, Item, ItemId, Kind, Place, Project, Role, bible};
 
 use crate::commands::{Spec, str_param};
@@ -22,6 +22,14 @@ pub fn specs() -> Vec<Spec> {
             params: r#"{"path": string, "rules"?: {"heading_roles"?: [role], "chapter_lines"?: bool, "split_scenes"?: bool, "scene_marks"?: [string], "underline_as_italic"?: bool}, "join_lines"?: bool}"#,
             about: "The binder an import would make, its report and its word-for-word check, without changing the project.",
             mutates: false,
+        },
+        Spec {
+            id: "import.set",
+            label: "Import Document Set",
+            key: "",
+            params: r#"{"paths"?: [string], "folder"?: string, "names"?: [{"marker": string, "dest": "notes"|"research"|"draft", "draft"?: n}], "rules"?: {...}}"#,
+            about: "Import a set of documents placed by the roles in their names: plans into Notes, rough work into Research, the latest draft's files joined into the manuscript, earlier drafts into Research (one undo step).",
+            mutates: true,
         },
         Spec {
             id: "import.document",
@@ -59,6 +67,50 @@ pub fn plan_json(plan: &mapping::Plan) -> Value {
         "word_check": plan.report.check.as_ref().map(ToString::to_string),
         "notes_check": plan.report.notes_check.as_ref().map(ToString::to_string),
     })
+}
+
+/// Where a plan goes in a set import: the area, and a folder to hold it (when titled).
+pub struct Target {
+    /// The area.
+    pub area: Area,
+    /// A folder made for the plan's items, with this title (none: the items go at the top).
+    pub folder: Option<String>,
+    /// The plan.
+    pub plan: mapping::Plan,
+}
+
+/// Place several plans as one undo step. Returns the ids made.
+pub fn place_many(s: &mut Session, targets: Vec<Target>, label: &str) -> Result<Vec<ItemId>, String> {
+    let ids: Vec<ItemId> =
+        targets.iter().flat_map(|t| t.plan.items.iter().map(|_| ItemId::new()).chain(t.folder.iter().map(|_| ItemId::new()))).collect();
+    let mut pool = ids.clone().into_iter();
+    let mut made = Vec::new();
+    s.change(label, &ids, &[], |p| {
+        for t in targets {
+            let mut parents: Vec<Option<ItemId>> = vec![None];
+            if let Some(title) = t.folder {
+                let fid = pool.next().ok_or("out of ids")?;
+                p.binder.insert(Place::end_of(t.area), Item::with_id(fid, Kind::Folder, title)).map_err(|e| e.to_string())?;
+                parents = vec![Some(fid)];
+                made.push(fid);
+            }
+            for it in t.plan.items {
+                let id = pool.next().ok_or("out of ids")?;
+                let parent = parents.get(it.depth).copied().flatten();
+                let place = parent.map_or(Place::end_of(t.area), |pid| Place::inside(t.area, pid));
+                let role = if t.area == Area::Manuscript { it.role } else { Role::None };
+                p.binder.insert(place, Item::with_id(id, it.kind, it.title).role(role)).map_err(|e| e.to_string())?;
+                if !it.text.is_empty() {
+                    p.texts.insert(id, it.text);
+                }
+                parents.truncate(it.depth + 1);
+                parents.push(Some(id));
+                made.push(id);
+            }
+        }
+        Ok(())
+    })?;
+    Ok(made)
 }
 
 /// Place a plan's items at the end of `into` (or the Manuscript), as one undo step.
@@ -148,6 +200,58 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             let text = TextRules { join_lines: v.get("join_lines").and_then(Value::as_bool).unwrap_or(true) };
             let plan = import::plan_file(Path::new(&path), &rules, &text)?;
             Ok(plan_json(&plan))
+        })(),
+        "import.set" => (|| {
+            let paths: Vec<std::path::PathBuf> = match (v.get("paths").and_then(Value::as_array), crate::commands::opt_str(v, "folder")) {
+                (Some(list), _) => list.iter().filter_map(Value::as_str).map(std::path::PathBuf::from).collect(),
+                (None, Some(dir)) => docset::folder_files(Path::new(dir))?,
+                (None, None) => return Err("give `paths` or a `folder`".into()),
+            };
+            if paths.is_empty() {
+                return Err("the set holds no files that can be imported".into());
+            }
+            let rules = rules_of(s, v)?;
+            let set_rules: docset::SetRules = match v.get("names") {
+                Some(n) => docset::SetRules { names: serde_json::from_value(n.clone()).map_err(|e| format!("names: {e}"))? },
+                None => s.project.settings.extra.get("document_set").and_then(|r| serde_json::from_value(r.clone()).ok()).unwrap_or_default(),
+            };
+            let set = docset::plan_set(&paths, &set_rules, &rules, &TextRules::default())?;
+            let mut checks = Vec::new();
+            let mut targets = Vec::new();
+            if let Some(m) = set.manuscript {
+                if let Some(c) = &m.report.check
+                    && !c.passed()
+                {
+                    return Err(format!("the import was stopped: the manuscript's words do not match its files ({c})"));
+                }
+                checks.push(json!({ "draft": set.draft_name, "check": m.report.check.as_ref().map(ToString::to_string), "items": m.items.len() }));
+                targets.push(Target { area: Area::Manuscript, folder: None, plan: m });
+            }
+            for (dest, name, plan) in set.others {
+                if let Some(c) = &plan.report.check
+                    && !c.passed()
+                {
+                    return Err(format!("the import was stopped: the words of {name} do not match ({c})"));
+                }
+                let area = if dest == docset::Dest::Notes { Area::Notes } else { Area::Research };
+                checks.push(json!({ "file": name, "into": area.key(), "check": plan.report.check.as_ref().map(ToString::to_string) }));
+                let one = plan.items.len() == 1;
+                let mut plan = plan;
+                if one && let Some(it) = plan.items.first_mut() {
+                    it.title.clone_from(&name);
+                }
+                targets.push(Target { area, folder: (!one).then_some(name), plan });
+            }
+            let made = place_many(s, targets, "Import Document Set")?;
+            if v.get("names").is_some() {
+                s.project.settings.extra.insert("document_set".into(), serde_json::to_value(&set_rules).map_err(|e| e.to_string())?);
+                s.touch();
+            }
+            Ok(json!({
+                "files": set.files.iter().map(|f| json!({ "name": f.name, "dest": format!("{:?}", f.dest).to_lowercase(), "draft": f.draft })).collect::<Vec<_>>(),
+                "made": made.len(),
+                "checks": checks,
+            }))
         })(),
         "import.document" => (|| {
             let path = str_param(v, "path")?.to_owned();
