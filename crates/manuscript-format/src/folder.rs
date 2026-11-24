@@ -80,6 +80,34 @@ pub struct Saved {
     pub written: Vec<String>,
     /// Files removed.
     pub removed: Vec<String>,
+    /// Files that had changed on disk since they were read (another device, a sync service):
+    /// each was copied into `conflicts/` before this save wrote over it (FIL-4).
+    pub conflicts: Vec<String>,
+}
+
+/// A file changed outside the app since it was read or last saved (FIL-4).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OutsideChange {
+    /// The file, relative to the project folder.
+    pub rel: String,
+    /// What it holds now, with its hash; `None` when it was removed.
+    pub now: Option<(String, Hash)>,
+}
+
+/// Where a copy of `rel` is kept when a save would write over a change made elsewhere:
+/// `conflicts/<stamp> <rel with slashes as dashes>`.
+pub fn conflict_name(rel: &str, at: std::time::SystemTime) -> String {
+    format!("conflicts/{} {}", wordsmith_manuscript_model::snapshot::stamp(at), rel.replace('/', "-"))
+}
+
+/// Whether `rel` names a file the project's model holds (`project.toml`, `binder.toml`,
+/// `text/<id>.md`, `bible/<id>.md`).
+fn watched(rel: &str) -> bool {
+    if rel == "project.toml" || rel == "binder.toml" {
+        return true;
+    }
+    let Some((dir, name)) = rel.split_once('/') else { return false };
+    (dir == "text" || dir == "bible") && name.strip_suffix(".md").is_some_and(|id| id.parse::<wordsmith_manuscript_model::ItemId>().is_ok())
 }
 
 /// An open project folder: where it is and what its files held when read or last saved.
@@ -244,6 +272,48 @@ impl Folder {
         Ok(folder)
     }
 
+    /// The files changed, added or removed outside the app since they were read or last saved:
+    /// `project.toml`, `binder.toml` and the text and entry files (FIL-4).
+    pub fn outside_changes(&self) -> Result<Vec<OutsideChange>, Error> {
+        let mut out = Vec::new();
+        for (rel, stamp) in &self.index {
+            if !watched(rel) {
+                continue;
+            }
+            match read_text(&self.root, rel, limits::MAX_TEXT_FILE.max(limits::MAX_BINDER_FILE))? {
+                Some((text, h)) if h != stamp.disk => out.push(OutsideChange { rel: rel.clone(), now: Some((text, h)) }),
+                Some(_) => {}
+                None => out.push(OutsideChange { rel: rel.clone(), now: None }),
+            }
+        }
+        for dir in ["text", "bible"] {
+            let Ok(rd) = std::fs::read_dir(self.root.join(dir)) else { continue };
+            for e in rd.flatten() {
+                let rel = format!("{dir}/{}", e.file_name().to_string_lossy());
+                if watched(&rel)
+                    && !self.index.contains_key(&rel)
+                    && let Some((text, h)) = read_text(&self.root, &rel, limits::MAX_TEXT_FILE)?
+                {
+                    out.push(OutsideChange { rel, now: Some((text, h)) });
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// Record what a file holds now: on disk (`disk`), and what the model renders it to
+    /// (`model`). `None` forgets the file, so the next save writes it.
+    pub fn accept(&mut self, rel: &str, stamp: Option<Stamp>) {
+        match stamp {
+            Some(s) => {
+                self.index.insert(rel.to_owned(), s);
+            }
+            None => {
+                self.index.remove(rel);
+            }
+        }
+    }
+
     /// Save the project into its folder.
     pub fn save(&mut self, project: &Project) -> Result<Saved, Error> {
         let mut disk = Disk::new(&self.root);
@@ -256,11 +326,21 @@ impl Folder {
         let rendered = files::render(project)?;
         let mut saved = Saved::default();
         let mut keep: Vec<&str> = Vec::with_capacity(rendered.len());
+        let now = std::time::SystemTime::now();
         for (rel, bytes) in &rendered {
             keep.push(rel);
             let h = hash(bytes);
             if self.index.get(rel).is_some_and(|s| s.model == h) {
                 continue;
+            }
+            // Never write over a change made elsewhere without keeping it (FIL-4).
+            if let Ok(Some((theirs, disk))) = read_text(&self.root, rel, limits::MAX_TEXT_FILE.max(limits::MAX_BINDER_FILE))
+                && disk != h
+                && self.index.get(rel).is_none_or(|s| s.disk != disk)
+            {
+                let copy = conflict_name(rel, now);
+                sink.write(&copy, theirs.as_bytes())?;
+                saved.conflicts.push(copy);
             }
             sink.write(rel, bytes)?;
             self.index.insert(rel.clone(), Stamp { disk: h, model: h });
@@ -273,6 +353,13 @@ impl Folder {
             .cloned()
             .collect();
         for rel in stale {
+            if let Ok(Some((theirs, disk))) = read_text(&self.root, &rel, limits::MAX_TEXT_FILE)
+                && self.index.get(&rel).is_some_and(|s| s.disk != disk)
+            {
+                let copy = conflict_name(&rel, now);
+                sink.write(&copy, theirs.as_bytes())?;
+                saved.conflicts.push(copy);
+            }
             sink.remove(&rel)?;
             self.index.remove(&rel);
             saved.removed.push(rel);

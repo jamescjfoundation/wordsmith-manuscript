@@ -10,9 +10,57 @@ use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime};
 
 use serde_json::{Value, json};
-use wordsmith_manuscript_format::folder::Folder;
+use wordsmith_manuscript_format::files;
+use wordsmith_manuscript_format::folder::{Folder, Stamp, hash};
 use wordsmith_manuscript_format::pack;
 use wordsmith_manuscript_model::{Binder, Entry, ItemId, ItemText, Project, Settings};
+
+/// What [`Session::check_outside`] found and did.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Outside {
+    /// The whole project was read again (nothing here was unsaved).
+    pub project_reloaded: bool,
+    /// Documents and entries read again (changed only elsewhere).
+    pub reloaded: Vec<ItemId>,
+    /// Documents and entries changed both here and elsewhere: this version kept, the other a
+    /// snapshot (documents) or a copy in `conflicts/` (entries).
+    pub conflicts: Vec<ItemId>,
+    /// Copies kept in `conflicts/`.
+    pub copies: Vec<String>,
+    /// Files removed elsewhere that the next save writes again.
+    pub restored: Vec<String>,
+}
+
+impl Outside {
+    /// Whether anything was found.
+    pub fn is_empty(&self) -> bool {
+        *self == Outside::default()
+    }
+
+    /// A sentence for the status bar.
+    pub fn summary(&self) -> String {
+        if self.project_reloaded {
+            return "The project was changed on another device or by a sync service; it was read again.".into();
+        }
+        let mut parts = Vec::new();
+        if !self.reloaded.is_empty() {
+            parts.push(format!("{} changed elsewhere and read again", self.reloaded.len()));
+        }
+        if !self.conflicts.is_empty() {
+            parts.push(format!(
+                "{} changed both here and elsewhere (yours kept; the other version is a snapshot named “Changed elsewhere”)",
+                self.conflicts.len()
+            ));
+        }
+        if !self.copies.is_empty() {
+            parts.push(format!("{} file{} kept in the project's conflicts folder", self.copies.len(), if self.copies.len() == 1 { "" } else { "s" }));
+        }
+        if !self.restored.is_empty() {
+            parts.push(format!("{} removed elsewhere, kept here", self.restored.len()));
+        }
+        format!("Outside changes: {}.", parts.join("; "))
+    }
+}
 
 /// What a command touched, kept to undo it.
 #[derive(Clone, Debug)]
@@ -167,6 +215,130 @@ impl Session {
         }
         let bytes = pack::pack_files(&files).map_err(|e| e.to_string())?;
         jcj_project_write(file, &bytes)
+    }
+
+    /// Look for changes made to the project folder outside the app (another device, a sync
+    /// service) and take them in (FIL-4):
+    ///
+    /// - a document or entry changed only there is read again;
+    /// - one changed both there and here keeps this version, and the other version becomes a
+    ///   snapshot of it ("Changed elsewhere") to compare and restore; an entry's other version is
+    ///   copied into `conflicts/`;
+    /// - a changed binder or project settings reload the whole project when nothing here is
+    ///   unsaved; otherwise this version is kept and theirs copied into `conflicts/`.
+    ///
+    /// Nothing is overwritten without a copy, and nothing is lost.
+    pub fn check_outside(&mut self) -> Result<Outside, String> {
+        let mut out = Outside::default();
+        let Some(folder) = self.folder.as_ref() else { return Ok(out) };
+        let root = folder.root().to_path_buf();
+        let changes = folder.outside_changes().map_err(|e| e.to_string())?;
+        if changes.is_empty() {
+            return Ok(out);
+        }
+        let structural = changes.iter().any(|c| c.rel == "binder.toml" || c.rel == "project.toml");
+        if structural && !self.is_dirty() && self.media.is_empty() {
+            let (f, p) = Folder::open(&root).map_err(|e| e.to_string())?;
+            self.project = p;
+            self.folder = Some(f);
+            self.undo.clear();
+            self.redo.clear();
+            self.revision += 1;
+            self.saved = self.revision;
+            out.project_reloaded = true;
+            return Ok(out);
+        }
+        let now = SystemTime::now();
+        let mut disk = wordsmith_manuscript_format::folder::Disk::new(&root);
+        for c in changes {
+            let stamp = self.folder.as_ref().and_then(|f| f.index().get(&c.rel).copied());
+            let id: Option<ItemId> = c.rel.split_once('/').and_then(|(_, n)| n.strip_suffix(".md")).and_then(|n| n.parse().ok());
+            let Some((text, h)) = c.now else {
+                // Removed there: this version is written again at the next save.
+                if let Some(f) = self.folder.as_mut() {
+                    f.accept(&c.rel, None);
+                }
+                out.restored.push(c.rel);
+                continue;
+            };
+            let keep_copy = |disk: &mut wordsmith_manuscript_format::folder::Disk, out: &mut Outside| -> Result<(), String> {
+                let copy = wordsmith_manuscript_format::folder::conflict_name(&c.rel, now);
+                wordsmith_manuscript_format::folder::Sink::write(disk, &copy, text.as_bytes()).map_err(|e| e.to_string())?;
+                out.copies.push(copy);
+                Ok(())
+            };
+            match (c.rel.as_str(), id) {
+                ("binder.toml" | "project.toml", _) => {
+                    keep_copy(&mut disk, &mut out)?;
+                    if let (Some(f), Some(st)) = (self.folder.as_mut(), stamp) {
+                        f.accept(&c.rel, Some(Stamp { disk: h, model: st.model }));
+                    }
+                }
+                (rel, Some(id)) if rel.starts_with("text/") && self.project.binder.contains(id) => {
+                    let theirs = files::read_item(&text, rel).map_err(|e| e.to_string())?;
+                    let mine = self.project.texts.get(&id).cloned().unwrap_or_default();
+                    let mine_hash = if mine.is_empty() { hash(b"") } else { hash(files::write_item(&mine).map_err(|e| e.to_string())?.as_bytes()) };
+                    let unchanged_here = stamp.is_none_or(|st| st.model == mine_hash);
+                    let theirs_hash =
+                        if theirs.is_empty() { hash(b"") } else { hash(files::write_item(&theirs).map_err(|e| e.to_string())?.as_bytes()) };
+                    if unchanged_here {
+                        self.project.texts.insert(id, theirs);
+                        out.reloaded.push(id);
+                        if let Some(f) = self.folder.as_mut() {
+                            f.accept(rel, Some(Stamp { disk: h, model: theirs_hash }));
+                        }
+                    } else {
+                        let taken = wordsmith_manuscript_model::snapshot::stamp(now);
+                        let list = self.project.snapshots.entry(id).or_default();
+                        if !list.iter().any(|x| x.taken == taken) {
+                            list.push(wordsmith_manuscript_model::Snapshot { taken, name: "Changed elsewhere".into(), text: theirs.body });
+                        }
+                        out.conflicts.push(id);
+                        if let (Some(f), Some(st)) = (self.folder.as_mut(), stamp) {
+                            f.accept(rel, Some(Stamp { disk: h, model: st.model }));
+                        }
+                    }
+                    self.revision += 1;
+                }
+                (rel, Some(id)) if rel.starts_with("bible/") && self.project.binder.contains(id) => {
+                    let theirs = files::read_entry(&text, rel).map_err(|e| e.to_string())?;
+                    let mine = self.project.entries.get(&id).cloned();
+                    let mine_hash = match &mine {
+                        Some(e) => hash(files::write_entry(e).map_err(|e| e.to_string())?.as_bytes()),
+                        None => hash(b""),
+                    };
+                    let theirs_hash = hash(files::write_entry(&theirs).map_err(|e| e.to_string())?.as_bytes());
+                    if stamp.is_none_or(|st| st.model == mine_hash) {
+                        self.project.entries.insert(id, theirs);
+                        out.reloaded.push(id);
+                        if let Some(f) = self.folder.as_mut() {
+                            f.accept(rel, Some(Stamp { disk: h, model: theirs_hash }));
+                        }
+                    } else {
+                        keep_copy(&mut disk, &mut out)?;
+                        out.conflicts.push(id);
+                        if let (Some(f), Some(st)) = (self.folder.as_mut(), stamp) {
+                            f.accept(rel, Some(Stamp { disk: h, model: st.model }));
+                        }
+                    }
+                    self.revision += 1;
+                }
+                // A file of an item this binder does not hold (yet): kept as it is, and copied
+                // so it is safe whatever happens to the binder.
+                _ => {
+                    keep_copy(&mut disk, &mut out)?;
+                    if let Some(f) = self.folder.as_mut() {
+                        f.accept(&c.rel, Some(Stamp { disk: h, model: hash(text.as_bytes()) }));
+                    }
+                }
+            }
+        }
+        if !out.reloaded.is_empty() {
+            // Undo steps from before would put the other device's changes back out.
+            self.undo.clear();
+            self.redo.clear();
+        }
+        Ok(out)
     }
 
     /// Where a media item's file is inside the project (`media/<id>.<ext>`).

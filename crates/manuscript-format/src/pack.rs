@@ -39,7 +39,7 @@ pub const MAX_ENTRIES: usize = 4 * limits::MAX_ITEMS + 16;
 /// The most bytes unpacked in all.
 pub const MAX_UNPACKED: u64 = 4 * 1024 * 1024 * 1024;
 
-const TOP: [&str; 5] = ["text/", "bible/", "media/", "scripts/", "snapshots/"];
+const TOP: [&str; 6] = ["text/", "bible/", "media/", "scripts/", "snapshots/", "conflicts/"];
 
 /// Whether `name` may be a file inside a packed project: `project.toml`, `binder.toml`, or a
 /// plain relative path under one of the project's folders, with no `..`, backslash, colon,

@@ -16,9 +16,15 @@ My Novel.wsm/
   media/<id>.<ext>              images, PDFs and other files
   scripts/<id>.wss              screenplays, in Wordsmith Script's own format (from 1.0)
   snapshots/<id>/<UTC time>.md  named, dated copies of one item's text
+  conflicts/<UTC time> <file>   a file changed elsewhere, kept before this copy wrote over it
   .recovery/                    unsaved work while the app runs
 ```
 
+- **Conflicts** (FIL-4): a save never writes over a file that changed on disk since it was read
+  (another device, a sync service) without first copying it to `conflicts/`, named by the time
+  and the file's path with `/` as `-`. The app reads in files changed only elsewhere, and keeps a
+  document changed on both sides as this version plus a snapshot named "Changed elsewhere".
+  Readers ignore `conflicts/`; packed projects and backups carry it.
 - **Ids** are UUID version 7, lowercase and hyphenated (`0190a5c2-b7d0-7c3e-8d2f-1a2b3c4d5e6f`).
   Files are named by id, so renaming or moving an item never touches its file.
 - All text files are UTF-8 with LF line ends. A file the app did not change is never rewritten,

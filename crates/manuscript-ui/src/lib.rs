@@ -79,6 +79,9 @@ pub enum ViewMode {
     Pages,
 }
 
+/// How often the project folder is checked for changes made elsewhere.
+pub const OUTSIDE_EVERY: std::time::Duration = std::time::Duration::from_secs(3);
+
 /// A `#RRGGBB` color.
 fn hex_color(s: &str) -> Option<egui::Color32> {
     let h = s.strip_prefix('#')?;
@@ -128,6 +131,8 @@ pub struct Manuscript {
     pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
     pub showing: Option<String>,
+    /// When the project folder was last checked for outside changes (FIL-4).
+    outside_checked: Option<Instant>,
     /// Where writing histories are kept on this computer (the app's settings folder), if anywhere.
     pub history_dir: Option<std::path::PathBuf>,
     /// Where the writer's own project templates are kept on this computer, if anywhere.
@@ -216,6 +221,7 @@ impl Manuscript {
             other: None,
             compare: snapshots::CompareView::default(),
             history_dir: None,
+            outside_checked: None,
             history_view: history::HistoryView::default(),
             entry_types: entry_types::TypesView::default(),
             templates_dir: None,
@@ -272,6 +278,41 @@ impl Manuscript {
         self.progress = None;
         self.status = "Opened.".into();
         Ok(())
+    }
+
+    /// Take in changes made to the project folder elsewhere (FIL-4), reloading editors whose
+    /// text was read again.
+    pub fn check_outside(&mut self) {
+        if self.session.as_ref().and_then(Session::root).is_none() {
+            return;
+        }
+        self.write_back();
+        let Some(s) = self.session.as_mut() else { return };
+        match s.check_outside() {
+            Ok(o) if o.is_empty() => {}
+            Ok(o) => {
+                self.status = o.summary();
+                let open: Vec<ItemId> = [self.editor.as_ref(), self.other.as_ref()].into_iter().flatten().map(|e| e.item).collect();
+                if o.project_reloaded {
+                    self.other = None;
+                    self.split = jcj_shell::split::Split::None;
+                    self.active_pane = 0;
+                    if self.editor.as_ref().is_some_and(|e| self.session.as_ref().is_some_and(|s| !s.project.binder.contains(e.item))) {
+                        self.editor = None;
+                    }
+                    self.reload_editor();
+                } else if o.reloaded.iter().any(|i| open.contains(i)) || self.editor.as_ref().is_some_and(stitch::is_stitched) {
+                    self.reload_editor();
+                    if let Some(oth) = self.other.take() {
+                        self.other = Some(oth);
+                        self.switch_pane();
+                        self.reload_editor();
+                        self.switch_pane();
+                    }
+                }
+            }
+            Err(e) => self.status = format!("Could not look for outside changes: {e}"),
+        }
     }
 
     /// Start counting this session's words, with the project's writing history from this
@@ -1212,6 +1253,11 @@ impl Manuscript {
 
 impl Manuscript {
     fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+        if self.outside_checked.is_none_or(|t| t.elapsed() >= OUTSIDE_EVERY) {
+            self.outside_checked = Some(Instant::now());
+            self.check_outside();
+        }
+        ui.ctx().request_repaint_after(OUTSIDE_EVERY);
         self.mark_revisions();
         for ed in [self.editor.as_mut(), self.other.as_mut()].into_iter().flatten() {
             if let Some(sp) = ed.spell.as_mut() {
