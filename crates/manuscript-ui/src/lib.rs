@@ -8,6 +8,7 @@
 pub mod agents;
 pub mod bible;
 pub mod binder;
+pub mod board;
 pub mod bookmarks;
 pub mod brand;
 pub mod collections;
@@ -67,6 +68,8 @@ pub enum ViewMode {
     Corkboard,
     /// The outline table.
     Outline,
+    /// The freeform board (PLN-3).
+    Board,
 }
 
 /// The desktop app's state: what the shell draws around.
@@ -103,6 +106,8 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// The freeform board's state (PLN-3).
+    pub board: board::BoardView,
     /// Pictures and PDFs loaded for the media viewer (BND-6).
     pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
@@ -186,6 +191,7 @@ impl Manuscript {
             compare: snapshots::CompareView::default(),
             showing: None,
             media_view: media::MediaView::default(),
+            board: board::BoardView::default(),
             split: jcj_shell::split::Split::None,
             split_state: jcj_shell::split::SplitState::default(),
             active_pane: 0,
@@ -461,6 +467,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
         v.push(CommandInfo::new("view.corkboard", "Corkboard", "Mod+2"));
         v.push(CommandInfo::new("view.outline", "Outline", "Mod+3"));
+        v.push(CommandInfo::new("view.board", "Board", "Mod+4"));
         v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
         v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
         v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
@@ -924,6 +931,11 @@ impl Manuscript {
                 self.mode = ViewMode::Corkboard;
                 return Ok(());
             }
+            "view.board" => {
+                self.write_back();
+                self.mode = ViewMode::Board;
+                return Ok(());
+            }
             _ => {}
         }
         if cmd.id == "write.comment" {
@@ -1105,6 +1117,10 @@ impl Manuscript {
                 self.corkboard_ui(ui);
                 return;
             }
+            ViewMode::Board => {
+                self.board_ui(ui);
+                return;
+            }
             ViewMode::Editor => {}
         }
         if self.focus.is_none() {
@@ -1272,6 +1288,27 @@ impl Manuscript {
         self.binder.selected = Some(item);
         self.status = "Comment added: write it in the inspector.".into();
         Ok(())
+    }
+
+    fn board_ui(&mut self, ui: &mut egui::Ui) {
+        let Some(s) = self.session.as_mut() else {
+            ui.centered_and_justified(|ui| ui.label("Open a project to plan on its board."));
+            return;
+        };
+        let rev = s.revision();
+        let (asks, errors) = board::view(ui, s, &mut self.board, self.binder.selected);
+        if let Some(e) = errors.into_iter().last() {
+            self.status = e;
+        }
+        if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+            self.sync_editor();
+        }
+        for a in asks {
+            let board::Ask::Open(id) = a;
+            self.binder.selected = Some(id);
+            self.open_item(id);
+            self.mode = ViewMode::Editor;
+        }
     }
 
     /// Make the other pane the active one.

@@ -8,6 +8,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Add Comment | `Mod+Alt+M` |
 | Aside | `Mod+Alt+A` |
 | Block Quote | `Mod+Alt+Q` |
+| Board | `Mod+4` |
 | Body | `Mod+Alt+0` |
 | Bold | `Mod+B` |
 | Bookmark | `Mod+D` |

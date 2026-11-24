@@ -58,7 +58,7 @@ writing_days = ["mon", "tue", "wed", "thu", "fri"]
 | `[targets]` | `manuscript` (words), `deadline` (`YYYY-MM-DD`), `writing_days` (`mon` .. `sun`), `session` (words) |
 | `[[fields]]` | Custom fields: `name`, `kind` (`text`, `date`, `checkbox`, `list`), `choices` |
 | `words` | The project word list for spelling (besides bible names) |
-| `[extra]` | Export presets, document-set rules, collections (`collections`: each a `name` with hand-picked `items` or a saved `search`), bookmarks (`bookmarks`: item ids in order) and other settings kept by name |
+| `[extra]` | Export presets, document-set rules, collections (`collections`: each a `name` with hand-picked `items` or a saved `search`), bookmarks (`bookmarks`: item ids in order), the freeform board (`board`: `board` with its cards, links and grid, and `items`, the item each card stands for) and other settings kept by name |
 
 Unknown keys are ignored when read.
 

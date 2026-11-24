@@ -15,6 +15,16 @@ Double-click a cell to edit it. Drag rows to move items when the table is in bin
 
 The binder, the corkboard and the outline always show the same order.
 
+## The board
+
+View › Board (Mod+4) is a canvas for thinking: cards anywhere, with lines between them. Double-click
+the canvas (or Add Card) for a free note; Add the Selected Item puts a binder item on the board as a
+card that always shows its current title and synopsis. Drag cards to move them, drag from a card's
+edge to another card to draw a line, Delete takes selected cards off the board (items stay in the
+binder). Double-click a note to write on it, or an item's card to open the item. Arrange lines the
+selected cards (or all) up in a grid. Every change can be undone, and the board is kept with the
+project.
+
 ## The inspector
 
 The inspector holds the selected item's synopsis, label, status, custom fields, target, keywords,
