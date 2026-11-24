@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Wordsmith Manuscript's brand: design tokens, the editor's page colors and the mark.
 
-use jcj_shell::egui::{self, Color32, Painter, Pos2, Rect, Stroke, StrokeKind};
+use jcj_shell::egui::{self, Color32, Painter, Pos2, Rect, Stroke};
 use jcj_shell::theme::Tokens;
 use serde::Deserialize;
 
-/// The brand's design tokens (`assets/brand/manuscript/tokens.json`).
-pub const TOKENS_JSON: &str = include_str!("../../../assets/brand/manuscript/tokens.json");
+/// The brand's design tokens (`assets/brand/tokens.json`).
+pub const TOKENS_JSON: &str = include_str!("../../../assets/brand/tokens.json");
 
 /// The app icon at 256 pixels, for the window.
-pub const ICON_256: &[u8] = include_bytes!("../../../assets/brand/manuscript/icon-256.png");
+pub const ICON_256: &[u8] = include_bytes!("../../../assets/brand/icon-256.png");
 
 /// The brand's tokens; the core's neutral tokens if the file could not be read (never expected:
 /// a test reads it).
@@ -99,17 +99,52 @@ pub fn editor_font() -> String {
     serde_json::from_str::<RawFile>(TOKENS_JSON).map(|r| r.manuscript.editor_font).unwrap_or_else(|_| "Source Serif 4".into())
 }
 
-/// Paint the mark (a page with lines of text and a turned corner, as `mark.svg`) in `rect` in one
-/// ink color, as the shell asks for it in the quick-access row and the About page.
+/// Paint the mark (the letter M and the cursor of three sheets, as
+/// `assets/brand/wordsmith-manuscript-mark-ink.svg`) in `rect` in one ink color, as the shell asks
+/// for it in the quick-access row and the About page. The letter is drawn from straight pieces, close
+/// to the outlined original at the sizes the shell uses; the two sheets behind are lighter.
 pub fn paint_mark(painter: &Painter, rect: Rect, ink: Color32) {
-    let s = rect.width().min(rect.height()) / 64.0;
-    let at = |x: f32, y: f32| Pos2::new(rect.left() + x * s, rect.top() + y * s);
-    let page = vec![at(17.0, 12.0), at(39.0, 12.0), at(47.0, 20.0), at(47.0, 52.0), at(17.0, 52.0)];
-    painter.add(egui::Shape::closed_line(page, Stroke::new(3.0 * s, ink)));
-    painter.add(egui::Shape::convex_polygon(vec![at(39.0, 12.0), at(47.0, 20.0), at(39.0, 20.0)], ink, Stroke::NONE));
-    for (y, w) in [(26.0, 20.0), (33.0, 20.0), (40.0, 13.0)] {
-        let r = Rect::from_min_max(at(22.0, y), at(22.0 + w, y + 3.0));
-        painter.rect(r, 1.5 * s, ink, Stroke::NONE, StrokeKind::Inside);
+    // The artwork's box, in the SVG's units: 389 wide, 362 high, starting at y = -41.78.
+    const W: f32 = 388.93;
+    const H: f32 = 361.58;
+    const TOP: f32 = -41.78;
+    const MID: f32 = 119.95; // The letter's axis.
+    let s = (rect.width() / W).min(rect.height() / H);
+    let origin = rect.center() - egui::vec2(W, H) * s / 2.0;
+    let at = |x: f32, y: f32| Pos2::new(origin.x + x * s, origin.y + (y - TOP) * s);
+    let mirror = |x: f32| 2.0 * MID - x;
+    let block = |x0: f32, y0: f32, x1: f32, y1: f32| Rect::from_two_pos(at(x0, y0), at(x1, y1));
+
+    // The cursor: each sheet stands 61.2 wide and 239.84 high, a step up and to the right of the
+    // one in front. Only the part a sheet shows is painted, so the lighter ones never overlap.
+    let (step_x, step_y, width, height) = (37.95, 20.87, 61.2, 239.84);
+    for (i, tone) in [(0.0_f32, 1.0_f32), (1.0, 0.6), (2.0, 0.3)] {
+        let (x, y) = (251.84 + i * step_x, -i * step_y);
+        let color = ink.gamma_multiply(tone);
+        if i == 0.0 {
+            painter.rect_filled(block(x, y, x + width, y + height), 0.0, color);
+        } else {
+            let front_right = x - step_x + width;
+            painter.rect_filled(block(front_right, y, x + width, y + height), 0.0, color);
+            painter.rect_filled(block(x, y, front_right, y + step_y), 0.0, color);
+        }
+    }
+
+    // The letter: each half is a slab serif above and below a stem, and a diagonal to the middle.
+    let round = 12.0 * s;
+    for side in [false, true] {
+        let x = |v: f32| if side { mirror(v) } else { v };
+        let shape = |points: &[(f32, f32)]| {
+            let mut pts: Vec<Pos2> = points.iter().map(|&(px, py)| at(x(px), py)).collect();
+            if side {
+                pts.reverse();
+            }
+            egui::Shape::convex_polygon(pts, ink, Stroke::NONE)
+        };
+        painter.rect_filled(block(x(5.86), 0.0, x(73.63), 40.04), round, ink);
+        painter.rect_filled(block(x(1.95), 191.8, x(99.61), 231.84), round, ink);
+        painter.add(shape(&[(28.71, 30.0), (70.6, 30.0), (69.14, 200.0), (25.78, 200.0)]));
+        painter.add(shape(&[(66.0, 0.0), (80.37, 1.37), (MID, 101.95), (MID, 168.36), (102.73, 162.7), (70.31, 76.76)]));
     }
 }
 

@@ -176,7 +176,7 @@ crates/
                          export presets, standard manuscript layout
   manuscript-ui/         views: binder, editor and stitched view, corkboard, outline,
                          inspector, bible, search, export dialog, ribbon tabs, panels
-assets/brand/manuscript/ tokens.json, mark, icons (the brand lives here, never in the core)
+assets/brand/ tokens.json, the logos and icons (see its README.md) (the brand lives here, never in the core)
 docs/                    PLAN.md, SPEC.md, format.md, book-handoff.md, decisions/, guide/,
                          progress.md, golden.md, fixtures.md
 tests/fixtures/          public-domain and written-for-test inputs, with provenance
@@ -213,7 +213,7 @@ Each layer calls only the layers under it; `cargo xtask layers` gets this app's 
 | Atomic saves, backups, recovery, auto-save timing | `jcj-project` | Writes of every file in the project folder; backups of the packed project |
 | Notes, bookmarks, revision marks, comparison, headers and footers | `jcj-features` | Comments, revision passes, snapshot compare (`Grouping` by scene), manuscript headers through a `FieldSource` |
 | Window, ribbon, panels, File page, preferences, keys, updates | `jcj-shell` | Manuscript implements `App` and supplies tabs, panels, File page sections and About |
-| Theme | `jcj-theme` | `assets/brand/manuscript/tokens.json` |
+| Theme | `jcj-theme` | `assets/brand/tokens.json` |
 | Cards, corkboard, canvas | `jcj-board` | Corkboard of a folder's children; freeform board |
 | Agent control | `jcj-agents` | Every Manuscript command as a tool |
 
@@ -631,7 +631,7 @@ standard manuscript format (title page, header, margins, spacing, chapter starts
 word count rounding). Sources are listed by public URL. Done when: every 0.1 feature id in
 section 7 has a spec section, and a person has reviewed it.
 
-**M0.4 `m0/brand`**: `assets/brand/manuscript/tokens.json` in the shape of `jcj-theme`'s
+**M0.4 `m0/brand`**: `assets/brand/tokens.json` in the shape of `jcj-theme`'s
 `TOKENS.md` (light, dark, extra-dark, plus a sepia editor surface), the mark and app icons in the
 suite's brand style, fonts chosen from OFL fonts already bundled or added with licenses
 (`ATTRIBUTION.md`, `cargo xtask assets`). Done when: the app window uses the tokens and icons, and

@@ -57,7 +57,7 @@ jobs:
           case "${{ runner.os }}" in
             Linux)
               cp target/release/wordsmith-manuscript target/release/manuscript-cli "dist/$name/"
-              cp packaging/linux/* assets/brand/manuscript/icon-256.png "dist/$name/"
+              cp packaging/linux/* assets/brand/icon-256.png "dist/$name/"
               tar -C dist -czf "dist/$name.tar.gz" "$name" ;;
             macOS)
               app="dist/$name/Wordsmith Manuscript.app"
@@ -66,7 +66,7 @@ jobs:
               cp target/release/manuscript-cli "dist/$name/"
               sed "s/VERSION/$v/g" packaging/macos/Info.plist > "$app/Contents/Info.plist"
               mkdir icon.iconset
-              for s in 256 512 1024; do cp "assets/brand/manuscript/icon-$s.png" "icon.iconset/icon_${s}x${s}.png"; done
+              for s in 256 512 1024; do cp "assets/brand/icon-$s.png" "icon.iconset/icon_${s}x${s}.png"; done
               iconutil -c icns icon.iconset -o "$app/Contents/Resources/AppIcon.icns"
               (cd dist && zip -qry "$name.zip" "$name") ;;
             Windows)
