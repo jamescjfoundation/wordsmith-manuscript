@@ -150,6 +150,7 @@ tools!(
     "revision.mode",
     "revision.list",
     "revision.clear",
+    "grammar.check",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",

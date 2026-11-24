@@ -21,11 +21,13 @@ pub struct ViewPrefs {
     pub typewriter: bool,
     /// In focus mode, dim the paragraphs around the caret's.
     pub dim_in_focus: bool,
+    /// Show grammar and style hints (ED-9); off unless the writer turns them on.
+    pub grammar: bool,
 }
 
 impl Default for ViewPrefs {
     fn default() -> Self {
-        ViewPrefs { surface: EditorSurface::Theme, size: 17.0, width: 680.0, typewriter: false, dim_in_focus: false }
+        ViewPrefs { surface: EditorSurface::Theme, size: 17.0, width: 680.0, typewriter: false, dim_in_focus: false, grammar: false }
     }
 }
 

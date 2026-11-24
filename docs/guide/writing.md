@@ -72,6 +72,11 @@ All in the project first takes a snapshot of every document it changes.
 Misspelled words get a wavy line; right-click one for suggestions, Add to Project Words, or Ignore
 All. Every bible entry's name and aliases count as words.
 
+**Grammar hints** are off until you turn them on (View › Grammar Hints, in the command palette).
+Then words a grammar or style rule questions get a dotted blue line; right-click for what the
+rule says, a replacement, or Ignore. The check runs on this computer; nothing is sent anywhere.
+Hints are suggestions only: nothing changes unless you pick a replacement.
+
 ## Links
 
 Select words and use Write › Link to… (Mod+K) to link them to a bible entry or a document. Hover

@@ -545,6 +545,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
         v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
         v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
+        v.push(CommandInfo::new("view.grammar", "Grammar Hints", ""));
         v.push(CommandInfo::new("view.dimAround", "Dim Around the Caret", ""));
         v.push(CommandInfo::new("view.textSize", "Text Size", ""));
         v.push(CommandInfo::new("view.width", "Text Width", ""));
@@ -1163,6 +1164,11 @@ impl Manuscript {
 impl Manuscript {
     fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
         self.mark_revisions();
+        for ed in [self.editor.as_mut(), self.other.as_mut()].into_iter().flatten() {
+            if let Some(sp) = ed.spell.as_mut() {
+                sp.grammar = self.view.grammar;
+            }
+        }
         if let Some(ask) = ui.ctx().data_mut(|d| d.remove_temp::<(ItemId, String)>(egui::Id::unique("manuscript-compare-ask"))) {
             self.write_back();
             self.compare.open = Some(ask);
@@ -1512,6 +1518,11 @@ impl Manuscript {
             }
             "view.typewriter" => {
                 self.view.typewriter = !self.view.typewriter;
+                Some(Ok(()))
+            }
+            "view.grammar" => {
+                self.view.grammar = !self.view.grammar;
+                self.status = if self.view.grammar { "Grammar hints are on.".into() } else { "Grammar hints are off.".into() };
                 Some(Ok(()))
             }
             "view.dimAround" => {

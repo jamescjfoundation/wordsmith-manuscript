@@ -74,6 +74,8 @@ pub struct Editor {
     pub spell: Option<crate::spelling::SpellCache>,
     /// The spelling menu: on which word, and where.
     pub menu: Option<(usize, std::ops::Range<usize>, egui::Pos2)>,
+    /// The grammar hint menu: the paragraph, the hint, and where.
+    pub hint_menu: Option<(usize, crate::spelling::Hint, egui::Pos2)>,
     /// A word the writer added to the project's words from the menu (the app runs the command).
     pub add_word: Option<String>,
     /// The link under the pointer and where (the app shows its preview).
@@ -144,6 +146,7 @@ impl Editor {
             last_smart: None,
             spell: None,
             menu: None,
+            hint_menu: None,
             add_word: None,
             hover_link: None,
             follow: None,

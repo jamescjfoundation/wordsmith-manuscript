@@ -302,6 +302,18 @@ impl Editor {
                     },
                     _ => Vec::new(),
                 };
+                let hinted: Vec<(usize, usize)> =
+                    match self.paragraph(i).map(|p| (p.rev, p.text.clone(), mdoc::is_text(&mdoc::tag_of(p)) && !crate::stitch::is_divider(p))) {
+                        Some((rev, text, true)) => match self.spell.as_mut() {
+                            Some(spell) => spell
+                                .hints(i, rev, &text)
+                                .into_iter()
+                                .map(|h| (char_index(&text, h.range.start), char_index(&text, h.range.end)))
+                                .collect(),
+                            None => Vec::new(),
+                        },
+                        _ => Vec::new(),
+                    };
                 let dim = look.dim_others && i != caret_para;
                 let p = self.paragraph(i);
                 let divider = p.is_some_and(crate::stitch::is_divider);
@@ -317,6 +329,11 @@ impl Editor {
                     for (a, b) in &marked {
                         for rect in selection_rects(&l.galley, *a, *b, false) {
                             squiggle(ui.painter(), rect.translate(origin.to_vec2()), egui::Color32::from_rgb(0xC0, 0x39, 0x2B));
+                        }
+                    }
+                    for (a, b) in &hinted {
+                        for rect in selection_rects(&l.galley, *a, *b, false) {
+                            dotted(ui.painter(), rect.translate(origin.to_vec2()), egui::Color32::from_rgb(0x2E, 0x6F, 0xB7));
                         }
                     }
                     if p.is_some_and(|p| matches!(mdoc::tag_of(p), BlockTag::Aside { .. } | BlockTag::EmptyFence { verse: false, .. })) {
@@ -393,11 +410,59 @@ impl Editor {
         let Some(spell) = self.spell.as_mut() else { return };
         if let Some(r) = spell.of(i, rev, &text).into_iter().find(|r| r.start <= off && off <= r.end) {
             self.menu = Some((i, r, at));
+        } else if let Some(h) = spell.hints(i, rev, &text).into_iter().find(|h| h.range.start <= off && off <= h.range.end) {
+            self.hint_menu = Some((i, h, at));
         }
     }
 
-    /// Draw the spelling menu, if open.
+    /// Draw the grammar hint menu, if open: what the hint says, its replacements, Ignore.
+    fn hint_menu_ui(&mut self, ctx: &egui::Context) {
+        let Some((i, hint, at)) = self.hint_menu.clone() else { return };
+        let words = self.paragraph(i).and_then(|p| p.text.get(hint.range.clone())).unwrap_or("").to_owned();
+        let mut close = false;
+        let mut pick: Option<String> = None;
+        let area = egui::Area::new(egui::Id::unique("manuscript-grammar-menu")).order(egui::Order::Foreground).fixed_pos(at).show(ctx, |ui| {
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                ui.set_max_width(300.0);
+                ui.label(&hint.message);
+                ui.separator();
+                for s in hint.suggestions.iter().take(6) {
+                    let shown = if s.is_empty() { "(remove)".to_owned() } else { s.clone() };
+                    if ui.button(shown).clicked() {
+                        pick = Some(s.clone());
+                    }
+                }
+                if ui.button("Ignore").clicked() {
+                    if let Some(sp) = self.spell.as_mut() {
+                        sp.ignored.insert((hint.message.clone(), words.clone()));
+                    }
+                    close = true;
+                }
+            });
+        });
+        if let Some(s) = pick {
+            self.session.sel = jcj_engine::Selection { anchor: super::pos(i, hint.range.start), focus: super::pos(i, hint.range.end) };
+            let r = if s.is_empty() {
+                self.session.checkpoint("Grammar Hint");
+                let out = self.run("text.delete", &serde_json::json!({})).map(|_| ());
+                self.changed();
+                out
+            } else {
+                self.guarded(&s, true, &|sess, t| crate::editor::pasted(sess, t))
+            };
+            if let Err(e) = r {
+                self.error = Some(e);
+            }
+            close = true;
+        }
+        if close || ctx.input(|i| i.key_pressed(egui::Key::Escape)) || (ctx.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer()) {
+            self.hint_menu = None;
+        }
+    }
+
+    /// Draw the spelling menu or the grammar hint menu, if open.
     pub fn menu_ui(&mut self, ctx: &egui::Context) {
+        self.hint_menu_ui(ctx);
         let Some((i, range, at)) = self.menu.clone() else { return };
         let word = self.paragraph(i).and_then(|p| p.text.get(range.clone())).unwrap_or("").to_owned();
         let lang = self.spell.as_ref().map_or_else(|| "en".to_owned(), |s| s.lang.clone());
@@ -482,6 +547,16 @@ impl Editor {
     /// The colors the editor uses for a look (tests).
     pub fn colors_for(look: &EditorLook) -> PageColors {
         look.colors()
+    }
+}
+
+/// A dotted line under a rectangle (a grammar hint).
+fn dotted(painter: &egui::Painter, r: Rect, color: egui::Color32) {
+    let y = r.max.y - 1.0;
+    let mut x = r.min.x;
+    while x < r.max.x {
+        painter.circle_filled(pos2(x + 1.0, y), 1.0, color);
+        x += 4.0;
     }
 }
 

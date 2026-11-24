@@ -40,10 +40,36 @@ pub fn marks(text: &str, lang: &str, words: &HashSet<String>) -> Vec<Range<usize
         .collect()
 }
 
-/// Spelling marks kept per paragraph while its text stays the same.
+/// A grammar or style hint (ED-9): what it says, where, and the replacements offered.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Hint {
+    /// The bytes of the paragraph it is about.
+    pub range: Range<usize>,
+    /// What it says.
+    pub message: String,
+    /// Replacements, best first.
+    pub suggestions: Vec<String>,
+}
+
+/// The grammar hints of a paragraph of language `lang` (the core's offline grammar check).
+pub fn hints(text: &str, lang: &str) -> Vec<Hint> {
+    let opts = jcj_proof::SpellingOptions::default();
+    jcj_proof::check(text, Some(lang), &opts, true)
+        .into_iter()
+        .filter(|i| i.kind == jcj_proof::IssueKind::Grammar)
+        .map(|i| Hint { range: i.range, message: i.message, suggestions: i.suggestions })
+        .collect()
+}
+
+/// Spelling marks and grammar hints kept per paragraph while its text stays the same.
 #[derive(Default)]
 pub struct SpellCache {
     marks: HashMap<usize, (u64, u64, Vec<Range<usize>>)>,
+    hinted: HashMap<usize, (u64, Vec<Hint>)>,
+    /// Whether grammar hints are shown (off by default).
+    pub grammar: bool,
+    /// Hints the writer chose to ignore this session (message and text).
+    pub ignored: HashSet<(String, String)>,
     /// The project's words, and a number that changes with them.
     pub words: HashSet<String>,
     words_gen: u64,
@@ -56,7 +82,16 @@ pub struct SpellCache {
 impl SpellCache {
     /// A cache for a project.
     pub fn new(p: &Project) -> SpellCache {
-        SpellCache { marks: HashMap::new(), words: project_words(p), words_gen: 1, lang: p.settings.book.language.clone(), on: true }
+        SpellCache {
+            marks: HashMap::new(),
+            hinted: HashMap::new(),
+            grammar: false,
+            ignored: HashSet::new(),
+            words: project_words(p),
+            words_gen: 1,
+            lang: p.settings.book.language.clone(),
+            on: true,
+        }
     }
 
     /// Take a new word list (the project's changed).
@@ -85,6 +120,24 @@ impl SpellCache {
     }
 }
 
+impl SpellCache {
+    /// The grammar hints of paragraph `i` at revision `rev` (none while hints are off).
+    pub fn hints(&mut self, i: usize, rev: u64, text: &str) -> Vec<Hint> {
+        if !self.grammar {
+            return Vec::new();
+        }
+        let found = match self.hinted.get(&i) {
+            Some((r, h)) if *r == rev => h.clone(),
+            _ => {
+                let h = hints(text, &self.lang);
+                self.hinted.insert(i, (rev, h.clone()));
+                h
+            }
+        };
+        found.into_iter().filter(|h| !self.ignored.contains(&(h.message.clone(), text.get(h.range.clone()).unwrap_or("").to_owned()))).collect()
+    }
+}
+
 /// The spelling commands.
 pub fn specs() -> Vec<Spec> {
     vec![
@@ -95,6 +148,14 @@ pub fn specs() -> Vec<Spec> {
             params: r#"{"word": string}"#,
             about: "Accept a word in this project's spelling check.",
             mutates: true,
+        },
+        Spec {
+            id: "grammar.check",
+            label: "Check Grammar",
+            key: "",
+            params: r#"{"id": id}"#,
+            about: "Grammar and style hints for an item (offline): paragraph, place, the words, what is wrong and replacements.",
+            mutates: false,
         },
         Spec {
             id: "spelling.check",
@@ -121,6 +182,21 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 Ok(())
             })?;
             Ok(json!({ "added": true }))
+        })(),
+        "grammar.check" => (|| {
+            let item = crate::commands::id_param(v, "id")?;
+            let lang = s.project.settings.book.language.clone();
+            let text = s.project.text(item).map(|t| t.body.plain_paragraphs()).unwrap_or_default();
+            let mut out = Vec::new();
+            for (i, para) in text.iter().enumerate() {
+                for h in hints(para, &lang) {
+                    out.push(json!({
+                        "paragraph": i, "start": h.range.start, "end": h.range.end,
+                        "words": para.get(h.range.clone()).unwrap_or(""), "message": h.message, "suggestions": h.suggestions,
+                    }));
+                }
+            }
+            Ok(json!({ "hints": out }))
         })(),
         "spelling.check" => (|| {
             let item = crate::commands::id_param(v, "id")?;
