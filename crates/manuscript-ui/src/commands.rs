@@ -95,6 +95,7 @@ pub fn specs() -> Vec<Spec> {
     v.extend(crate::texts::specs());
     v.extend(crate::find::specs());
     v.extend(crate::spelling::specs());
+    v.extend(crate::snapshots::specs());
     v
 }
 
@@ -364,6 +365,9 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Outcome {
                 return out;
             }
             if let Some(out) = crate::spelling::run(s, other, v) {
+                return out;
+            }
+            if let Some(out) = crate::snapshots::run(s, other, v) {
                 return out;
             }
             Err(format!("unknown command {other}"))

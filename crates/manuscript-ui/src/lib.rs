@@ -39,6 +39,8 @@ pub const NAME: &str = "Wordsmith Manuscript";
 
 /// The binder panel's id.
 pub const BINDER_PANEL: &str = "manuscript.binder";
+/// The inspector panel's id.
+pub const INSPECTOR_PANEL: &str = "manuscript.inspector";
 
 /// The desktop app's state: what the shell draws around.
 pub struct Manuscript {
@@ -64,6 +66,8 @@ pub struct Manuscript {
     pub editor_focused: bool,
     /// The find bar.
     pub find: findbar::FindBar,
+    /// The inspector panel.
+    pub inspector: inspector::InspectorView,
     /// The view preferences.
     pub view: view::ViewPrefs,
     /// Focus mode: the chrome it hid, while on.
@@ -99,6 +103,7 @@ impl Manuscript {
             look: editor::EditorLook::default(),
             editor_focused: false,
             find: findbar::FindBar::default(),
+            inspector: inspector::InspectorView::default(),
             view: view::ViewPrefs::default(),
             focus: None,
             fullscreen: None,
@@ -376,7 +381,7 @@ impl App for Manuscript {
         if self.focus.is_some() {
             return Vec::new();
         }
-        vec![PanelSpec::new(BINDER_PANEL, "Binder", "list", Side::Left)]
+        vec![PanelSpec::new(BINDER_PANEL, "Binder", "list", Side::Left), PanelSpec::new(INSPECTOR_PANEL, "Inspector", "info", Side::Right)]
     }
 
     fn ribbon_tabs(&self) -> Vec<jcj_shell::TabSpec> {
@@ -405,6 +410,22 @@ impl App for Manuscript {
     }
 
     fn panel_ui(&mut self, panel: &str, ui: &mut egui::Ui, _shell: &mut Shell) {
+        if panel == INSPECTOR_PANEL {
+            self.write_back();
+            let Some(s) = self.session.as_mut() else {
+                ui.label("No project open.");
+                return;
+            };
+            let rev = s.revision();
+            let errors = inspector::panel(ui, s, &mut self.inspector, self.binder.selected);
+            if let Some(e) = errors.into_iter().last() {
+                self.status = e;
+            }
+            if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+                self.sync_editor();
+            }
+            return;
+        }
         if panel != BINDER_PANEL {
             return;
         }
