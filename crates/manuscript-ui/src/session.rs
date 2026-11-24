@@ -92,6 +92,11 @@ pub struct Session {
     backups_dir: Option<PathBuf>,
     /// Media added since the last save (images, PDFs), by item: written into `media/` on save.
     pub media: BTreeMap<ItemId, Vec<u8>>,
+    /// The series bible this book shares (BND-8): its folder and its project as last read or
+    /// saved.
+    series: Option<(Folder, Project)>,
+    /// Why the series bible could not be opened, if it could not.
+    pub series_problem: Option<String>,
 }
 
 /// The result of a command: a JSON value for agents and the command line.
@@ -113,6 +118,8 @@ impl Session {
             last_backup: None,
             backups_dir: None,
             media: BTreeMap::new(),
+            series: None,
+            series_problem: None,
         }
     }
 
@@ -123,7 +130,101 @@ impl Session {
         let (folder, project) = Folder::open(&root).map_err(|e| e.to_string())?;
         let mut s = Session::new(project);
         s.folder = Some(folder);
+        s.attach_series();
         Ok(s)
+    }
+
+    /// The series bible's folder, if this book shares one.
+    pub fn series_root(&self) -> Option<&Path> {
+        self.series.as_ref().map(|(f, _)| f.root())
+    }
+
+    /// The series bible's details, if this book shares one.
+    pub fn series_info(&self) -> Option<wordsmith_manuscript_model::series::SeriesInfo> {
+        self.series.as_ref().and_then(|(_, p)| wordsmith_manuscript_model::series::info(p))
+    }
+
+    /// Open the series bible the settings name and merge it in (a problem is kept in
+    /// `series_problem`; the book then opens with its own bible).
+    fn attach_series(&mut self) {
+        self.series = None;
+        self.series_problem = None;
+        let rel = self.project.settings.series.clone();
+        if rel.is_empty() {
+            return;
+        }
+        let Some(root) = self.root().map(|r| r.join(&rel)) else { return };
+        let root = std::fs::canonicalize(&root).unwrap_or(root);
+        match Folder::open(&root) {
+            Ok((f, bible)) if wordsmith_manuscript_model::series::info(&bible).is_some() => {
+                self.project = wordsmith_manuscript_model::series::merge(&self.project, &bible);
+                self.series = Some((f, bible));
+            }
+            Ok(_) => self.series_problem = Some(format!("{} is not a series bible", root.display())),
+            Err(e) => {
+                self.series_problem = Some(format!("the series bible at {} could not be opened ({e}); this book shows its own bible", root.display()))
+            }
+        }
+    }
+
+    /// Make a new series bible at `root` named `name` from this book's Story Bible, and share it
+    /// from now on (BND-8). The book must have a folder.
+    pub fn create_series(&mut self, root: &Path, name: &str) -> Result<(), String> {
+        let own = canonical(self.root().ok_or("save the book first")?);
+        let root = &absolute(root);
+        if self.series.is_some() {
+            return Err("this book is already in a series".into());
+        }
+        let mut base = wordsmith_manuscript_model::series::new_bible(name.trim());
+        let mut info = wordsmith_manuscript_model::series::info(&base).unwrap_or_default();
+        info.books.push(wordsmith_manuscript_model::series::relative(root, &own));
+        wordsmith_manuscript_model::series::set_info(&mut base, &info);
+        let (_, bible) = wordsmith_manuscript_model::series::split(&self.project, &base);
+        let folder = Folder::create(root, &bible).map_err(|e| e.to_string())?;
+        self.series = Some((folder, bible));
+        self.project.settings.series = wordsmith_manuscript_model::series::relative(&own, root);
+        self.revision += 1;
+        self.save()
+    }
+
+    /// Share the series bible at `root`: this book's own entries join it (BND-8).
+    pub fn join_series(&mut self, root: &Path) -> Result<(), String> {
+        let own = canonical(self.root().ok_or("save the book first")?);
+        let root = &canonical(root);
+        if self.series.is_some() {
+            return Err("this book is already in a series".into());
+        }
+        let (folder, mut bible) = Folder::open(root).map_err(|e| e.to_string())?;
+        let mut info = wordsmith_manuscript_model::series::info(&bible).ok_or_else(|| format!("{} is not a series bible", root.display()))?;
+        let me = wordsmith_manuscript_model::series::relative(root, &own);
+        if !info.books.contains(&me) {
+            info.books.push(me);
+        }
+        wordsmith_manuscript_model::series::set_info(&mut bible, &info);
+        // The series' entry types win; this book's own entries are added to the series.
+        if let Some(t) = bible.settings.extra.get(wordsmith_manuscript_model::series::TEMPLATES).cloned() {
+            self.project.settings.extra.insert(wordsmith_manuscript_model::series::TEMPLATES.into(), t);
+        }
+        self.project = wordsmith_manuscript_model::series::merge(&self.project, &bible);
+        self.series = Some((folder, bible));
+        self.project.settings.series = wordsmith_manuscript_model::series::relative(&own, root);
+        self.revision += 1;
+        self.save()
+    }
+
+    /// Stop sharing the series bible: this book keeps a copy of it as its own bible.
+    pub fn leave_series(&mut self) -> Result<(), String> {
+        let own = canonical(self.root().ok_or("save the book first")?);
+        let Some((mut folder, mut bible)) = self.series.take() else { return Err("this book is not in a series".into()) };
+        let me = wordsmith_manuscript_model::series::relative(&canonical(folder.root()), &own);
+        if let Some(mut info) = wordsmith_manuscript_model::series::info(&bible) {
+            info.books.retain(|b| *b != me);
+            wordsmith_manuscript_model::series::set_info(&mut bible, &info);
+            pack::save_safely(&mut folder, &bible).map_err(|e| e.to_string())?;
+        }
+        self.project.settings.series.clear();
+        self.revision += 1;
+        self.save()
     }
 
     /// Unpack a `.wsmz` into a new folder and open it.
@@ -179,7 +280,18 @@ impl Session {
         self.write_media(&root, &self.media.clone())?;
         self.media.clear();
         let folder = self.folder.as_mut().ok_or("the project has no folder yet: use Save As")?;
-        pack::save_safely(folder, &self.project).map_err(|e| e.to_string())?;
+        match self.series.as_mut() {
+            // A book of a series: its own part here, the bible in the series folder.
+            Some((sf, base)) => {
+                let (own, bible) = wordsmith_manuscript_model::series::split(&self.project, base);
+                pack::save_safely(folder, &own).map_err(|e| e.to_string())?;
+                pack::save_safely(sf, &bible).map_err(|e| e.to_string())?;
+                *base = bible;
+            }
+            None => {
+                pack::save_safely(folder, &self.project).map_err(|e| e.to_string())?;
+            }
+        }
         self.saved = self.revision;
         Ok(())
     }
@@ -192,7 +304,14 @@ impl Session {
         }
         std::fs::create_dir_all(root).map_err(|e| format!("{}: {e}", root.display()))?;
         self.write_media(root, &media)?;
-        let folder = Folder::create(root, &self.project).map_err(|e| e.to_string())?;
+        if let Some((sf, _)) = self.series.as_ref() {
+            self.project.settings.series = wordsmith_manuscript_model::series::relative(root, sf.root());
+        }
+        let own = match self.series.as_ref() {
+            Some((_, base)) => wordsmith_manuscript_model::series::split(&self.project, base).0,
+            None => self.project.clone(),
+        };
+        let folder = Folder::create(root, &own).map_err(|e| e.to_string())?;
         self.folder = Some(folder);
         self.media.clear();
         self.saved = self.revision;
@@ -237,6 +356,42 @@ impl Session {
     /// Nothing is overwritten without a copy, and nothing is lost.
     pub fn check_outside(&mut self) -> Result<Outside, String> {
         let mut out = Outside::default();
+        // The series bible first: another book (or another device) may have changed it.
+        if let Some((sf, _)) = self.series.as_ref() {
+            let changes = sf.outside_changes().map_err(|e| e.to_string())?;
+            if !changes.is_empty() {
+                if self.is_dirty() {
+                    // Keep this version; theirs is copied, and the next save writes ours.
+                    let sroot = sf.root().to_path_buf();
+                    let mut disk = wordsmith_manuscript_format::folder::Disk::new(&sroot);
+                    let now = SystemTime::now();
+                    for c in changes {
+                        let stamp = self.series.as_ref().and_then(|(f, _)| f.index().get(&c.rel).copied());
+                        if let Some((text, h)) = c.now {
+                            let copy = wordsmith_manuscript_format::folder::conflict_name(&c.rel, now);
+                            wordsmith_manuscript_format::folder::Sink::write(&mut disk, &copy, text.as_bytes()).map_err(|e| e.to_string())?;
+                            out.copies.push(copy);
+                            if let (Some((f, _)), Some(st)) = (self.series.as_mut(), stamp) {
+                                f.accept(&c.rel, Some(Stamp { disk: h, model: st.model }));
+                            }
+                        }
+                    }
+                } else {
+                    let (own, _) = match self.series.as_ref() {
+                        Some((_, base)) => wordsmith_manuscript_model::series::split(&self.project, base),
+                        None => (self.project.clone(), Project::default()),
+                    };
+                    self.project = own;
+                    self.attach_series();
+                    self.undo.clear();
+                    self.redo.clear();
+                    self.revision += 1;
+                    self.saved = self.revision;
+                    out.project_reloaded = true;
+                    return Ok(out);
+                }
+            }
+        }
         let Some(folder) = self.folder.as_ref() else { return Ok(out) };
         let root = folder.root().to_path_buf();
         let changes = folder.outside_changes().map_err(|e| e.to_string())?;
@@ -248,6 +403,7 @@ impl Session {
             let (f, p) = Folder::open(&root).map_err(|e| e.to_string())?;
             self.project = p;
             self.folder = Some(f);
+            self.attach_series();
             self.undo.clear();
             self.redo.clear();
             self.revision += 1;
@@ -413,6 +569,11 @@ impl Session {
         let (Some(root), Some(dir)) = (self.root().map(Path::to_path_buf), self.backups_dir()) else { return Ok(None) };
         let name = root.file_stem().and_then(|n| n.to_str()).unwrap_or("Project").to_owned();
         let path = pack::backup(&root, &dir, &name, BACKUPS_KEPT, SystemTime::now()).map_err(|e| e.to_string())?;
+        // The series bible is backed up beside it.
+        if let Some((sf, _)) = self.series.as_ref() {
+            let sname = sf.root().file_stem().and_then(|n| n.to_str()).unwrap_or("Series").to_owned();
+            pack::backup(sf.root(), &dir, &sname, BACKUPS_KEPT, SystemTime::now()).map_err(|e| e.to_string())?;
+        }
         self.last_backup = Some(Instant::now());
         Ok(Some(path))
     }
@@ -574,6 +735,23 @@ impl Session {
     /// Run a command with no parameters.
     pub fn run0(&mut self, id: &str) -> Outcome {
         self.run(id, &json!({}))
+    }
+}
+
+/// A path with `.` and `..` resolved through the file system (the path itself when it does not
+/// exist).
+fn canonical(p: &Path) -> PathBuf {
+    std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf())
+}
+
+/// A path made absolute, its parent resolved (for a folder about to be made).
+fn absolute(p: &Path) -> PathBuf {
+    match (p.parent(), p.file_name()) {
+        (Some(parent), Some(name)) if !parent.as_os_str().is_empty() => {
+            std::fs::create_dir_all(parent).ok();
+            canonical(parent).join(name)
+        }
+        _ => std::env::current_dir().map(|d| d.join(p)).unwrap_or_else(|_| p.to_path_buf()),
     }
 }
 

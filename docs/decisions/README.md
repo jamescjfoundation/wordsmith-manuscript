@@ -13,3 +13,4 @@ Decisions about interfaces shared by the foundation's apps go in open-source-cor
 | [0004](0004-the-bible-in-two-layers.md) | The story bible in two layers |
 | [0005](0005-revision-passes-and-schema-2.md) | Revision passes, and schema 2 of the format |
 | [0006](0006-drafts.md) | Drafts in one project |
+| [0007](0007-series-and-a-shared-bible.md) | Series and a shared story bible |

@@ -198,6 +198,10 @@ pub struct Settings {
     /// The stored drafts, oldest first (their manuscripts are in `drafts/<id>/`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub drafts: Vec<crate::drafts::DraftInfo>,
+    /// The series bible this book shares, as a path from the book's folder (BND-8; empty: the
+    /// book keeps its own bible).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub series: String,
     /// The draft that exports (empty: the working draft).
     #[serde(skip_serializing_if = "String::is_empty")]
     pub export_draft: String,
@@ -228,6 +232,7 @@ impl Default for Settings {
             draft_name: String::new(),
             drafts: Vec::new(),
             export_draft: String::new(),
+            series: String::new(),
             extra: Default::default(),
         }
     }

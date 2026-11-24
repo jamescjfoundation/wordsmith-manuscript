@@ -14,6 +14,7 @@ pub mod entries;
 mod id;
 mod meta;
 mod project;
+pub mod series;
 mod settings;
 pub mod snapshot;
 pub mod templates;

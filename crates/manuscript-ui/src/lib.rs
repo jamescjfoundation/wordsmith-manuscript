@@ -35,6 +35,7 @@ pub mod progress;
 pub mod revisions;
 pub mod ribbon;
 pub mod search;
+pub mod series;
 pub mod session;
 pub mod snapshots;
 pub mod spelling;
@@ -134,6 +135,8 @@ pub struct Manuscript {
     pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
     pub showing: Option<String>,
+    /// The Series window (BND-8).
+    pub series_view: series::SeriesView,
     /// The drafts window (DRF-1).
     pub drafts_view: drafts::DraftsView,
     /// The "Offered fixes" inbox (plan 9.2 item 4).
@@ -233,6 +236,7 @@ impl Manuscript {
             outside_checked: None,
             offers_view: offers::InboxView::default(),
             drafts_view: drafts::DraftsView::default(),
+            series_view: series::SeriesView::default(),
             offers_pending: 0,
             history_view: history::HistoryView::default(),
             entry_types: entry_types::TypesView::default(),
@@ -609,6 +613,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.entryTypes", "Entry Types", ""));
         v.push(CommandInfo::new("view.offers", "Offered Fixes", ""));
         v.push(CommandInfo::new("view.drafts", "Drafts", ""));
+        v.push(CommandInfo::new("view.series", "Series", ""));
         v.push(CommandInfo::new("file.saveTemplate", "Save as Template", ""));
         v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
@@ -1149,6 +1154,11 @@ impl Manuscript {
             i18n::set_language(code);
             return Ok(());
         }
+        if cmd.id == "view.series" {
+            self.write_back();
+            self.series_view.open = true;
+            return Ok(());
+        }
         if cmd.id == "view.drafts" {
             self.write_back();
             self.drafts_view.open = true;
@@ -1350,6 +1360,24 @@ impl Manuscript {
             if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
                 self.sync_editor();
             }
+        }
+        let mut book_to_open = None;
+        if let Some(s) = self.session.as_mut() {
+            let rev = s.revision();
+            let (errors, book) = series::window(ui.ctx(), s, &mut self.series_view);
+            if let Some(e) = errors.into_iter().last() {
+                self.status = e;
+            }
+            if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+                self.sync_editor();
+            }
+            book_to_open = book;
+        }
+        if let Some(book) = book_to_open {
+            if let Err(e) = self.open(&book) {
+                self.status = e;
+            }
+            self.series_view.open = true;
         }
         if std::mem::take(&mut self.binder.open_types) {
             self.entry_types.open = true;

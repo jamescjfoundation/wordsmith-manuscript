@@ -26,6 +26,11 @@ My Novel.wsm/
   `project.toml` (`[[drafts]]`, ids of letters, digits and hyphens) keeps its manuscript in
   `drafts/<id>/`: a `binder.toml` holding only Manuscript items, and its texts. Items keep their
   ids from draft to draft, so the same scene can be compared across drafts.
+- **Series** (BND-8, decision 0007): a book's `project.toml` may name a series bible (`series`, a
+  path from the book's folder). A series bible is a project folder holding only a Story Bible:
+  `[extra] series` (`name`, `books`: paths from the series folder) and `[extra] templates` in its
+  `project.toml`, the Bible area in its `binder.toml`, the entries in `bible/`. The book's own
+  folder then keeps no Bible area of its own.
 - **Conflicts** (FIL-4): a save never writes over a file that changed on disk since it was read
   (another device, a sync service) without first copying it to `conflicts/`, named by the time
   and the file's path with `/` as `-`. The app reads in files changed only elsewhere, and keeps a

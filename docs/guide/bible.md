@@ -29,3 +29,13 @@ another entry), move it up or remove it, then Save Type. Renaming a field keeps 
 under the new name. Removing a field never removes what you wrote: an entry's values for fields
 its type no longer has stay with it, after the type's fields. A changed default type can go back
 to the default; a type of your own can be removed once no entry uses it.
+
+## A series
+
+Books of a series can share one Story Bible. In the command palette run Series, give the series a
+name and a folder for its bible, and Start a Series: this book's bible moves into that folder.
+Open the next book, run Series, give the same folder and Join a Series: its own entries join the
+series' and it sees all of them. Every book of the series now reads and writes the same entries;
+what one book saves appears in the others (the status bar says so), and if two books change the
+same entry at once, both versions are kept. The Series window lists the books with Open buttons.
+Leave the Series keeps a copy of the bible in the book as its own.
