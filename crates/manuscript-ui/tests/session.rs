@@ -68,3 +68,20 @@ fn a_packed_copy_opens_as_a_new_folder() {
     assert_eq!(app.session.as_ref().unwrap().project, s.project);
     assert!(base.join("Book copy.wsm").join("project.toml").exists());
 }
+
+#[test]
+fn new_projects_come_from_templates() {
+    let base = scratch("templates");
+    let mut app = Manuscript::new();
+    assert!(!app.has_document());
+    assert_eq!(app.templates().len(), 2);
+    let root = base.join("My Novel.wsm");
+    app.new_from_template("novel", &root).unwrap();
+    assert!(app.has_document());
+    let s = app.session.as_ref().unwrap();
+    assert_eq!(s.project.settings.book.title, "My Novel");
+    assert_eq!(s.project.binder.area(Area::Bible).len(), 6);
+    let reopened = Session::open(&root).unwrap();
+    assert_eq!(reopened.project, s.project);
+    assert!(app.new_from_template("novel", &root).is_err(), "never over an existing project");
+}

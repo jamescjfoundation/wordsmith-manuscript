@@ -11,6 +11,7 @@ mod id;
 mod meta;
 mod project;
 mod settings;
+pub mod templates;
 pub mod text;
 pub mod words;
 

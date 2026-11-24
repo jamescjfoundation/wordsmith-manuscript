@@ -29,7 +29,8 @@ impl eframe::App for Window {
 }
 
 fn main() -> ExitCode {
-    let shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens());
+    let shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens())
+        .with_options(jcj_shell::ShellOptions { start_window: true, ..jcj_shell::ShellOptions::default() });
     let mut app = Manuscript::new();
     if let Some(path) = std::env::args_os().nth(1) {
         if let Err(e) = app.open(std::path::Path::new(&path)) {

@@ -243,3 +243,15 @@ proptest! {
         prop_assert_eq!(files_of(&dir), before);
     }
 }
+
+#[test]
+fn both_templates_make_valid_projects_that_round_trip() {
+    for t in wordsmith_manuscript_model::templates::TEMPLATES {
+        let p = wordsmith_manuscript_model::templates::build(t.id, "Test", &mut ItemId::new).unwrap();
+        let dir = scratch(&format!("template-{}", t.id));
+        Folder::create(&dir, &p).unwrap();
+        let (mut f, back) = Folder::open(&dir).unwrap();
+        assert_eq!(back, p);
+        assert!(f.save(&back).unwrap().written.is_empty());
+    }
+}

@@ -20,7 +20,7 @@ use jcj_shell::commands::ids;
 use jcj_shell::egui;
 use jcj_shell::{About, App, Cmd, CommandInfo, Commands, Page, PageSpec, PanelSpec, Shell, Side};
 use serde_json::json;
-use wordsmith_manuscript_model::{ItemId, Project};
+use wordsmith_manuscript_model::{ItemId, Project, templates};
 
 use crate::binder::BinderView;
 use crate::session::Session;
@@ -118,6 +118,35 @@ impl Manuscript {
         }
     }
 
+    /// A free folder for a new project from `template` in the Documents folder (or beside the
+    /// path typed on the New page).
+    pub fn new_project_path(&self, template: &str) -> PathBuf {
+        let typed = PathBuf::from(&self.new_path);
+        let dir = typed.parent().map_or_else(documents_dir, Path::to_path_buf);
+        let base = templates::TEMPLATES.iter().find(|t| t.id == template).map_or("Untitled", |t| t.name);
+        let mut n = 1;
+        loop {
+            let name = if n == 1 { format!("{base}.wsm") } else { format!("{base} {n}.wsm") };
+            let p = dir.join(name);
+            if !p.exists() || n > 999 {
+                return p;
+            }
+            n += 1;
+        }
+    }
+
+    /// Make a new project from a template at `root` and open it.
+    pub fn new_from_template(&mut self, template: &str, root: &Path) -> Result<(), String> {
+        let title = root.file_stem().map_or("Untitled".into(), |n| n.to_string_lossy().into_owned());
+        let project = templates::build(template, &title, &mut ItemId::new).ok_or_else(|| format!("no template `{template}`"))?;
+        self.close()?;
+        let s = Session::create(root, project)?;
+        self.session = Some(s);
+        self.binder = BinderView::default();
+        self.status = format!("Made {}.", root.display());
+        Ok(())
+    }
+
     fn report(&mut self, r: Result<(), String>) {
         if let Err(e) = r {
             self.status = e;
@@ -134,6 +163,7 @@ impl Commands for Manuscript {
         let mut v = vec![
             CommandInfo { icon: "save".into(), ..CommandInfo::new(ids::SAVE, "Save", "Mod+S") },
             CommandInfo { icon: "file".into(), ..CommandInfo::new(ids::NEW, "New Project", "Mod+N") },
+            CommandInfo::new(ids::NEW_FROM_TEMPLATE, "New Project from Template", ""),
             CommandInfo { icon: "open".into(), ..CommandInfo::new(ids::OPEN, "Open Project", "Mod+O") },
             CommandInfo::new(ids::OPEN_PATH, "Open Recent", ""),
             CommandInfo::new(ids::SAVE_AS, "Save As", "Mod+Shift+S"),
@@ -153,6 +183,14 @@ impl Commands for Manuscript {
 impl App for Manuscript {
     fn document_name(&self) -> String {
         self.project_name()
+    }
+
+    fn has_document(&self) -> bool {
+        self.session.is_some()
+    }
+
+    fn templates(&self) -> Vec<jcj_shell::TemplateSpec> {
+        templates::TEMPLATES.iter().map(|t| jcj_shell::TemplateSpec::new(t.id, t.name, t.about).in_group("Fiction")).collect()
     }
 
     fn document_path(&self) -> Option<String> {
@@ -189,6 +227,13 @@ impl App for Manuscript {
             }
             ids::NEW => {
                 shell.open_file_page(Page::New);
+                Ok(())
+            }
+            ids::NEW_FROM_TEMPLATE => {
+                let template = cmd.params.get("template").and_then(|t| t.as_str()).unwrap_or("novel").to_owned();
+                let path = cmd.params.get("path").and_then(|p| p.as_str()).map_or_else(|| self.new_project_path(&template), PathBuf::from);
+                self.new_from_template(&template, &path)?;
+                shell.add_recent(&path.to_string_lossy());
                 Ok(())
             }
             ids::OPEN => {

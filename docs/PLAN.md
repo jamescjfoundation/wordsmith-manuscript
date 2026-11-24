@@ -584,7 +584,7 @@ with the Wordsmith Book plan and written up as `docs/book-handoff.md` in step M6
 | Milestone | Release | Result | State |
 | --- | --- | --- | --- |
 | M0 Foundations | – | Repository from the template, rules, spec, brand | Done 2026-11-24 (spec awaits review) |
-| M1 Project | 0.1 | Format, binder, saving, templates | Not started |
+| M1 Project | 0.1 | Format, binder, saving, templates | Done 2026-11-24 |
 | M2 Editor | 0.1 | Manuscript styles, stitched view, find, spelling, focus | Not started |
 | M3 Plan | 0.1 | Inspector, corkboard, outline, filters | Not started |
 | M4 Bible | 0.1 | Entries, templates, links, backlinks, notes-folder import | Not started |
