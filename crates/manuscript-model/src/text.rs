@@ -32,6 +32,10 @@ pub struct Marks {
     /// The id of the comment anchored to this text (the comment is in the item's metadata).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
+    /// The revision pass this text was written in (PRG-4): an index into the project's revision
+    /// passes. Text of the first draft has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<u32>,
 }
 
 fn is_false(b: &bool) -> bool {

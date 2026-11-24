@@ -292,16 +292,16 @@ mod tests {
         s.book.author = "A. Writer".into();
         s.targets.manuscript = Some(90_000);
         let text = write_project(&s).unwrap();
-        assert!(text.starts_with("schema = 1\n"));
+        assert!(text.starts_with("schema = 2\n"));
         assert_eq!(read_project(&text).unwrap(), s);
         assert_eq!(write_project(&read_project(&text).unwrap()).unwrap(), text);
     }
 
     #[test]
     fn a_newer_schema_is_refused_clearly() {
-        let text = write_project(&Settings::default()).unwrap().replacen("schema = 1", "schema = 2", 1);
+        let text = write_project(&Settings::default()).unwrap().replacen("schema = 2", "schema = 3", 1);
         let err = read_project(&text).unwrap_err();
-        assert_eq!(err, Error::Newer { found: 2, supported: 1 });
+        assert_eq!(err, Error::Newer { found: 3, supported: 2 });
         assert!(err.to_string().contains("newer version"));
         assert_eq!(read_project("title = 'x'\n").unwrap_err(), Error::NotAProject);
     }

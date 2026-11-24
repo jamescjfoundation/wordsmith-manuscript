@@ -69,6 +69,16 @@ fn nested_and_adjacent_emphasis() {
 }
 
 #[test]
+fn revision_marks() {
+    let t =
+        Text { blocks: vec![Block::Para(vec![Inline::plain("Kept "), marked("added", |m| m.rev = Some(2)), Inline::plain(".")])], notes: Vec::new() };
+    let s = write(&t);
+    assert_eq!(s, "Kept [added]{rev=2}.\n");
+    assert_eq!(parse(&s), t);
+    assert_eq!(parse("[x]{rev=02}").plain_paragraphs(), vec!["[x]{rev=02}"], "no leading zeros");
+}
+
+#[test]
 fn small_caps_strike_language_links_comments() {
     check(
         paras(vec![Block::Para(vec![
@@ -233,8 +243,18 @@ fn arb_marks() -> impl Strategy<Value = Marks> {
         proptest::option::of("[a-z]{1,3}"),
         proptest::option::of("[a-z: ()]{1,6}"),
         proptest::option::of("c[0-9]"),
+        proptest::option::of(0u32..12),
     )
-        .prop_map(|(italic, bold, small_caps, strike, lang, link, comment)| Marks { italic, bold, small_caps, strike, lang, link, comment })
+        .prop_map(|(italic, bold, small_caps, strike, lang, link, comment, rev)| Marks {
+            italic,
+            bold,
+            small_caps,
+            strike,
+            lang,
+            link,
+            comment,
+            rev,
+        })
 }
 
 fn arb_inlines() -> impl Strategy<Value = Vec<Inline>> {

@@ -132,10 +132,24 @@ fn a_newer_project_is_refused() {
     let dir = scratch("newer");
     Folder::create(&dir, &sample()).unwrap();
     let path = dir.join("project.toml");
-    let t = std::fs::read_to_string(&path).unwrap().replacen("schema = 1", "schema = 2", 1);
+    let t = std::fs::read_to_string(&path).unwrap().replacen("schema = 2", "schema = 3", 1);
     std::fs::write(&path, t).unwrap();
     let err = Folder::open(&dir).unwrap_err();
-    assert_eq!(err, Error::Newer { found: 2, supported: 1 });
+    assert_eq!(err, Error::Newer { found: 3, supported: 2 });
+}
+
+#[test]
+fn a_schema_1_project_opens_unchanged() {
+    // Schema 2 only adds revision marks: a version 1 project reads as it is and is written as 2.
+    let dir = scratch("schema1");
+    Folder::create(&dir, &sample()).unwrap();
+    for f in ["project.toml", "binder.toml"] {
+        let path = dir.join(f);
+        let t = std::fs::read_to_string(&path).unwrap().replacen("schema = 2", "schema = 1", 1);
+        std::fs::write(&path, t).unwrap();
+    }
+    let (_, p) = Folder::open(&dir).unwrap();
+    assert_eq!(p, sample());
 }
 
 #[test]

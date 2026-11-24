@@ -27,6 +27,7 @@ pub mod media;
 pub mod outline;
 pub mod pages;
 pub mod progress;
+pub mod revisions;
 pub mod ribbon;
 pub mod search;
 pub mod session;
@@ -73,6 +74,13 @@ pub enum ViewMode {
     Board,
     /// Standard manuscript pages (ED-8).
     Pages,
+}
+
+/// A `#RRGGBB` color.
+fn hex_color(s: &str) -> Option<egui::Color32> {
+    let h = s.strip_prefix('#')?;
+    let b = |i: usize| h.get(i..i + 2).and_then(|x| u8::from_str_radix(x, 16).ok());
+    Some(egui::Color32::from_rgb(b(0)?, b(2)?, b(4)?))
 }
 
 /// The desktop app's state: what the shell draws around.
@@ -312,6 +320,23 @@ impl Manuscript {
         }
     }
 
+    /// Give the open editors the project's revision passes: typing follows the current pass and
+    /// each pass shows in its color (PRG-4).
+    pub fn mark_revisions(&mut self) {
+        let Some(s) = self.session.as_ref() else { return };
+        let r = revisions::of(&s.project);
+        let colors: Vec<egui::Color32> = r.sets.iter().map(|set| hex_color(&set.color).unwrap_or(egui::Color32::LIGHT_BLUE)).collect();
+        for ed in [self.editor.as_mut(), self.other.as_mut()].into_iter().flatten() {
+            if jcj_features::revisions::Revisions::of_doc(&ed.session.doc) != r {
+                let _ = r.store(&mut ed.session.doc);
+            }
+            if ed.pass_colors != colors {
+                ed.pass_colors.clone_from(&colors);
+                ed.relayout();
+            }
+        }
+    }
+
     /// Whether the other pane holds `id`, alone or in a stitched view (one item is only ever
     /// editable in one pane, so no edit can overwrite another; here it opens read-only).
     fn held_elsewhere(&self, id: ItemId) -> bool {
@@ -354,6 +379,7 @@ impl Manuscript {
             self.status = "This document is open for editing in the stitched view in the other pane; here it is read-only.".into();
         }
         self.editor = Some(ed);
+        self.mark_revisions();
     }
 
     /// Reload the open editor from the project (after a project-wide change).
@@ -400,12 +426,18 @@ impl Manuscript {
             e.spell = Some(spelling::SpellCache::new(&s.project));
         }
         self.status = format!("{} documents as one text.", items.len());
+        self.mark_revisions();
         Ok(())
     }
 
     /// After a project command: an editor whose item's text changed in the project reloads, and
     /// one whose item left the binder closes.
     fn sync_editor(&mut self) {
+        self.sync_editor_text();
+        self.mark_revisions();
+    }
+
+    fn sync_editor_text(&mut self) {
         let Some(s) = self.session.as_ref() else {
             self.editor = None;
             return;
@@ -1086,6 +1118,7 @@ impl Manuscript {
 
 impl Manuscript {
     fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+        self.mark_revisions();
         if let Some(ask) = ui.ctx().data_mut(|d| d.remove_temp::<(ItemId, String)>(egui::Id::unique("manuscript-compare-ask"))) {
             self.write_back();
             self.compare.open = Some(ask);

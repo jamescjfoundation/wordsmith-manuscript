@@ -147,6 +147,7 @@ fn escape_block_start(s: String) -> String {
 /// The marks, outermost first. Each is written as a wrapper around everything inside it.
 #[derive(Clone, Copy)]
 enum Mark {
+    Rev,
     Comment,
     Link,
     Lang,
@@ -156,18 +157,19 @@ enum Mark {
     Strike,
 }
 
-const ORDER: [Mark; 7] = [Mark::Comment, Mark::Link, Mark::Lang, Mark::SmallCaps, Mark::Bold, Mark::Italic, Mark::Strike];
+const ORDER: [Mark; 8] = [Mark::Rev, Mark::Comment, Mark::Link, Mark::Lang, Mark::SmallCaps, Mark::Bold, Mark::Italic, Mark::Strike];
 
 /// The value of one mark, as a key for grouping (`None` when the mark is off).
-fn value(m: &Marks, mark: Mark) -> Option<&str> {
+fn value(m: &Marks, mark: Mark) -> Option<String> {
     match mark {
-        Mark::Comment => m.comment.as_deref(),
-        Mark::Link => m.link.as_deref(),
-        Mark::Lang => m.lang.as_deref(),
-        Mark::SmallCaps => m.small_caps.then_some(""),
-        Mark::Bold => m.bold.then_some(""),
-        Mark::Italic => m.italic.then_some(""),
-        Mark::Strike => m.strike.then_some(""),
+        Mark::Rev => m.rev.map(|r| r.to_string()),
+        Mark::Comment => m.comment.clone(),
+        Mark::Link => m.link.clone(),
+        Mark::Lang => m.lang.clone(),
+        Mark::SmallCaps => m.small_caps.then(String::new),
+        Mark::Bold => m.bold.then(String::new),
+        Mark::Italic => m.italic.then(String::new),
+        Mark::Strike => m.strike.then(String::new),
     }
 }
 
@@ -189,7 +191,7 @@ fn level(items: &[Inline], depth: usize, out: &mut String) {
         match v {
             None => level(group, depth + 1, out),
             Some(v) => {
-                let (open, close) = wrapper(mark, v);
+                let (open, close) = wrapper(mark, &v);
                 out.push_str(&open);
                 level(group, depth + 1, out);
                 out.push_str(&close);
@@ -201,6 +203,7 @@ fn level(items: &[Inline], depth: usize, out: &mut String) {
 
 fn wrapper(mark: Mark, v: &str) -> (String, String) {
     match mark {
+        Mark::Rev => ("[".into(), format!("]{{rev={v}}}")),
         Mark::Comment => ("[".into(), format!("]{{.comment id={v}}}")),
         Mark::Link => ("[".into(), format!("]({})", escape_dest(v))),
         Mark::Lang => ("[".into(), format!("]{{lang={v}}}")),

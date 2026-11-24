@@ -95,7 +95,15 @@ fn family(bold: bool, italic: bool) -> FontFamily {
 }
 
 /// The layout job of one paragraph.
-fn job(p: &Paragraph, tag: &BlockTag, first: bool, look: &EditorLook, width: f32, colors: &PageColors) -> (LayoutJob, f32, f32, f32) {
+fn job(
+    p: &Paragraph,
+    tag: &BlockTag,
+    first: bool,
+    look: &EditorLook,
+    width: f32,
+    colors: &PageColors,
+    passes: &[egui::Color32],
+) -> (LayoutJob, f32, f32, f32) {
     let (size, bold_all, center, indent, inset, above, below) = match tag {
         BlockTag::Heading { level } => {
             let size = look.size
@@ -141,6 +149,9 @@ fn job(p: &Paragraph, tag: &BlockTag, first: bool, look: &EditorLook, width: f32
         }
         if m.comment.is_some() {
             f.background = colors.selection.gamma_multiply(0.5);
+        } else if let Some(c) = m.rev.and_then(|r| passes.get(r as usize)) {
+            // Text of a revision pass, in the pass's color.
+            f.background = c.gamma_multiply(0.6);
         }
         let shown = if m.small_caps { text.to_uppercase() } else { text.to_owned() };
         if m.small_caps {
@@ -201,7 +212,7 @@ impl Editor {
                     Laid { rev, width, first, galley, above: look.size * 0.5, below: look.size * 0.5, inset: 0.0 }
                 }
                 _ => {
-                    let (j, inset, above, below) = job(p, &tag, first, look, width, colors);
+                    let (j, inset, above, below) = job(p, &tag, first, look, width, colors, &self.pass_colors);
                     let galley = ui.painter().layout_job(j);
                     Laid { rev, width, first, galley, above, below, inset }
                 }
@@ -413,7 +424,7 @@ impl Editor {
         });
         if let Some(s) = pick {
             self.session.sel = jcj_engine::Selection { anchor: super::pos(i, range.start), focus: super::pos(i, range.end) };
-            if let Err(e) = self.guarded(&s, true, &|sess, t| jcj_engine::cmd::paste_text(sess, t)) {
+            if let Err(e) = self.guarded(&s, true, &|sess, t| crate::editor::pasted(sess, t)) {
                 self.error = Some(e);
             }
             close = true;

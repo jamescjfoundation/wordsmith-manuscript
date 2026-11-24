@@ -1,6 +1,6 @@
 # The Wordsmith Manuscript project format
 
-Schema version 1. This file specifies every file of a project and the text dialect. The code is
+Schema version 2. This file specifies every file of a project and the text dialect. The code is
 `crates/manuscript-format`; its tests check each example here.
 
 ## The folder
@@ -31,7 +31,7 @@ My Novel.wsm/
 ## `project.toml`
 
 ```toml
-schema = 1
+schema = 2
 statuses = ["To do", "First draft", "Revised draft", "Final draft", "Done"]
 
 [book]
@@ -58,7 +58,7 @@ writing_days = ["mon", "tue", "wed", "thu", "fri"]
 | `[targets]` | `manuscript` (words), `deadline` (`YYYY-MM-DD`), `writing_days` (`mon` .. `sun`), `session` (words) |
 | `[[fields]]` | Custom fields: `name`, `kind` (`text`, `date`, `checkbox`, `list`), `choices` |
 | `words` | The project word list for spelling (besides bible names) |
-| `[extra]` | Export presets, document-set rules, collections (`collections`: each a `name` with hand-picked `items` or a saved `search`), bookmarks (`bookmarks`: item ids in order), the freeform board (`board`: `board` with its cards, links and grid, and `items`, the item each card stands for) and other settings kept by name |
+| `[extra]` | Export presets, document-set rules, collections (`collections`: each a `name` with hand-picked `items` or a saved `search`), bookmarks (`bookmarks`: item ids in order), the freeform board (`board`: `board` with its cards, links and grid, and `items`, the item each card stands for), revision passes (`revisions`: the passes, each a name and color, the current one and whether revision mode is on) and other settings kept by name |
 
 Unknown keys are ignored when read.
 
@@ -68,7 +68,7 @@ One `[[item]]` per item, depth first, area by area (`manuscript`, `bible`, `rese
 `trash`), so every parent comes before its children and the file's order is the binder's order.
 
 ```toml
-schema = 1
+schema = 2
 
 [[item]]
 area = "manuscript"
@@ -197,9 +197,10 @@ continues the paragraph whatever it holds.
 | Another language | `[text]{lang=fr}` |
 | Link to an item or entry | `[text](wsm:<id>)`; other addresses as `[text](https://...)` |
 | Comment | `[text]{.comment id=c1}`, the comment in the front matter |
+| Revision pass | `[text]{rev=2}`: written in revision pass 2 (an index into `[extra] revisions`); no leading zeros |
 | Note reference | `[^label]` |
 
-Marks nest in one fixed order, outermost first: comment, link, language, small caps, bold, italic,
+Marks nest in one fixed order, outermost first: revision pass, comment, link, language, small caps, bold, italic,
 strikethrough: `[[*both*]{lang=de}](wsm:x)`. Neighbouring text with the same marks is one span.
 
 ### Escapes
@@ -237,3 +238,4 @@ Marks nested deeper than 32 levels read the rest of the paragraph as plain text.
 | Schema | Release | Changes |
 | --- | --- | --- |
 | 1 | 0.1 | First version |
+| 2 | 0.2 | Revision pass marks (`{rev=N}`) and the project's revision passes; a version 1 project reads unchanged (decision 0005) |

@@ -33,6 +33,7 @@ struct Attrs {
     lang: Option<String>,
     small_caps: bool,
     comment: Option<String>,
+    rev: Option<u32>,
 }
 
 fn is_label_char(c: char) -> bool {
@@ -117,6 +118,11 @@ fn attrs_after(s: &str) -> Option<(Attrs, usize)> {
         } else if let Some(v) = part.strip_prefix("lang=") {
             a.lang = Some(v.to_owned()).filter(|v| !v.is_empty() && v.chars().all(is_label_char));
             a.lang.as_ref()?;
+        } else if let Some(v) = part.strip_prefix("rev=") {
+            if v.is_empty() || v.len() > 4 || !v.bytes().all(|b| b.is_ascii_digit()) || (v.len() > 1 && v.starts_with('0')) {
+                return None;
+            }
+            a.rev = Some(v.parse().ok()?);
         } else if let Some(v) = part.strip_prefix("id=") {
             if !v.chars().all(is_label_char) || v.is_empty() {
                 return None;
@@ -266,6 +272,9 @@ fn close(stack: &mut Vec<Frame>, root: &mut Inlines, attrs: Option<&Attrs>) {
             }
             if m.comment.is_none() {
                 m.comment.clone_from(&a.comment);
+            }
+            if m.rev.is_none() {
+                m.rev = a.rev;
             }
         }),
         (Kind::Bracket, None) => {}

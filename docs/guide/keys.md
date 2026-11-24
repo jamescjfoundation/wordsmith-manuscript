@@ -40,6 +40,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Redo | `Mod+Shift+Z` |
 | Remove Link | `Mod+Shift+K` |
 | Rename | `F2` |
+| Revision Mode | `Mod+Shift+E` |
 | Save | `Mod+S` |
 | Save As | `Mod+Shift+S` |
 | Scene Break | `Mod+Shift+Enter` |

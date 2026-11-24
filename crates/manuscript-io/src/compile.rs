@@ -352,9 +352,9 @@ impl Compiled {
     }
 }
 
-/// Marks with the comment taken off (comments are not exported as text).
+/// Marks with the comment and revision pass taken off (neither is exported as text).
 pub fn export_marks(m: &Marks) -> Marks {
-    Marks { comment: None, ..m.clone() }
+    Marks { comment: None, rev: None, ..m.clone() }
 }
 
 #[cfg(test)]

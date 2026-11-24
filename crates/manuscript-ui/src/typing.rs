@@ -118,14 +118,14 @@ pub fn type_smart(ed: &mut Editor, s: &str) -> Result<Option<Replaced>, String> 
     };
     match replacement {
         None => {
-            ed.guarded(s, false, &|sess, t| jcj_engine::cmd::type_text(sess, t))?;
+            ed.guarded(s, false, &|sess, t| crate::editor::typed(sess, t))?;
             Ok(None)
         }
         Some((start, inserted, typed)) => {
             if start < caret.off {
                 ed.session.sel.anchor = pos(i, start);
             }
-            ed.guarded(&inserted, false, &|sess, t| jcj_engine::cmd::type_text(sess, t))?;
+            ed.guarded(&inserted, false, &|sess, t| crate::editor::typed(sess, t))?;
             Ok(Some(Replaced { para: i, start, inserted, typed }))
         }
     }
@@ -139,7 +139,7 @@ pub fn undo_smart(ed: &mut Editor, r: &Replaced) -> Result<(), String> {
         return ed.run("text.backspace", &serde_json::json!({})).map(|_| ());
     }
     ed.session.sel = jcj_engine::Selection { anchor: pos(r.para, r.start), focus: pos(r.para, end) };
-    jcj_engine::cmd::paste_text(&mut ed.session, &r.typed).map_err(|e| format!("{e:?}"))?;
+    crate::editor::pasted(&mut ed.session, &r.typed).map_err(|e| format!("{e:?}"))?;
     ed.changed();
     Ok(())
 }

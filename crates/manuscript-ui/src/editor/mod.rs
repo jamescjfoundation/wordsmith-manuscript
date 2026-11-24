@@ -60,6 +60,8 @@ pub struct Editor {
     pub typewriter: bool,
     /// Read-only (an item held by a stitched view elsewhere).
     pub read_only: bool,
+    /// The color of each revision pass, by pass number (PRG-4).
+    pub pass_colors: Vec<egui::Color32>,
     /// The last error, for the status bar.
     pub error: Option<String>,
     /// Where the caret was drawn last frame (screen), for typewriter scrolling and menus.
@@ -83,6 +85,25 @@ pub struct Editor {
 /// The registry every editor session uses: the engine's commands and the core's features.
 pub fn registry() -> Arc<jcj_engine::Registry> {
     Arc::new(jcj_engine::registry_with(jcj_engine::commands::merged(Vec::new())))
+}
+
+/// Type `text` at the selection; in revision mode it takes the current pass's mark, and out of
+/// it text typed next to revised text is not revised (the core's typing rules for its marks).
+pub fn typed(s: &mut Session, text: &str) -> Result<(), jcj_engine::CmdError> {
+    with_marks(s, |s| jcj_engine::cmd::type_text(s, text))
+}
+
+/// [`typed`] for text that was not typed (pasted, replaced, put back).
+pub fn pasted(s: &mut Session, text: &str) -> Result<(), jcj_engine::CmdError> {
+    with_marks(s, |s| jcj_engine::cmd::paste_text(s, text))
+}
+
+fn with_marks(s: &mut Session, f: impl FnOnce(&mut Session) -> Result<(), jcj_engine::CmdError>) -> Result<(), jcj_engine::CmdError> {
+    let props = jcj_features::editing::typing_props(s);
+    let held = s.pending.replace(props);
+    let out = f(s);
+    s.pending = held;
+    out
 }
 
 /// A position at byte `off` of top-level paragraph `i`.
@@ -116,6 +137,7 @@ impl Editor {
             reveal: false,
             typewriter: false,
             read_only: false,
+            pass_colors: Vec::new(),
             error: None,
             caret_rect: None,
             smart: crate::typing::Smart::default(),
@@ -291,11 +313,11 @@ impl Editor {
                     }
                     if !line.is_empty() {
                         self.session.join_next_undo();
-                        jcj_engine::cmd::paste_text(&mut self.session, line).map_err(|e| format!("{e:?}"))?;
+                        pasted(&mut self.session, line).map_err(|e| format!("{e:?}"))?;
                     }
                 }
             } else {
-                jcj_engine::cmd::type_text(&mut self.session, t).map_err(|e| format!("{e:?}"))?;
+                typed(&mut self.session, t).map_err(|e| format!("{e:?}"))?;
             }
         }
         self.changed();

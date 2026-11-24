@@ -44,6 +44,15 @@ book with its title page, as standard manuscript pages: laid out exactly as the 
 them out, with the page count above. The pages follow your writing (they are laid out again in the
 background after each change); write in the editor and come back to see them.
 
+## Revision passes
+
+When you start a round of revision, run Start Revision Pass (command palette, or ask an agent): the
+pass gets the next color, and from then on what you type or paste shows in that color. Revision
+Mode (Mod+Shift+E) turns marking off and on; text you type next to marked text while it is off is
+not marked. `revision.list` shows the passes and how many documents carry each; Clear Revision
+Marks takes one pass's marks (or all) off the text and leaves every word. The marks are saved with
+the text and never exported. Projects with passes need Wordsmith Manuscript 0.2 or later.
+
 ## Comments
 
 Select some words and choose Add Comment (Mod+Alt+M): the words get a soft highlight and the

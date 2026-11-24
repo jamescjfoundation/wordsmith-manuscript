@@ -67,7 +67,7 @@ impl Editor {
                     if k > 0 {
                         sess.join_next_undo();
                     }
-                    jcj_engine::cmd::paste_text(sess, line)?;
+                    crate::editor::pasted(sess, line)?;
                 }
             }
             Ok(())

@@ -323,7 +323,7 @@ impl Editor {
         let whole = re.find(&sel).is_some_and(|m| m.start() == 0 && m.end() == sel.len());
         if !self.session.sel.is_collapsed() && whole {
             let rep = replacement(&re, q, &sel, with);
-            self.guarded(&rep, true, &|sess, t| jcj_engine::cmd::paste_text(sess, t))?;
+            self.guarded(&rep, true, &|sess, t| crate::editor::pasted(sess, t))?;
         }
         self.find_next(q, false)
     }

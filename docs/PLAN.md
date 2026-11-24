@@ -807,8 +807,8 @@ BND-4); HTML and OPML import (IMP-7, IMP-8); EPUB reading copy (EXP-6); safe in 
 
 ### R3 (v0.3): drafts and finish
 
-Drafts (DRF-1): format version 2 with `drafts/`, migration from version 1 with a fixture of each
-version, new draft from current, compare scene by scene, choose which draft exports; document-set
+Drafts (DRF-1): format version 3 with `drafts/` (version 2 went to revision pass marks in R2,
+decision 0005), migration from versions 1 and 2 with a fixture of each version, new draft from current, compare scene by scene, choose which draft exports; document-set
 import places later drafts as drafts; interface languages (ACC-4); polish from 0.1 and 0.2 use.
 
 ### R4 (v1.0): beyond

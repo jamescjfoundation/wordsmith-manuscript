@@ -37,6 +37,7 @@ fn every_construct_survives_the_document() {
                         link: Some("wsm:x".into()),
                         comment: Some("c1".into()),
                         bold: false,
+                        rev: Some(3),
                     },
                 ),
                 Inline::NoteRef { label: "1".into(), marks: Marks::default() },
@@ -89,8 +90,18 @@ fn arb_marks() -> impl Strategy<Value = Marks> {
         proptest::option::of("[a-z]{1,3}"),
         proptest::option::of("wsm:[a-z]{1,4}"),
         proptest::option::of("c[0-9]"),
+        proptest::option::of(0u32..5),
     )
-        .prop_map(|(italic, bold, small_caps, strike, lang, link, comment)| Marks { italic, bold, small_caps, strike, lang, link, comment })
+        .prop_map(|(italic, bold, small_caps, strike, lang, link, comment, rev)| Marks {
+            italic,
+            bold,
+            small_caps,
+            strike,
+            lang,
+            link,
+            comment,
+            rev,
+        })
 }
 
 fn arb_inlines() -> impl Strategy<Value = Inlines> {

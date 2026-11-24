@@ -5468,6 +5468,7 @@ dependencies = [
  "jcj-board",
  "jcj-doc",
  "jcj-engine",
+ "jcj-features",
  "jcj-layout",
  "jcj-proof",
  "jcj-shell",

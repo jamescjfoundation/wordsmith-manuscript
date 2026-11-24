@@ -178,7 +178,18 @@ fn section(p: &Project, item: &Item, n: &mut Counter) -> Option<Section> {
         }
         _ => None,
     };
-    let text = p.text(item.id).map(|t| t.body.clone()).unwrap_or_default();
+    let mut text = p.text(item.id).map(|t| t.body.clone()).unwrap_or_default();
+    // Revision pass marks are the writer's working marks, not part of the book.
+    for run in text.inline_runs_mut() {
+        for i in run.iter_mut() {
+            match i {
+                wordsmith_manuscript_model::Inline::Span { marks, .. } | wordsmith_manuscript_model::Inline::NoteRef { marks, .. } => {
+                    marks.rev = None
+                }
+            }
+        }
+    }
+    text.normalize();
     let kind = if matches!(item.role, Role::FrontMatter | Role::BackMatter) { FrontKind::of(&item.title) } else { FrontKind::Other };
     Some(Section {
         id: item.id,

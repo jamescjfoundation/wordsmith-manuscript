@@ -14,7 +14,7 @@ pub mod limits;
 pub mod pack;
 
 /// The schema version this build writes and the newest it reads.
-pub const SCHEMA: u32 = 1;
+pub const SCHEMA: u32 = 2;
 
 /// Why a project could not be read or written.
 #[derive(Debug, Clone, PartialEq, Eq)]

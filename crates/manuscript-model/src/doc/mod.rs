@@ -91,6 +91,9 @@ pub enum BlockTag {
 pub const BLOCK: ExtKey<BlockTag> = ExtKey::new("manuscript.block");
 /// A run's link target (`wsm:<id>` or a web address).
 pub const LINK: ExtKey<String> = ExtKey::new("manuscript.link");
+/// The revision pass a run was written in: the core's revision mark (`jcj-features`
+/// revisions use the same key, so text typed in revision mode carries it).
+pub const REV: ExtKey<u32> = ExtKey::new("core.revised");
 /// The id of the comment anchored to a run.
 pub const COMMENT: ExtKey<String> = ExtKey::new("manuscript.comment");
 /// A run that stands for a note reference (its text is the label, shown raised).
@@ -113,6 +116,9 @@ pub fn props_of(m: &Marks) -> CharProps {
     if let Some(c) = &m.comment {
         let _ = COMMENT.set(&mut p, c);
     }
+    if let Some(r) = m.rev {
+        let _ = REV.set(&mut p, &r);
+    }
     p
 }
 
@@ -126,6 +132,7 @@ pub fn marks_of(p: &CharProps) -> Marks {
         lang: p.lang.clone().filter(|l| !l.is_empty()),
         link: LINK.get_or_none(p),
         comment: COMMENT.get_or_none(p),
+        rev: REV.get_or_none(p),
     }
 }
 
