@@ -125,3 +125,33 @@ fn comments_become_review_comments_in_docx_and_never_text() {
         assert!(!String::from_utf8_lossy(&out.bytes).contains("Too plain"), "{target:?}");
     }
 }
+
+#[test]
+fn an_epub_reading_copy_reads_back_word_for_word() {
+    let mut novel = project_from(&fixture("documents/pride-and-prejudice.docx"));
+    novel.settings.book.title = "Pride and Prejudice".into();
+    novel.settings.book.author = "Jane Austen".into();
+    let out = export(&novel, &Options::default(), Target::Epub).unwrap();
+    assert!(out.check.passed(), "{}", out.check);
+    assert!(out.bytes.starts_with(b"PK"));
+    let back = jcj_interchange::import(jcj_interchange::Format::Epub, &out.bytes).unwrap();
+    assert_eq!(back.core.title, "Pride and Prejudice");
+    assert_eq!(back.core.creator, "Jane Austen");
+    // One reading document per chapter, so a reader's contents lists them.
+    let names: Vec<String> = {
+        let mut z = zip::ZipArchive::new(std::io::Cursor::new(&out.bytes)).unwrap();
+        (0..z.len()).map(|i| z.by_index(i).unwrap().name().to_owned()).collect()
+    };
+    assert!(names.iter().filter(|n| n.ends_with(".xhtml")).count() > 50, "{names:?}");
+    let small = export(&small(), &Options { end_mark: true, ..Options::default() }, Target::Epub).unwrap();
+    assert!(small.check.passed(), "{}", small.check);
+    // Notes are kept, as numbered notes at the end of their chapter.
+    let mut z = zip::ZipArchive::new(std::io::Cursor::new(&small.bytes)).unwrap();
+    let mut all = String::new();
+    for i in 0..z.len() {
+        let mut f = z.by_index(i).unwrap();
+        let _ = std::io::Read::read_to_string(&mut f, &mut all);
+    }
+    assert!(all.contains("1. At dawn."), "the note is in the reading copy");
+    assert_eq!(Target::from_extension("EPUB"), Some(Target::Epub));
+}

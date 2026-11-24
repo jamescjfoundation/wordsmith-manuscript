@@ -24,4 +24,5 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+zip = { workspace = true }
 jcj-interchange = { workspace = true }

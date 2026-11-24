@@ -31,6 +31,8 @@ pub enum Target {
     Text,
     /// A web page.
     Html,
+    /// An e-book reading copy (EPUB), to read the draft on a phone or e-reader (EXP-6).
+    Epub,
 }
 
 impl Target {
@@ -43,6 +45,7 @@ impl Target {
             Target::Markdown => Format::Markdown,
             Target::Text => Format::Text,
             Target::Html => Format::Html,
+            Target::Epub => Format::Epub,
         }
     }
 
@@ -55,6 +58,7 @@ impl Target {
             "md" | "markdown" => Some(Target::Markdown),
             "txt" | "text" => Some(Target::Text),
             "html" | "htm" => Some(Target::Html),
+            "epub" => Some(Target::Epub),
             _ => None,
         }
     }
@@ -203,6 +207,67 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
         doc.body.push(Arc::new(jcj_doc::Block::Para(Paragraph::new())));
     }
     (doc, left_out)
+}
+
+/// For the EPUB reading copy: each chapter's notes as numbered endnotes at its end, the note
+/// references as superscript numbers. Returns the words this adds (the numbers and the "Notes"
+/// headings), which the word check leaves out.
+///
+/// core-candidate: the core's EPUB writer (`jcj-interchange` epub) leaves notes out; once it
+/// writes them (as EPUB footnotes), this goes.
+fn notes_as_endnotes(doc: &mut Document) -> Vec<String> {
+    let mut added: Vec<String> = Vec::new();
+    let mut body: Vec<Arc<jcj_doc::Block>> = Vec::new();
+    let mut pending: Vec<(u32, u32)> = Vec::new();
+    let mut n = 0u32;
+    let parts = doc.parts.clone();
+    let flush = |body: &mut Vec<Arc<jcj_doc::Block>>, pending: &mut Vec<(u32, u32)>, added: &mut Vec<String>| {
+        if pending.is_empty() {
+            return;
+        }
+        let mut head = Paragraph::with_text("Notes", CharProps { bold: Some(true), ..CharProps::default() });
+        head.props.style = None;
+        body.push(Arc::new(jcj_doc::Block::Para(head)));
+        added.push("Notes".into());
+        for (num, part) in pending.drain(..) {
+            let paras: Vec<Paragraph> = parts.get(&part).map(|p| p.blocks.iter().filter_map(|b| b.as_para().cloned()).collect()).unwrap_or_default();
+            for (k, mut para) in paras.into_iter().enumerate() {
+                para.props.style = None;
+                if k == 0 {
+                    let _ = para.insert_text(0, &format!("{num}. "), &CharProps::default());
+                    added.push(num.to_string());
+                }
+                body.push(Arc::new(jcj_doc::Block::Para(para)));
+            }
+        }
+    };
+    for block in std::mem::take(&mut doc.body) {
+        let starts_chapter = block.as_para().is_some_and(|p| p.props.style.as_deref() == Some("Heading1"));
+        if starts_chapter {
+            flush(&mut body, &mut pending, &mut added);
+        }
+        let mut block = block;
+        if let jcj_doc::Block::Para(p) = Arc::make_mut(&mut block) {
+            let refs: Vec<(usize, u32)> = p
+                .objects_with_offsets()
+                .filter_map(|(off, o)| if let InlineObject::NoteRef { id, .. } = o { Some((off, *id)) } else { None })
+                .collect();
+            for (off, id) in refs.into_iter().rev() {
+                n += 1;
+                let _ = p.delete(off, off + jcj_doc::para::OBJ.len_utf8());
+                let mut sup = CharProps::default();
+                sup.vert_align = Some(jcj_doc::props::VertAlign::Superscript);
+                let _ = p.insert_text(off, &n.to_string(), &sup);
+                pending.push((n, id));
+                added.push(n.to_string());
+            }
+        }
+        body.push(block);
+    }
+    flush(&mut body, &mut pending, &mut added);
+    doc.body = body;
+    doc.parts.retain(|_, p| !matches!(p.kind, PartKind::Footnote | PartKind::Endnote));
+    added
 }
 
 /// An export's result: the file's bytes and its checks.
@@ -528,7 +593,44 @@ pub fn export(p: &Project, o: &Options, target: Target) -> Result<Exported, Stri
         }
         return Ok(Exported { bytes, check, left_out });
     }
-    let (doc, left_out) = document(&c, o);
+    let (mut doc, left_out) = document(&c, o);
+    if target == Target::Epub {
+        // The reading copy's title page in the reader's library.
+        let b = &p.settings.book;
+        doc.core.title.clone_from(&b.title);
+        doc.core.creator = b.byline().to_owned();
+        // A reader opens each part and chapter on its own page with its own contents entry:
+        // the writer starts a file at each level 1 heading, so parts and chapters are level 1,
+        // and the headings under them move up one level.
+        for block in doc.body.iter_mut() {
+            if let jcj_doc::Block::Para(para) = Arc::make_mut(block) {
+                let level = match para.props.style.as_deref() {
+                    Some("Heading1" | "Heading2") => Some(1u8),
+                    Some(s) => s.strip_prefix("Heading").and_then(|n| n.parse::<u8>().ok()).filter(|n| *n > 2).map(|n| n - 1),
+                    None => None,
+                };
+                if let Some(l) = level {
+                    para.props.style = Some(format!("Heading{l}"));
+                    para.props.outline_level = Some(l - 1);
+                }
+            }
+        }
+    }
+    if target == Target::Epub {
+        // Two checks: the reading copy's document holds every letter of the manuscript (notes
+        // moved to chapter ends, plus the note numbers), and the file holds that document, word
+        // for word in order.
+        let added = notes_as_endnotes(&mut doc);
+        let bytes = jcj_interchange::export(target.format(), &doc).map_err(|e| e.to_string())?;
+        let written = verify::document_words(&doc);
+        let mut want: Vec<String> = crate::standard::letters(expected.iter().chain(&added).map(String::as_str));
+        let mut have: Vec<String> = crate::standard::letters(written.iter().map(String::as_str));
+        want.sort();
+        have.sort();
+        let moved = Check::of(&want, &have);
+        let check = if moved.passed() { Check::of(&written, &read_back(target.format(), &bytes)?) } else { moved };
+        return Ok(Exported { bytes, check, left_out });
+    }
     let bytes = jcj_interchange::export(target.format(), &doc).map_err(|e| e.to_string())?;
     let found = read_back(target.format(), &bytes)?;
     // Notes come after the text in some formats and at their references in others: the check

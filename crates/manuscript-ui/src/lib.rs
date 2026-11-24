@@ -1767,6 +1767,7 @@ impl Manuscript {
             ("markdown", "Markdown"),
             ("text", "Plain text"),
             ("html", "Web page (HTML)"),
+            ("epub", "Reading copy (EPUB)"),
             ("book", "Book package for Wordsmith Book (.wsmz)"),
         ];
         let current = formats.iter().find(|f| f.0 == self.export_format).map_or("", |f| f.1);

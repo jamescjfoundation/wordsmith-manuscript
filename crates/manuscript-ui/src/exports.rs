@@ -19,7 +19,7 @@ pub fn specs() -> Vec<Spec> {
             id: "export.file",
             label: "Export",
             key: "Mod+E",
-            params: r#"{"path": string, "format"?: "docx"|"odt"|"rtf"|"markdown"|"text"|"html"|"manuscript-docx"|"manuscript-pdf"|"book", "options"?: {...}, "preset"?: string, "standard"?: {"paper"?: "letter"|"a4", "face"?: "serif"|"mono", "title_page"?: bool, "underline_italic"?: bool}}"#,
+            params: r#"{"path": string, "format"?: "docx"|"odt"|"rtf"|"markdown"|"text"|"html"|"epub"|"manuscript-docx"|"manuscript-pdf"|"book", "options"?: {...}, "preset"?: string, "standard"?: {"paper"?: "letter"|"a4", "face"?: "serif"|"mono", "title_page"?: bool, "underline_italic"?: bool}}"#,
             about: "Write the manuscript to a file (format from the extension when not given), checked word for word.",
             mutates: false,
         },
