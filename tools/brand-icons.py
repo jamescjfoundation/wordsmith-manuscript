@@ -1,37 +1,63 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# Usage: python3 tools/brand-icons.py assets/brand/manuscript 32 256 512 1024
-# Rasterise the mark (same shapes as mark.svg) with 4x4 supersampling; stdlib only.
-import struct, zlib, sys
-def rr(px,py,x,y,w,h,r):
-    if px<x or py<y or px>x+w or py>y+h: return False
-    cx=min(max(px,x+r),x+w-r); cy=min(max(py,y+r),y+h-r)
-    return (px-cx)**2+(py-cy)**2<=r*r
-def page(px,py):
-    return 17<=px<=47 and 12<=py<=52 and not (px>39 and py<20 and (px-39)>(py-12))
-def corner(px,py): return 39<=px<=47 and 12<=py<=20 and (px-39)>=(py-12)
-def color(px,py):
-    if (px-40)**2+(py-41.5)**2<=4: return (0xC9,0x97,0x3B,255)
-    for (x,y,w,h) in [(22,26,20,3),(22,33,20,3),(22,40,13,3)]:
-        if rr(px,py,x,y,w,h,1.5): return (0x7A,0x2E,0x3A,255)
-    if corner(px,py): return (0xE2,0xCF,0xA8,255)
-    if page(px,py): return (0xFB,0xF9,0xF5,255)
-    if rr(px,py,2,2,60,60,13): return (0x7A,0x2E,0x3A,255)
-    return (0,0,0,0)
-def png(n,path):
-    s=4; rows=[]
+# Usage: python3 tools/brand-icons.py assets/brand 32 256 512
+# Derive the smaller app icons from the brand's icon-1024.png by averaging pixel blocks (each size
+# must divide 1024); stdlib only.
+import struct, sys, zlib
+
+def read_png(path):
+    data = open(path, 'rb').read()
+    assert data[:8] == b'\x89PNG\r\n\x1a\n', 'not a PNG'
+    pos, idat, head = 8, b'', None
+    while pos < len(data):
+        n, kind = struct.unpack('>I4s', data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + n]
+        if kind == b'IHDR': head = struct.unpack('>IIBBBBB', body)
+        elif kind == b'IDAT': idat += body
+        pos += 12 + n
+    w, h, depth, ctype, _, _, interlace = head
+    assert depth == 8 and ctype == 6 and interlace == 0, 'expects 8-bit RGBA, not interlaced'
+    raw, bpp, stride = zlib.decompress(idat), 4, w * 4
+    rows, prev = [], bytearray(stride)
+    for y in range(h):
+        f, line = raw[y * (stride + 1)], bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        for i in range(stride):
+            a = line[i - bpp] if i >= bpp else 0
+            b, c = prev[i], prev[i - bpp] if i >= bpp else 0
+            if f == 1: line[i] = (line[i] + a) & 255
+            elif f == 2: line[i] = (line[i] + b) & 255
+            elif f == 3: line[i] = (line[i] + (a + b) // 2) & 255
+            elif f == 4:
+                p = a + b - c; pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        rows.append(line); prev = line
+    return w, rows
+
+def write_png(path, n, rows):
+    def chunk(t, d): return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+    body = b''.join(b'\x00' + bytes(r) for r in rows)
+    open(path, 'wb').write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', n, n, 8, 6, 0, 0, 0))
+                           + chunk(b'IDAT', zlib.compress(body, 9)) + chunk(b'IEND', b''))
+
+def shrink(w, rows, n):
+    k = w // n
+    out = []
     for j in range(n):
-        row=bytearray([0])
+        line = bytearray()
         for i in range(n):
-            acc=[0,0,0,0]
-            for a in range(s):
-                for b in range(s):
-                    c=color((i+(a+.5)/s)*64/n,(j+(b+.5)/s)*64/n)
-                    for k in range(3): acc[k]+=c[k]*c[3]
-                    acc[3]+=c[3]
-            al=acc[3]
-            row+=bytes([round(acc[0]/al) if al else 0,round(acc[1]/al) if al else 0,round(acc[2]/al) if al else 0,round(al/(s*s))])
-        rows.append(bytes(row))
-    def chunk(t,d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
-    data=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',n,n,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b''.join(rows),9))+chunk(b'IEND',b'')
-    open(path,'wb').write(data)
-for n in map(int,sys.argv[2:]): png(n,f"{sys.argv[1]}/icon-{n}.png")
+            acc = [0, 0, 0, 0]
+            for y in range(j * k, (j + 1) * k):
+                r = rows[y]
+                for x in range(i * k, (i + 1) * k):
+                    al = r[4 * x + 3]
+                    for c in range(3): acc[c] += r[4 * x + c] * al
+                    acc[3] += al
+            al = acc[3]
+            line += bytes([round(acc[c] / al) if al else 0 for c in range(3)] + [round(al / (k * k))])
+        out.append(line)
+    return out
+
+folder = sys.argv[1]
+w, rows = read_png(f'{folder}/icon-1024.png')
+for n in map(int, sys.argv[2:]):
+    assert w % n == 0, f'{n} does not divide {w}'
+    write_png(f'{folder}/icon-{n}.png', n, shrink(w, rows, n))
