@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod bible;
 pub mod binder;
 pub mod brand;
 pub mod commands;
@@ -90,6 +91,8 @@ pub struct Manuscript {
     pub outline: outline::OutlineView,
     /// The corkboard's state.
     pub cork: cork::CorkView,
+    /// The bible entry form.
+    pub entry: bible::EntryView,
     /// The folder the corkboard and outline show (follows the binder's selection).
     pub view_root: Option<ItemId>,
     /// The filter on binder, corkboard and outline.
@@ -134,6 +137,7 @@ impl Manuscript {
             mode: ViewMode::Editor,
             outline: outline::OutlineView::default(),
             cork: cork::CorkView::default(),
+            entry: bible::EntryView::default(),
             view_root: None,
             filter: filter::Filter::default(),
             filtered_at: u64::MAX,
@@ -238,11 +242,14 @@ impl Manuscript {
         self.write_back();
         let Some(s) = self.session.as_ref() else { return };
         let Some(item) = s.project.binder.get(id) else { return };
-        if !item.kind.has_text() {
+        let text = if let Some(e) = s.project.entries.get(&id) {
+            e.body.clone()
+        } else if item.kind.has_text() {
+            s.project.text(id).map(|t| t.body.clone()).unwrap_or_default()
+        } else {
             self.editor = None;
             return;
-        }
-        let text = s.project.text(id).map(|t| t.body.clone()).unwrap_or_default();
+        };
         let mut ed = editor::Editor::new(id, &text, self.registry.clone());
         ed.smart = typing::Smart::of(&s.project.settings);
         ed.spell = Some(spelling::SpellCache::new(&s.project));
@@ -317,7 +324,10 @@ impl Manuscript {
             self.editor = None;
             return;
         }
-        let want = s.project.text(id).map(|t| t.body.clone()).unwrap_or_default();
+        let want = match s.project.entries.get(&id) {
+            Some(e) => e.body.clone(),
+            None => s.project.text(id).map(|t| t.body.clone()).unwrap_or_default(),
+        };
         if !ed.is_dirty() && ed.text() != want {
             let mut fresh = editor::Editor::new(id, &want, self.registry.clone());
             fresh.smart = ed.smart.clone();
@@ -423,13 +433,18 @@ impl App for Manuscript {
     }
 
     fn ribbon_tabs(&self) -> Vec<jcj_shell::TabSpec> {
-        vec![jcj_shell::TabSpec::new("write", "Write", "W"), jcj_shell::TabSpec::new("view", "View", "V")]
+        vec![
+            jcj_shell::TabSpec::new("write", "Write", "W"),
+            jcj_shell::TabSpec::new("bible", "Bible", "B"),
+            jcj_shell::TabSpec::new("view", "View", "V"),
+        ]
     }
 
     fn ribbon_ui(&mut self, tab: &str, ui: &mut egui::Ui, shell: &mut Shell) {
         match tab {
             "write" => ribbon::write_tab(self, ui, shell),
             "view" => ribbon::view_tab(self, ui, shell),
+            "bible" => ribbon::bible_tab(self, ui, shell),
             _ => {}
         }
     }
@@ -755,7 +770,9 @@ impl Manuscript {
                 let out = s.run(id, &params)?;
                 if let Some(new) = out.get("id").and_then(|v| v.as_str()).and_then(|v| v.parse::<ItemId>().ok()) {
                     self.binder.selected = Some(new);
-                    self.binder.tree.rename(binder::Node::Item(new), "Untitled");
+                    let title = self.session.as_ref().and_then(|s| s.project.binder.get(new)).map(|i| i.title.clone()).unwrap_or_default();
+                    self.binder.tree.rename(binder::Node::Item(new), &title);
+                    self.open_item(new);
                 }
                 Ok(())
             }
@@ -805,6 +822,29 @@ impl Manuscript {
         }
         if self.focus.is_none() {
             findbar::ui(self, ui);
+        }
+        let entry = self.editor.as_ref().map(|e| e.item).filter(|i| self.session.as_ref().is_some_and(|s| s.project.entries.contains_key(i)));
+        if let Some(eid) = entry
+            && self.focus.is_none()
+        {
+            self.write_back();
+            let mut asks = Vec::new();
+            if let Some(s) = self.session.as_mut() {
+                egui::ScrollArea::vertical().id_salt("manuscript-entry-form").max_height(ui.available_height() * 0.5).show(ui, |ui| {
+                    let (a, errors) = bible::form(ui, s, &mut self.entry, eid);
+                    asks = a;
+                    if let Some(e) = errors.into_iter().last() {
+                        self.status = e;
+                    }
+                });
+            }
+            ui.separator();
+            self.sync_editor();
+            for bible::Ask::Open(d) in asks {
+                self.binder.selected = Some(d);
+                self.binder.tree.reveal = true;
+                self.open_item(d);
+            }
         }
         match self.editor.as_mut() {
             Some(ed) => {

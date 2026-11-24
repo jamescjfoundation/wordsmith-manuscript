@@ -115,6 +115,13 @@ pub fn write_back(ed: &Editor, project: &mut Project) -> bool {
     let mut changed = false;
     let pieces = if is_stitched(ed) { split(&ed.session.doc) } else { vec![(ed.item, ed.text())] };
     for (id, text) in pieces {
+        if let Some(e) = project.entries.get_mut(&id) {
+            if e.body != text {
+                e.body = text;
+                changed = true;
+            }
+            continue;
+        }
         if project.binder.get(id).is_none_or(|i| !i.kind.has_text()) {
             continue;
         }

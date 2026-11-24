@@ -97,6 +97,7 @@ pub fn specs() -> Vec<Spec> {
     v.extend(crate::spelling::specs());
     v.extend(crate::snapshots::specs());
     v.extend(crate::outline::specs());
+    v.extend(crate::bible::specs());
     v
 }
 
@@ -241,7 +242,11 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Outcome {
             let id = id_param(v, "id")?;
             let title = str_param(v, "title")?.to_owned();
             exists(&s.project, id)?;
-            s.change("Rename", &[], &[], |p| {
+            s.change("Rename", &[], &[id], |p| {
+                // An entry's name is its title in the binder.
+                if let Some(e) = p.entries.get_mut(&id) {
+                    e.name.clone_from(&title);
+                }
                 if let Some(i) = p.binder.get_mut(id) {
                     i.title = title;
                 }
@@ -372,6 +377,9 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Outcome {
                 return out;
             }
             if let Some(out) = crate::outline::run(s, other, v) {
+                return out;
+            }
+            if let Some(out) = crate::bible::run(s, other, v) {
                 return out;
             }
             Err(format!("unknown command {other}"))

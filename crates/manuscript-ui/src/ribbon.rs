@@ -75,3 +75,15 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
         widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": -60 })).label("Narrower"));
     });
 }
+
+/// The Bible tab: a new entry of each type.
+pub fn bible_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
+    let templates = app.session.as_ref().map(|s| wordsmith_manuscript_model::bible::templates(&s.project.settings)).unwrap_or_default();
+    let cmds: &dyn Commands = &*app;
+    widgets::group(ui, shell, "New Entry", |ui, shell| {
+        for t in templates {
+            let c = Control::with("bible.new", json!({ "kind": t.kind, "name": format!("New {}", t.title) })).label(t.title.clone());
+            widgets::small(ui, shell, cmds, &c);
+        }
+    });
+}

@@ -250,6 +250,18 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                         close = true;
                     }
                 }
+                Node::Area(Area::Bible) => {
+                    for t in wordsmith_manuscript_model::bible::templates(&s.project.settings) {
+                        if ui.button(format!("New {}", t.title)).clicked() {
+                            run("bible.new", json!({ "kind": t.kind, "name": format!("New {}", t.title) }));
+                            close = true;
+                        }
+                    }
+                    if ui.button("New Folder").clicked() {
+                        run("binder.newFolder", json!({ "area": "bible" }));
+                        close = true;
+                    }
+                }
                 Node::Area(a) => {
                     if ui.button("New Document").clicked() {
                         run("binder.new", json!({ "area": a.key() }));
