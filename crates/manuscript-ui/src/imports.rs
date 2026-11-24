@@ -5,22 +5,86 @@
 use std::path::Path;
 
 use serde_json::{Value, json};
-use wordsmith_manuscript_io::notes;
-use wordsmith_manuscript_model::{Area, Item, ItemId, Kind, Place, Project, bible};
+use wordsmith_manuscript_io::import::{self, TextRules};
+use wordsmith_manuscript_io::{mapping, notes};
+use wordsmith_manuscript_model::{Area, Item, ItemId, Kind, Place, Project, Role, bible};
 
 use crate::commands::{Spec, str_param};
 use crate::session::{Outcome, Session};
 
 /// The import commands.
 pub fn specs() -> Vec<Spec> {
-    vec![Spec {
-        id: "import.notes",
-        label: "Import Notes Folder",
-        key: "",
-        params: r#"{"path": string}"#,
-        about: "Each Markdown note in a folder becomes a bible entry; front matter becomes fields; [[links]] become links (one undo step).",
-        mutates: true,
-    }]
+    vec![
+        Spec {
+            id: "import.preview",
+            label: "Preview Import",
+            key: "",
+            params: r#"{"path": string, "rules"?: {"heading_roles"?: [role], "chapter_lines"?: bool, "split_scenes"?: bool, "scene_marks"?: [string], "underline_as_italic"?: bool}, "join_lines"?: bool}"#,
+            about: "The binder an import would make, its report and its word-for-word check, without changing the project.",
+            mutates: false,
+        },
+        Spec {
+            id: "import.document",
+            label: "Import Document",
+            key: "",
+            params: r#"{"path": string, "rules"?: {...}, "join_lines"?: bool, "into"?: id}"#,
+            about: "Import a DOCX, ODT, RTF, Markdown, HTML or text file into the manuscript (or a folder) as one undo step; the rules are kept in the project.",
+            mutates: true,
+        },
+        Spec {
+            id: "import.notes",
+            label: "Import Notes Folder",
+            key: "",
+            params: r#"{"path": string}"#,
+            about: "Each Markdown note in a folder becomes a bible entry; front matter becomes fields; [[links]] become links (one undo step).",
+            mutates: true,
+        },
+    ]
+}
+
+/// The rules for an import: given ones, else the project's kept ones, else the defaults.
+fn rules_of(s: &Session, v: &Value) -> Result<mapping::Rules, String> {
+    match v.get("rules") {
+        Some(r) => serde_json::from_value(r.clone()).map_err(|e| format!("rules: {e}")),
+        None => Ok(s.project.settings.extra.get("import").and_then(|r| serde_json::from_value(r.clone()).ok()).unwrap_or_default()),
+    }
+}
+
+/// A plan as JSON for previews and reports.
+pub fn plan_json(plan: &mapping::Plan) -> Value {
+    json!({
+        "items": plan.items.iter().map(|i| json!({ "title": i.title, "role": i.role.key(), "kind": format!("{:?}", i.kind).to_lowercase(), "depth": i.depth, "words": i.text.body.word_count() })).collect::<Vec<_>>(),
+        "made": plan.report.made,
+        "dropped": plan.report.dropped,
+        "word_check": plan.report.check.as_ref().map(ToString::to_string),
+        "notes_check": plan.report.notes_check.as_ref().map(ToString::to_string),
+    })
+}
+
+/// Place a plan's items at the end of `into` (or the Manuscript), as one undo step.
+pub fn place(s: &mut Session, plan: mapping::Plan, into: Option<ItemId>, label: &str) -> Result<Vec<ItemId>, String> {
+    // Ids first, so the undo step knows every text it adds.
+    let ids: Vec<ItemId> = plan.items.iter().map(|_| ItemId::new()).collect();
+    let mut made: Vec<ItemId> = Vec::new();
+    s.change(label, &ids, &[], |p| {
+        let area = into.and_then(|i| p.binder.area_of(i)).unwrap_or(Area::Manuscript);
+        // The parent at each depth.
+        let mut parents: Vec<Option<ItemId>> = vec![into];
+        for (it, id) in plan.items.into_iter().zip(ids.iter().copied()) {
+            let parent = parents.get(it.depth).copied().flatten();
+            let place = parent.map_or(Place::end_of(area), |pid| Place::inside(area, pid));
+            let item = Item::with_id(id, it.kind, it.title).role(if area == Area::Manuscript { it.role } else { Role::None });
+            p.binder.insert(place, item).map_err(|e| e.to_string())?;
+            if !it.text.is_empty() {
+                p.texts.insert(id, it.text);
+            }
+            parents.truncate(it.depth + 1);
+            parents.push(Some(id));
+            made.push(id);
+        }
+        Ok(())
+    })?;
+    Ok(made)
 }
 
 /// The folder at the end of `path` (titles) under the Story Bible, made where missing.
@@ -78,6 +142,33 @@ fn import_notes(s: &mut Session, path: &Path) -> Outcome {
 pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
     Some(match id {
         "import.notes" => str_param(v, "path").map(|p| p.to_owned()).and_then(|p| import_notes(s, Path::new(&p))),
+        "import.preview" => (|| {
+            let path = str_param(v, "path")?.to_owned();
+            let rules = rules_of(s, v)?;
+            let text = TextRules { join_lines: v.get("join_lines").and_then(Value::as_bool).unwrap_or(true) };
+            let plan = import::plan_file(Path::new(&path), &rules, &text)?;
+            Ok(plan_json(&plan))
+        })(),
+        "import.document" => (|| {
+            let path = str_param(v, "path")?.to_owned();
+            let rules = rules_of(s, v)?;
+            let text = TextRules { join_lines: v.get("join_lines").and_then(Value::as_bool).unwrap_or(true) };
+            let into = crate::commands::opt_id(v, "into")?;
+            let plan = import::plan_file(Path::new(&path), &rules, &text)?;
+            if let Some(c) = &plan.report.check
+                && !c.passed()
+            {
+                return Err(format!("the import was stopped: its words do not match the source ({c})"));
+            }
+            let report = plan_json(&plan);
+            let made = place(s, plan, into, "Import Document")?;
+            if v.get("rules").is_some() {
+                let r = serde_json::to_value(&rules).map_err(|e| e.to_string())?;
+                s.project.settings.extra.insert("import".into(), r);
+                s.touch();
+            }
+            Ok(json!({ "made": made.len(), "first": made.first().map(|i| i.as_text()), "report": report }))
+        })(),
         _ => return None,
     })
 }

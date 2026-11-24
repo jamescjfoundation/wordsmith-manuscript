@@ -80,6 +80,9 @@ pub struct Manuscript {
     import_path: String,
     /// The last import's report.
     pub import_report: String,
+    /// The import rules on the Import page.
+    pub import_rules: wordsmith_manuscript_io::mapping::Rules,
+    import_join: bool,
     /// The open editor, if an item is open.
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
@@ -136,6 +139,8 @@ impl Manuscript {
             recovered: None,
             import_path: String::new(),
             import_report: String::new(),
+            import_rules: wordsmith_manuscript_io::mapping::Rules::default(),
+            import_join: true,
             editor: None,
             look: editor::EditorLook::default(),
             editor_focused: false,
@@ -1050,8 +1055,18 @@ impl Manuscript {
         ui.label("A file or folder to bring into the open project:");
         let l = ui.label("Path");
         ui.text_edit_singleline(&mut self.import_path).labelled_by(l.id);
+        ui.checkbox(&mut self.import_rules.split_scenes, "Scene breaks split chapters into scenes");
+        ui.checkbox(&mut self.import_rules.chapter_lines, "Lines such as “Chapter 12” start chapters");
+        ui.checkbox(&mut self.import_rules.underline_as_italic, "Underlined text becomes italic");
+        ui.checkbox(&mut self.import_join, "Plain text: lines without a blank line between are one paragraph");
         let mut run: Option<&str> = None;
         ui.horizontal_wrapped(|ui| {
+            if ui.button("Preview").clicked() {
+                run = Some("import.preview");
+            }
+            if ui.button("Import into the Manuscript").clicked() {
+                run = Some("import.document");
+            }
             if ui.button("Notes Folder into the Story Bible").clicked() {
                 run = Some("import.notes");
             }
@@ -1059,9 +1074,11 @@ impl Manuscript {
         if let Some(cmd) = run {
             self.write_back();
             let path = self.import_path.clone();
+            let params = json!({ "path": path, "rules": self.import_rules, "join_lines": self.import_join });
             self.import_report = match self.session.as_mut() {
                 None => "Open or create a project first.".into(),
-                Some(s) => match s.run(cmd, &json!({ "path": path })) {
+                Some(s) => match s.run(cmd, &params) {
+                    Ok(v) if cmd == "import.preview" => preview_text(&v),
                     Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
                     Err(e) => e,
                 },
@@ -1074,4 +1091,21 @@ impl Manuscript {
             egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| ui.monospace(&self.import_report));
         }
     }
+}
+
+/// A preview as an indented list with the checks.
+fn preview_text(v: &serde_json::Value) -> String {
+    let mut out = String::new();
+    for i in v["items"].as_array().into_iter().flatten() {
+        let depth = i["depth"].as_u64().unwrap_or(0) as usize;
+        out.push_str(&format!(
+            "{}{} ({}, {} words)\n",
+            "    ".repeat(depth),
+            i["title"].as_str().unwrap_or(""),
+            i["role"].as_str().unwrap_or(""),
+            i["words"]
+        ));
+    }
+    out.push_str(&format!("\nWord check: {}\nNotes: {}\nNot kept: {}\n", v["word_check"], v["notes_check"], v["dropped"]));
+    out
 }

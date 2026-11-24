@@ -5436,6 +5436,8 @@ dependencies = [
  "jcj-layout",
  "jcj-output",
  "jcj-proof",
+ "serde",
+ "serde_json",
  "wordsmith-manuscript-format",
  "wordsmith-manuscript-model",
 ]
