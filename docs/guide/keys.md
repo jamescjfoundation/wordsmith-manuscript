@@ -49,5 +49,6 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Small Caps | `Mod+Alt+K` |
 | Split Side by Side | `Mod+Alt+\` |
 | Take Snapshot | `Mod+Alt+S` |
+| Timeline | `Mod+7` |
 | Undo | `Mod+Z` |
 | Verse | `Mod+Alt+V` |

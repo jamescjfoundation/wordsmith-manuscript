@@ -44,6 +44,7 @@ pub mod spelling;
 pub mod stitch;
 pub mod table;
 pub mod texts;
+pub mod timeline;
 pub mod tree;
 pub mod typing;
 pub mod user_templates;
@@ -85,6 +86,8 @@ pub enum ViewMode {
     Pages,
     /// Thread lanes (PLN-4).
     Lanes,
+    /// The timeline (PLN-5).
+    Timeline,
 }
 
 /// How often the project folder is checked for changes made elsewhere.
@@ -630,6 +633,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.board", "Board", "Mod+4"));
         v.push(CommandInfo::new("view.pages", "Pages", "Mod+5"));
         v.push(CommandInfo::new("view.lanes", "Lanes", "Mod+6"));
+        v.push(CommandInfo::new("view.timeline", "Timeline", "Mod+7"));
         v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
         v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
         v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
@@ -1139,6 +1143,11 @@ impl Manuscript {
                 self.mode = ViewMode::Lanes;
                 return Ok(());
             }
+            "view.timeline" => {
+                self.write_back();
+                self.mode = ViewMode::Timeline;
+                return Ok(());
+            }
             _ => {}
         }
         if cmd.id == "file.saveTemplate" {
@@ -1449,6 +1458,23 @@ impl Manuscript {
             }
             ViewMode::Board => {
                 self.board_ui(ui);
+                return;
+            }
+            ViewMode::Timeline => {
+                self.write_back();
+                let mut open = None;
+                if let Some(s) = self.session.as_mut() {
+                    let (o, errors) = timeline::view(ui, s);
+                    open = o;
+                    if let Some(e) = errors.into_iter().last() {
+                        self.status = e;
+                    }
+                }
+                if let Some(id) = open {
+                    self.binder.selected = Some(id);
+                    self.open_item(id);
+                    self.mode = ViewMode::Editor;
+                }
                 return;
             }
             ViewMode::Lanes => {

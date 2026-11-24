@@ -80,3 +80,11 @@ linked in the inspector), and scenes in no thread share the last row. Switch to 
 one row per point-of-view character. Drag a card to another lane to move the scene to that thread
 (or point of view); double-click a card to open the scene. Gaps in a row show where a thread goes
 quiet.
+
+## Timeline
+
+View › Timeline (Mod+7) puts the scenes on your story's own calendar. It uses the project's date
+field (Timeline offers to add a "Scene date" field when there is none): give a scene its date in
+the inspector or the outline, as YYYY-MM-DD. Scenes are placed along a line from the earliest date
+to the latest, those on the same day stacked; each card's number is its place in the book, so a
+flashback stands out. Scenes without a date are listed below. Double-click a card to open it.

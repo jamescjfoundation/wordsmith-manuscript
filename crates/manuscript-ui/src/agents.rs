@@ -173,6 +173,7 @@ tools!(
     "entry.relations",
     "lanes.get",
     "lanes.move",
+    "timeline.get",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",
