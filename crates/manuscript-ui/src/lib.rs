@@ -5,6 +5,8 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod brand;
+
 use jcj_shell::egui;
 use jcj_shell::{About, App, Cmd, CommandInfo, Commands, Shell};
 
@@ -51,5 +53,13 @@ impl App for Manuscript {
             credit: "Based on WordCraft by the ArtCraft team.".into(),
             ..About::default()
         }
+    }
+
+    fn mark_width(&self, height: f32) -> f32 {
+        height
+    }
+
+    fn paint_mark(&self, painter: &egui::Painter, rect: egui::Rect, ink: egui::Color32) {
+        brand::paint_mark(painter, rect, ink);
     }
 }

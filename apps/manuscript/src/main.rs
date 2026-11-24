@@ -6,9 +6,9 @@
 
 use std::process::ExitCode;
 
+use jcj_shell::Shell;
 use jcj_shell::egui;
-use jcj_shell::{Shell, theme::Tokens};
-use wordsmith_manuscript_ui::{Manuscript, NAME};
+use wordsmith_manuscript_ui::{Manuscript, NAME, brand};
 
 struct Window {
     shell: Shell,
@@ -22,9 +22,14 @@ impl eframe::App for Window {
 }
 
 fn main() -> ExitCode {
-    let shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), Tokens::default());
+    let shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens());
     let window = Window { shell, app: Manuscript::new() };
-    match eframe::run_native(NAME, eframe::NativeOptions::default(), Box::new(|_cc| Ok(Box::new(window)))) {
+    let mut viewport = egui::ViewportBuilder::default().with_title(NAME).with_app_id("org.jcjfoundation.manuscript");
+    if let Ok(icon) = eframe::icon_data::from_png_bytes(brand::ICON_256) {
+        viewport = viewport.with_icon(icon);
+    }
+    let options = eframe::NativeOptions { viewport, ..eframe::NativeOptions::default() };
+    match eframe::run_native(NAME, options, Box::new(|_cc| Ok(Box::new(window)))) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!("could not open a window: {e}");

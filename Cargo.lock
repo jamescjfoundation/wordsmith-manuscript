@@ -5376,6 +5376,8 @@ dependencies = [
  "jcj-engine",
  "jcj-shell",
  "jcj-theme",
+ "serde",
+ "serde_json",
  "wordsmith-manuscript-format",
  "wordsmith-manuscript-io",
  "wordsmith-manuscript-model",
