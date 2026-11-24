@@ -311,6 +311,11 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                         }
                     }
                     if !in_trash {
+                        let marked = crate::bookmarks::all(&s.project).contains(&id);
+                        if ui.button(if marked { "Remove Bookmark" } else { "Bookmark" }).clicked() {
+                            run("bookmark.toggle", json!({ "id": id.as_text() }));
+                            close = true;
+                        }
                         ui.menu_button("Add to Collection", |ui| {
                             for c in crate::collections::all(&s.project).into_iter().filter(|c| c.search.is_none()) {
                                 if ui.button(&c.name).clicked() {

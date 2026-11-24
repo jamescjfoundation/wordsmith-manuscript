@@ -10,6 +10,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Block Quote | `Mod+Alt+Q` |
 | Body | `Mod+Alt+0` |
 | Bold | `Mod+B` |
+| Bookmark | `Mod+D` |
 | Corkboard | `Mod+2` |
 | Editor | `Mod+1` |
 | Export | `Mod+E` |

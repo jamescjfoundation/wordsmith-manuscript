@@ -8,6 +8,7 @@
 pub mod agents;
 pub mod bible;
 pub mod binder;
+pub mod bookmarks;
 pub mod brand;
 pub mod collections;
 pub mod commands;
@@ -582,6 +583,26 @@ impl App for Manuscript {
         let before = self.binder.selected;
         let rev = s.revision();
         self.searcher.refresh(&s.project, rev);
+        let marks = bookmarks::all(&s.project);
+        if !marks.is_empty() {
+            let mut go = None;
+            ui.horizontal_wrapped(|ui| {
+                ui.label(egui::RichText::new("★").weak()).on_hover_text("Bookmarks");
+                for m in &marks {
+                    let title = s.project.binder.get(*m).map(|i| i.title.clone()).unwrap_or_default();
+                    if ui.small_button(&title).on_hover_text("Open").clicked() {
+                        go = Some(*m);
+                    }
+                }
+            });
+            if let Some(id) = go {
+                self.showing = None;
+                self.search_results = None;
+                self.binder.selected = Some(id);
+                self.open_item(id);
+                return;
+            }
+        }
         let cols = collections::all(&s.project);
         if self.showing.as_ref().is_some_and(|n| !cols.iter().any(|c| &c.name == n)) {
             self.showing = None;

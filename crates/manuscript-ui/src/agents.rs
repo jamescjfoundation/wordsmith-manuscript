@@ -132,6 +132,8 @@ tools!(
     "collection.delete",
     "collection.list",
     "collection.items",
+    "bookmark.toggle",
+    "bookmark.list",
     "snapshot.delete",
     "snapshot.get",
     "outline.list",

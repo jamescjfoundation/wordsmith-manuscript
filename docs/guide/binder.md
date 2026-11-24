@@ -36,3 +36,9 @@ Rename an item with F2 or a double-click on its title.
 Delete (or Move to Trash) puts an item and its children in the Trash. Restore puts it back where it
 came from. **Empty Trash** asks first, saying how many items and words go, and removes them for
 good once the project is saved.
+
+## Bookmarks
+
+Mod+D (or right-click › Bookmark) bookmarks the selected item; its title then sits in the row of
+bookmarks above the binder, one click away from anywhere in the project. Press Mod+D again, or
+right-click › Remove Bookmark, to take it off. Items in the Trash leave the row until restored.
