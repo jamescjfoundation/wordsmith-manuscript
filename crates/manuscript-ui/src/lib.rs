@@ -100,6 +100,8 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// The snapshot comparison window (INS-5).
+    pub compare: snapshots::CompareView,
     /// The other pane's editor, when the editor is split (ED-6).
     pub other: Option<editor::Editor>,
     /// How the editor is split.
@@ -174,6 +176,7 @@ impl Manuscript {
             import_join: true,
             editor: None,
             other: None,
+            compare: snapshots::CompareView::default(),
             split: jcj_shell::split::Split::None,
             split_state: jcj_shell::split::SplitState::default(),
             active_pane: 0,
@@ -962,6 +965,13 @@ impl Manuscript {
 
 impl Manuscript {
     fn draw_document(&mut self, ui: &mut egui::Ui, _shell: &mut Shell) {
+        if let Some(ask) = ui.ctx().data_mut(|d| d.remove_temp::<(ItemId, String)>(egui::Id::unique("manuscript-compare-ask"))) {
+            self.write_back();
+            self.compare.open = Some(ask);
+        }
+        if let Some(s) = self.session.as_ref() {
+            snapshots::compare_window(ui.ctx(), s, &mut self.compare);
+        }
         if self.recovered.is_some() {
             ui.horizontal(|ui| {
                 ui.label("Unsaved work from a session that did not end cleanly was found.");

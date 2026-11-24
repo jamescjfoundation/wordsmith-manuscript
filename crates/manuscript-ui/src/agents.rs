@@ -117,6 +117,7 @@ tools!(
     "snapshot.list",
     "snapshot.restore",
     "snapshot.rename",
+    "snapshot.compare",
     "comment.add",
     "comment.set",
     "comment.remove",

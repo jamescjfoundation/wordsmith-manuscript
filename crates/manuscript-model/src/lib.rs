@@ -7,6 +7,7 @@
 
 pub mod bible;
 mod binder;
+pub mod diff;
 pub mod doc;
 pub mod entries;
 mod id;

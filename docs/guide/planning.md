@@ -39,6 +39,8 @@ are. Show All clears the filter.
 
 Take Snapshot in the inspector keeps a named, dated copy of the item's text. Restore puts it back
 (after keeping the current text as a snapshot too). Snapshots live in the project beside the text.
+Compare opens the snapshot beside the current text word by word: added words underlined, removed
+words struck through, with a count of each (`snapshot.compare` also compares two snapshots).
 
 ## Targets
 
