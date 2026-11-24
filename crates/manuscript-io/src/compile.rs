@@ -175,7 +175,7 @@ pub fn number_words(n: usize) -> String {
         0..=19 => ONES.get(n).copied().unwrap_or("").to_owned(),
         20..=99 => {
             let t = TENS.get(n / 10).copied().unwrap_or("");
-            if n % 10 == 0 { t.to_owned() } else { format!("{t}-{}", ONES.get(n % 10).copied().unwrap_or("")) }
+            if n.is_multiple_of(10) { t.to_owned() } else { format!("{t}-{}", ONES.get(n % 10).copied().unwrap_or("")) }
         }
         100..=999 => {
             let rest = n % 100;

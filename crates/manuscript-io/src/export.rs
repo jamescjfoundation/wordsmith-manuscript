@@ -255,8 +255,7 @@ fn notes_as_endnotes(doc: &mut Document) -> Vec<String> {
             for (off, id) in refs.into_iter().rev() {
                 n += 1;
                 let _ = p.delete(off, off + jcj_doc::para::OBJ.len_utf8());
-                let mut sup = CharProps::default();
-                sup.vert_align = Some(jcj_doc::props::VertAlign::Superscript);
+                let sup = CharProps { vert_align: Some(jcj_doc::props::VertAlign::Superscript), ..CharProps::default() };
                 let _ = p.insert_text(off, &n.to_string(), &sup);
                 pending.push((n, id));
                 added.push(n.to_string());
@@ -418,7 +417,7 @@ pub fn plain_text(c: &Compiled, o: &Options) -> String {
         out.push_str("\n\n");
     }
     for n in &t.notes {
-        let body = n.paras.iter().map(|p| para(p)).collect::<Vec<_>>().join(" ");
+        let body = n.paras.iter().map(&para).collect::<Vec<_>>().join(" ");
         out.push_str(&format!("[{}] {body}\n\n", n.label));
     }
     out

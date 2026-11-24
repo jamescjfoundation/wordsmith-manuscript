@@ -42,6 +42,6 @@ Document Set (a Folder) imports every document in a folder, placed by the role i
 | (First Draft), (Second Draft), (Third Draft), (Final Draft), (Draft), or nothing | The manuscript |
 
 Several files of one draft ("Part 1", "Part 2", or numbered names) are joined in name order into
-one manuscript. When the set holds several drafts, the latest goes into the manuscript and earlier
-ones into Research. The name rules can be changed (`import.set` with `names`) and are kept in the
+one manuscript. When the set holds several drafts, the latest is the draft you write and the earlier
+ones are kept as drafts (View › Drafts), their chapters matched to compare scene by scene. The name rules can be changed (`import.set` with `names`) and are kept in the
 project.

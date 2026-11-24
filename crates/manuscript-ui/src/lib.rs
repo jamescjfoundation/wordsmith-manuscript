@@ -738,7 +738,7 @@ impl App for Manuscript {
         if panel == INSPECTOR_PANEL {
             self.write_back();
             let Some(s) = self.session.as_mut() else {
-                ui.label("No project open.");
+                ui.label(crate::i18n::tr("No project open."));
                 return;
             };
             let rev = s.revision();
@@ -755,7 +755,7 @@ impl App for Manuscript {
             return;
         }
         let Some(s) = self.session.as_mut() else {
-            ui.label("No project open.");
+            ui.label(crate::i18n::tr("No project open."));
             return;
         };
         let before = self.binder.selected;
@@ -806,7 +806,7 @@ impl App for Manuscript {
             let items = collections::items_of(&s.project, &c).unwrap_or_default();
             ui.horizontal(|ui| {
                 ui.label(format!("{} items", items.len()));
-                if ui.small_button("Delete Collection").on_hover_text("The items stay in the binder").clicked() {
+                if ui.small_button(crate::i18n::tr("Delete Collection")).on_hover_text("The items stay in the binder").clicked() {
                     match s.run("collection.delete", &json!({ "name": c.name })) {
                         Ok(_) => self.showing = None,
                         Err(e) => self.status = e,
@@ -869,7 +869,7 @@ impl App for Manuscript {
                 if ui.small_button("Back to the Binder").clicked() {
                     self.search_results = None;
                 }
-                if ui.small_button("Save Search").on_hover_text("Keep this search as a collection that stays up to date").clicked() {
+                if ui.small_button(crate::i18n::tr("Save Search")).on_hover_text("Keep this search as a collection that stays up to date").clicked() {
                     let name = self.search_text.trim().to_owned();
                     match s.run("collection.saveSearch", &json!({ "name": name, "query": name })) {
                         Ok(_) => {
@@ -962,7 +962,7 @@ impl App for Manuscript {
     fn file_page_ui(&mut self, page: &Page, ui: &mut egui::Ui, shell: &mut Shell) {
         match page {
             Page::New => {
-                ui.label("Folder for the new project (it must not exist yet):");
+                ui.label(crate::i18n::tr("Folder for the new project (it must not exist yet):"));
                 ui.text_edit_singleline(&mut self.new_path);
                 if ui.button("Create Empty Project").clicked() {
                     let r = self.close().and_then(|()| Session::create(Path::new(&self.new_path), Project::new()));
@@ -978,7 +978,7 @@ impl App for Manuscript {
                 }
             }
             Page::Open => {
-                ui.label("A project folder (.wsm), its project.toml, or a packed project (.wsmz):");
+                ui.label(crate::i18n::tr("A project folder (.wsm), its project.toml, or a packed project (.wsmz):"));
                 ui.text_edit_singleline(&mut self.open_path);
                 if ui.button("Open").clicked() {
                     let path = self.open_path.clone();
@@ -990,7 +990,7 @@ impl App for Manuscript {
                 }
             }
             Page::Save => {
-                ui.label("Save a copy as a new project folder, or as one packed file (.wsmz):");
+                ui.label(crate::i18n::tr("Save a copy as a new project folder, or as one packed file (.wsmz):"));
                 ui.text_edit_singleline(&mut self.save_path);
                 ui.horizontal(|ui| {
                     if ui.button("Save As Folder").clicked() {
@@ -1284,10 +1284,9 @@ impl Manuscript {
                     && params.get("after").is_none()
                     && params.get("inside").is_none()
                     && params.get("area").is_none()
+                    && let Some(sel) = self.binder.selected
                 {
-                    if let Some(sel) = self.binder.selected {
-                        params["after"] = json!(sel.as_text());
-                    }
+                    params["after"] = json!(sel.as_text());
                 }
                 let out = s.run(id, &params)?;
                 if let Some(new) = out.get("id").and_then(|v| v.as_str()).and_then(|v| v.parse::<ItemId>().ok()) {
@@ -1366,7 +1365,7 @@ impl Manuscript {
         }
         if self.recovered.is_some() {
             ui.horizontal(|ui| {
-                ui.label("Unsaved work from a session that did not end cleanly was found.");
+                ui.label(crate::i18n::tr("Unsaved work from a session that did not end cleanly was found."));
                 if ui.button("Recover It").clicked() {
                     self.accept_recovered();
                 }
@@ -1377,7 +1376,7 @@ impl Manuscript {
             ui.separator();
         }
         if self.session.is_none() {
-            ui.centered_and_justified(|ui| ui.label("No project open. Use File › New or File › Open."));
+            ui.centered_and_justified(|ui| ui.label(crate::i18n::tr("No project open. Use File › New or File › Open.")));
             return;
         }
         if let Some(f) = self.fullscreen.take() {
@@ -1409,7 +1408,7 @@ impl Manuscript {
                 match self.session.as_ref() {
                     Some(s) => pages::view(ui, s, &mut self.pages, self.binder.selected),
                     None => {
-                        ui.centered_and_justified(|ui| ui.label("Open a project to see its pages."));
+                        ui.centered_and_justified(|ui| ui.label(crate::i18n::tr("Open a project to see its pages.")));
                     }
                 }
                 return;
@@ -1467,7 +1466,7 @@ impl Manuscript {
                         }
                     }
                     _ => {
-                        ui.centered_and_justified(|ui| ui.label("Select a document in the binder to write in it."));
+                        ui.centered_and_justified(|ui| ui.label(crate::i18n::tr("Select a document in the binder to write in it.")));
                     }
                 }
             }
@@ -1536,7 +1535,7 @@ impl Manuscript {
                 ed.menu_ui(ui.ctx());
             }
             None => {
-                ui.centered_and_justified(|ui| ui.label("Select a document in the binder to open it here."));
+                ui.centered_and_justified(|ui| ui.label(crate::i18n::tr("Select a document in the binder to open it here.")));
             }
         };
         let clicked = jcj_shell::split::split(
@@ -1585,7 +1584,7 @@ impl Manuscript {
 
     fn board_ui(&mut self, ui: &mut egui::Ui) {
         let Some(s) = self.session.as_mut() else {
-            ui.centered_and_justified(|ui| ui.label("Open a project to plan on its board."));
+            ui.centered_and_justified(|ui| ui.label(crate::i18n::tr("Open a project to plan on its board.")));
             return;
         };
         let rev = s.revision();
@@ -1609,10 +1608,10 @@ impl Manuscript {
         let mut go = false;
         let mut cancel = false;
         egui::Window::new(i18n::tr("Save as Template")).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.label("A template keeps this project's binder, lists, fields, entry types, targets, notes and front matter. The book's own text and its bible entries are not kept.");
-            let l = ui.label("Name");
+            ui.label(crate::i18n::tr("A template keeps this project's binder, lists, fields, entry types, targets, notes and front matter. The book's own text and its bible entries are not kept."));
+            let l = ui.label(crate::i18n::tr("Name"));
             ui.add(egui::TextEdit::singleline(name).desired_width(320.0)).labelled_by(l.id);
-            let l = ui.label("What it is for");
+            let l = ui.label(crate::i18n::tr("What it is for"));
             ui.add(egui::TextEdit::singleline(about).desired_width(320.0)).labelled_by(l.id);
             ui.horizontal(|ui| {
                 go = ui.button("Save Template").clicked();
@@ -1814,8 +1813,8 @@ impl Manuscript {
 impl Manuscript {
     fn import_page(&mut self, ui: &mut egui::Ui) {
         ui.heading("Import");
-        ui.label("A file or folder to bring into the open project:");
-        let l = ui.label("Path");
+        ui.label(crate::i18n::tr("A file or folder to bring into the open project:"));
+        let l = ui.label(crate::i18n::tr("Path"));
         ui.text_edit_singleline(&mut self.import_path).labelled_by(l.id);
         ui.checkbox(&mut self.import_rules.split_scenes, "Scene breaks split chapters into scenes");
         ui.checkbox(&mut self.import_rules.chapter_lines, "Lines such as “Chapter 12” start chapters");
@@ -1852,7 +1851,7 @@ impl Manuscript {
         }
         if !self.import_report.is_empty() {
             ui.separator();
-            ui.label("Report");
+            ui.label(crate::i18n::tr("Report"));
             egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| ui.monospace(&self.import_report));
         }
     }
@@ -1878,8 +1877,8 @@ fn preview_text(v: &serde_json::Value) -> String {
 impl Manuscript {
     fn export_page(&mut self, ui: &mut egui::Ui) {
         use wordsmith_manuscript_io::compile::Titles;
-        ui.label("Write the manuscript to a file. Export never changes the project.");
-        let l = ui.label("File");
+        ui.label(crate::i18n::tr("Write the manuscript to a file. Export never changes the project."));
+        let l = ui.label(crate::i18n::tr("File"));
         ui.text_edit_singleline(&mut self.export_path).labelled_by(l.id);
         let formats = [
             ("manuscript-docx", "Standard manuscript (DOCX)"),
@@ -1924,14 +1923,14 @@ impl Manuscript {
         pick(ui, "Parts", &mut o.parts);
         ui.checkbox(&mut o.scene_titles, "Scene titles as headings");
         ui.horizontal(|ui| {
-            let l = ui.label("Scene break");
+            let l = ui.label(crate::i18n::tr("Scene break"));
             ui.add(egui::TextEdit::singleline(&mut o.scene_break).desired_width(60.0)).labelled_by(l.id);
         });
         ui.checkbox(&mut o.front_matter, "Front matter");
         ui.checkbox(&mut o.back_matter, "Back matter");
         ui.checkbox(&mut o.end_mark, "END after the last line");
         ui.checkbox(&mut o.comments, "Comments as review comments (DOCX, ODT, RTF)");
-        if ui.button("Export").clicked() {
+        if ui.button(crate::i18n::tr("Export")).clicked() {
             self.write_back();
             let params = json!({ "path": self.export_path, "format": self.export_format, "options": self.export_options });
             self.export_report = match self.session.as_mut() {
@@ -1953,7 +1952,7 @@ impl Manuscript {
     fn targets_page(&mut self, ui: &mut egui::Ui) {
         ui.heading("Targets");
         let Some(s) = self.session.as_mut() else {
-            ui.label("Open a project first.");
+            ui.label(crate::i18n::tr("Open a project first."));
             return;
         };
         let t = s.project.settings.targets.clone();
@@ -1963,20 +1962,20 @@ impl Manuscript {
         let mut days: Vec<bool> = wordsmith_manuscript_model::DAYS.iter().map(|d| t.writing_days.iter().any(|x| x == d)).collect();
         let mut changed = false;
         egui::Grid::new("targets").num_columns(2).show(ui, |ui| {
-            let l = ui.label("Manuscript (words)");
+            let l = ui.label(crate::i18n::tr("Manuscript (words)"));
             changed |= ui.text_edit_singleline(&mut manuscript).labelled_by(l.id).lost_focus();
             ui.end_row();
-            let l = ui.label("Deadline (YYYY-MM-DD)");
+            let l = ui.label(crate::i18n::tr("Deadline (YYYY-MM-DD)"));
             changed |= ui.text_edit_singleline(&mut deadline).labelled_by(l.id).lost_focus();
             ui.end_row();
-            ui.label("Writing days");
+            ui.label(crate::i18n::tr("Writing days"));
             ui.horizontal(|ui| {
                 for (d, on) in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].iter().zip(days.iter_mut()) {
                     changed |= ui.checkbox(on, *d).changed();
                 }
             });
             ui.end_row();
-            let l = ui.label("This session (words)");
+            let l = ui.label(crate::i18n::tr("This session (words)"));
             changed |= ui.text_edit_singleline(&mut session).labelled_by(l.id).lost_focus();
             ui.end_row();
         });
@@ -2007,10 +2006,10 @@ impl Manuscript {
                     p.writing.start_sprint(std::time::Duration::from_secs(15 * 60), Instant::now());
                 }
             }
-            if ui.button("Writing History").clicked() {
+            if ui.button(crate::i18n::tr("Writing History")).clicked() {
                 self.history_view.open = true;
             }
-            if ui.button("Start a New Session").clicked()
+            if ui.button(crate::i18n::tr("Start a New Session")).clicked()
                 && let Some(p) = self.progress.as_mut()
             {
                 p.writing.reset();

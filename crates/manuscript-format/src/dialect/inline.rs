@@ -123,13 +123,12 @@ fn attrs_after(s: &str) -> Option<(Attrs, usize)> {
                 return None;
             }
             a.rev = Some(v.parse().ok()?);
-        } else if let Some(v) = part.strip_prefix("id=") {
+        } else {
+            let v = part.strip_prefix("id=")?;
             if !v.chars().all(is_label_char) || v.is_empty() {
                 return None;
             }
             a.comment = Some(v.to_owned());
-        } else {
-            return None;
         }
     }
     if a.comment.as_deref() == Some("") {

@@ -80,6 +80,7 @@ impl std::fmt::Display for Difference {
 pub const CONTEXT: usize = 6;
 
 /// Compare two word lists. `Ok` holds the number of words; `Err` the first difference.
+#[allow(clippy::result_large_err, reason = "a difference is read once, when the check fails; boxing it would change a public signature for no gain")]
 pub fn compare(expected: &[String], found: &[String]) -> Result<usize, Difference> {
     let at = expected.iter().zip(found).position(|(a, b)| a != b).unwrap_or(expected.len().min(found.len()));
     if at == expected.len() && at == found.len() {

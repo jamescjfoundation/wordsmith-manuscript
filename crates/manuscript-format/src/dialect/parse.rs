@@ -22,7 +22,7 @@ pub fn parse(src: &str) -> Text {
     let lines: Vec<&str> = src.split('\n').collect();
     // A final newline does not start another line.
     let lines = match lines.split_last() {
-        Some((last, rest)) if last.is_empty() => rest.to_vec(),
+        Some((&"", rest)) => rest.to_vec(),
         _ => lines,
     };
     let mut p = Parser { lines, i: 0 };

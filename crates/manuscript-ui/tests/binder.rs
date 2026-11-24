@@ -114,7 +114,7 @@ fn emptying_the_trash_reports_what_went() {
     assert_eq!(titles(&s, Area::Trash), vec![(0, "Chapter One".into()), (1, "Arrival".into()), (1, "Storm".into())]);
     let out = run(&mut s, "binder.emptyTrash", json!({ "confirm": true }));
     assert_eq!(out, json!({ "removed": 3, "words": 3 }));
-    assert!(s.project.texts.get(&id(4)).is_none());
+    assert!(!s.project.texts.contains_key(&id(4)));
 }
 
 #[test]

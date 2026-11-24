@@ -214,7 +214,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 if list.len() == before { Err(format!("no collection named `{name}`")) } else { Ok(()) }
             })
         })(),
-        "collection.list" => (|| {
+        "collection.list" => {
             let rows: Vec<Value> = all(&s.project)
                 .iter()
                 .map(|c| {
@@ -227,7 +227,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 })
                 .collect();
             Ok(Value::Array(rows))
-        })(),
+        }
         "collection.items" => (|| {
             let name = str_param(v, "name")?;
             let c = all(&s.project).into_iter().find(|c| c.name == name).ok_or_else(|| format!("no collection named `{name}`"))?;

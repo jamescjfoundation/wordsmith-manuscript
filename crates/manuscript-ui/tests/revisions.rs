@@ -54,7 +54,7 @@ fn typing_in_a_pass_is_marked_and_kept() {
     s.save_as(&dir).unwrap();
     let back = Session::open(&dir).unwrap();
     assert_eq!(back.project.text(id(1)), s.project.text(id(1)));
-    assert!(std::fs::read_to_string(dir.join("project.toml")).unwrap().starts_with("schema = 2"));
+    assert!(std::fs::read_to_string(dir.join("project.toml")).unwrap().starts_with("schema = 3"));
     let md = wordsmith_manuscript_io::export::export(&s.project, &Default::default(), wordsmith_manuscript_io::export::Target::Markdown).unwrap();
     assert!(!String::from_utf8_lossy(&md.bytes).contains("rev="));
     let book = wordsmith_manuscript_format::book::from_project(&s.project);

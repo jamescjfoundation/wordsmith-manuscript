@@ -379,10 +379,11 @@ fn comments_section(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, id: 
                 r.request_focus();
                 view.focus_comment = None;
             }
-            if r.lost_focus() && row["text"].as_str() != Some(buf.as_str()) {
-                if let Err(e) = s.run("comment.set", &json!({ "id": id.as_text(), "comment": key, "text": buf.clone() })) {
-                    errors.push(e);
-                }
+            if r.lost_focus()
+                && row["text"].as_str() != Some(buf.as_str())
+                && let Err(e) = s.run("comment.set", &json!({ "id": id.as_text(), "comment": key, "text": buf.clone() }))
+            {
+                errors.push(e);
             }
             ui.horizontal(|ui| {
                 let by = row["by"].as_str().unwrap_or("");
@@ -435,7 +436,7 @@ impl InspectorView {
 pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: Option<ItemId>) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(id) = selected.filter(|i| s.project.binder.contains(*i)) else {
-        ui.label("Select an item in the binder.");
+        ui.label(crate::i18n::tr("Select an item in the binder."));
         return errors;
     };
     let rev = s.revision();
@@ -457,13 +458,13 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             return;
         }
         ui.add_space(6.0);
-        let l = ui.label("Synopsis");
+        let l = ui.label(crate::i18n::tr("Synopsis"));
         let r = ui.add(egui::TextEdit::multiline(&mut view.synopsis).desired_rows(3).desired_width(f32::INFINITY)).labelled_by(l.id);
         if r.lost_focus() && s.project.text(id).map(|t| t.meta.synopsis.as_str()).unwrap_or("") != view.synopsis {
             run(s, "item.setSynopsis", json!({ "id": id.as_text(), "synopsis": view.synopsis }));
         }
         ui.horizontal(|ui| {
-            let l = ui.label("Label");
+            let l = ui.label(crate::i18n::tr("Label"));
             let current = item.label.clone().unwrap_or_else(|| "None".into());
             let c = egui::ComboBox::from_id_salt("inspector-label").selected_text(current).show_ui(ui, |ui| {
                 if ui.selectable_label(item.label.is_none(), "None").clicked() {
@@ -478,7 +479,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             c.response.labelled_by(l.id);
         });
         ui.horizontal(|ui| {
-            let l = ui.label("Status");
+            let l = ui.label(crate::i18n::tr("Status"));
             let current = item.status.clone().unwrap_or_else(|| "None".into());
             let c = egui::ComboBox::from_id_salt("inspector-status").selected_text(current).show_ui(ui, |ui| {
                 if ui.selectable_label(item.status.is_none(), "None").clicked() {
@@ -494,7 +495,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
         });
         crate::fields::item_section(ui, s, id, &mut view.fields, &mut errs.borrow_mut());
         ui.horizontal(|ui| {
-            let l = ui.label("Target");
+            let l = ui.label(crate::i18n::tr("Target"));
             let r = ui.add(egui::TextEdit::singleline(&mut view.target).desired_width(80.0).hint_text("words")).labelled_by(l.id);
             if r.lost_focus() {
                 let words: Option<u64> = view.target.trim().replace(',', "").parse().ok();
@@ -504,7 +505,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             }
         });
         ui.add_space(6.0);
-        ui.label("Keywords");
+        ui.label(crate::i18n::tr("Keywords"));
         let kws = s.project.text(id).map(|t| t.meta.keywords.clone()).unwrap_or_default();
         ui.horizontal_wrapped(|ui| {
             for k in &kws {
@@ -520,7 +521,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             }
         });
         ui.add_space(6.0);
-        ui.label("Bible entries");
+        ui.label(crate::i18n::tr("Bible entries"));
         let linked = s.project.text(id).map(|t| t.meta.entries.clone()).unwrap_or_default();
         ui.horizontal_wrapped(|ui| {
             for e in &linked {
@@ -549,7 +550,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut InspectorView, selected: O
             }
         });
         ui.add_space(6.0);
-        let l = ui.label("Notes");
+        let l = ui.label(crate::i18n::tr("Notes"));
         let r = ui.add(egui::TextEdit::multiline(&mut view.notes).desired_rows(6).desired_width(f32::INFINITY)).labelled_by(l.id);
         if r.lost_focus() && s.project.text(id).map(|t| t.meta.notes.as_str()).unwrap_or("") != view.notes {
             run(s, "item.setNotes", json!({ "id": id.as_text(), "notes": view.notes }));

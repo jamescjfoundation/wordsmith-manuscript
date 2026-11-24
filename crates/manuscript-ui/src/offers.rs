@@ -175,7 +175,7 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut InboxView) -> (Vec<S
             egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                 let shown: Vec<&Offer> = file.offers.iter().filter(|o| v.all || matches!(state(&s.project, o), "pending" | "stale")).collect();
                 if shown.is_empty() {
-                    ui.label("No fixes are waiting.");
+                    ui.label(crate::i18n::tr("No fixes are waiting."));
                 }
                 for o in shown {
                     let st = state(&s.project, o);

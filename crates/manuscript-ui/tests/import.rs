@@ -75,11 +75,14 @@ fn a_document_set_places_each_file_by_its_role() {
     assert_eq!(chapters, ["Chapter 1", "Chapter 2"], "the latest draft's files, joined in order");
     assert_eq!(p.binder.area(Area::Notes)[0].title, "Tide (Plan)");
     let research: Vec<&str> = p.binder.area(Area::Research).iter().map(|i| i.title.as_str()).collect();
-    assert!(research.contains(&"First Draft"), "an earlier draft is kept in Research: {research:?}");
+    assert!(!research.contains(&"First Draft"), "an earlier draft is a draft now (DRF-1): {research:?}");
+    assert_eq!(p.settings.drafts.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(), ["First Draft"]);
     assert!(research.contains(&"Tide (Rough Work)"));
-    assert!(out["checks"].as_array().unwrap().iter().all(|c| c["check"].as_str().unwrap().starts_with("every word matches")));
+    assert!(out["checks"].as_array().unwrap().iter().filter_map(|c| c["check"].as_str()).all(|c| c.starts_with("every word matches")));
+    s.undo();
     s.undo();
     assert!(s.project.binder.is_empty());
+    assert!(s.project.drafts.is_empty());
 }
 
 #[test]

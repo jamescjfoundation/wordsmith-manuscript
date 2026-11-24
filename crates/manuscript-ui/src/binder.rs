@@ -119,7 +119,7 @@ pub fn format_words(n: usize) -> String {
     let s = n.to_string();
     let mut out = String::new();
     for (i, c) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -232,10 +232,11 @@ fn keys(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
         let title = s.project.binder.get(id).map(|i| i.title.clone()).unwrap_or_default();
         view.tree.rename(Node::Item(id), &title);
     }
-    if del && let Some(id) = view.selected {
-        if let Err(e) = s.run("binder.trash", &json!({ "id": id.as_text() })) {
-            errors.push(e);
-        }
+    if del
+        && let Some(id) = view.selected
+        && let Err(e) = s.run("binder.trash", &json!({ "id": id.as_text() }))
+    {
+        errors.push(e);
     }
 }
 
@@ -262,7 +263,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                             close = true;
                         }
                     }
-                    if ui.button("New Folder").clicked() {
+                    if ui.button(crate::i18n::tr("New Folder")).clicked() {
                         run("binder.newFolder", json!({ "area": "bible" }));
                         close = true;
                     }
@@ -273,7 +274,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                     }
                 }
                 Node::Area(a) => {
-                    if ui.button("New Document").clicked() {
+                    if ui.button(crate::i18n::tr("New Document")).clicked() {
                         run("binder.new", json!({ "area": a.key() }));
                         close = true;
                     }
@@ -287,7 +288,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                             close = true;
                         }
                     }
-                    if ui.button("New Folder").clicked() {
+                    if ui.button(crate::i18n::tr("New Folder")).clicked() {
                         run("binder.newFolder", json!({ "area": a.key() }));
                         close = true;
                     }
@@ -320,7 +321,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                         }
                     }
                     ui.separator();
-                    if ui.button("Rename").clicked() {
+                    if ui.button(crate::i18n::tr("Rename")).clicked() {
                         rename = Some(item.as_ref().map_or(String::new(), |i| i.title.clone()));
                         close = true;
                     }
@@ -353,7 +354,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                                     close = true;
                                 }
                             }
-                            if ui.button("New Collection").clicked() {
+                            if ui.button(crate::i18n::tr("New Collection")).clicked() {
                                 let names: Vec<String> = crate::collections::all(&s.project).into_iter().map(|c| c.name).collect();
                                 let name = (1..).map(|n| format!("Collection {n}")).find(|n| !names.contains(n)).unwrap_or_default();
                                 run("collection.new", json!({ "name": name, "items": [id.as_text()] }));
@@ -367,7 +368,7 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                             run("binder.restore", json!({ "id": id.as_text() }));
                             close = true;
                         }
-                    } else if ui.button("Move to Trash").clicked() {
+                    } else if ui.button(crate::i18n::tr("Move to Trash")).clicked() {
                         run("binder.trash", json!({ "id": id.as_text() }));
                         close = true;
                     }
@@ -449,7 +450,7 @@ fn confirm_empty(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &m
                 if words == 1 { "" } else { "s" }
             ));
             ui.horizontal(|ui| {
-                if ui.button("Empty Trash").clicked() {
+                if ui.button(crate::i18n::tr("Empty Trash")).clicked() {
                     if let Err(e) = s.run("binder.emptyTrash", &json!({ "confirm": true })) {
                         errors.push(e);
                     }

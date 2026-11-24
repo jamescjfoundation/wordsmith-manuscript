@@ -336,13 +336,13 @@ pub fn table<K: Clone + PartialEq + Hash + std::fmt::Debug + Send + Sync + 'stat
             }
         }
     });
-    if released && let Some(key) = state.dragging.take() {
-        if let Some((i, after)) = drop_on
-            && let Some(target) = shown.get(i)
-            && target.key != key
-        {
-            events.push(TableEvent::Move { key, target: target.key.clone(), after });
-        }
+    if released
+        && let Some(key) = state.dragging.take()
+        && let Some((i, after)) = drop_on
+        && let Some(target) = shown.get(i)
+        && target.key != key
+    {
+        events.push(TableEvent::Move { key, target: target.key.clone(), after });
     }
     events
 }

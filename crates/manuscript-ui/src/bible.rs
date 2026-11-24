@@ -46,7 +46,7 @@ pub fn specs() -> Vec<Spec> {
     ]
 }
 
-fn entry_of<'a>(p: &'a Project, id: ItemId) -> Result<&'a Entry, String> {
+fn entry_of(p: &Project, id: ItemId) -> Result<&Entry, String> {
     p.entries.get(&id).ok_or_else(|| format!("{id} is not a bible entry"))
 }
 
@@ -107,7 +107,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             })?;
             Ok(json!({ "id": eid.as_text() }))
         })(),
-        "bible.list" => (|| {
+        "bible.list" => {
             let kind = opt_str(v, "kind");
             Ok(Value::Array(
                 s.project
@@ -119,7 +119,7 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                     .map(|(i, e)| json!({ "id": i.as_text(), "kind": e.kind, "name": e.name, "aliases": e.aliases }))
                     .collect(),
             ))
-        })(),
+        }
         "bible.templates" => serde_json::to_value(bible::templates(&s.project.settings)).map_err(|e| e.to_string()),
         "entry.get" => (|| {
             let i = id_param(v, "id")?;
@@ -256,7 +256,7 @@ pub fn form(ui: &mut Ui, s: &mut Session, v: &mut EntryView, id: ItemId) -> (Vec
     let Some(e) = s.project.entries.get(&id).cloned() else { return (asks, errors) };
     let mut todo: Vec<(&str, Value)> = Vec::new();
     ui.horizontal(|ui| {
-        let l = ui.label("Name");
+        let l = ui.label(crate::i18n::tr("Name"));
         let r = ui.add(egui::TextEdit::singleline(&mut v.name).font(egui::TextStyle::Heading).desired_width(260.0)).labelled_by(l.id);
         if r.lost_focus() && v.name.trim() != e.name {
             todo.push(("entry.set", json!({ "id": id.as_text(), "name": v.name })));
@@ -273,7 +273,7 @@ pub fn form(ui: &mut Ui, s: &mut Session, v: &mut EntryView, id: ItemId) -> (Vec
         c.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Entry type"));
     });
     ui.horizontal(|ui| {
-        let l = ui.label("Also called");
+        let l = ui.label(crate::i18n::tr("Also called"));
         let r = ui
             .add(egui::TextEdit::singleline(&mut v.aliases).hint_text("other names, separated by commas").desired_width(f32::INFINITY))
             .labelled_by(l.id);

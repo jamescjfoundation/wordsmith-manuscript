@@ -251,9 +251,9 @@ fn edit(ui: &mut Ui, s: &mut Session, v: &mut TypesView, errors: &mut Vec<String
     let original = bible::template(&s.project, &d.kind);
     let used = s.project.entries.values().filter(|e| e.kind == d.kind).count();
     ui.horizontal(|ui| {
-        let l = ui.label("Name");
+        let l = ui.label(crate::i18n::tr("Name"));
         ui.add(egui::TextEdit::singleline(&mut d.title).desired_width(140.0)).labelled_by(l.id);
-        let l = ui.label("Folder");
+        let l = ui.label(crate::i18n::tr("Folder"));
         ui.add(egui::TextEdit::singleline(&mut d.plural).desired_width(140.0)).labelled_by(l.id);
     });
     ui.label(RichText::new(format!("{used} entr{} of this type", if used == 1 { "y" } else { "ies" })).weak());

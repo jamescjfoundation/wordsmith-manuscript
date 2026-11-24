@@ -3,6 +3,18 @@
 What changed in each release of Wordsmith Manuscript. The book view's own versions, and what
 Wordsmith Book must do when one changes, are in `docs/book-handoff.md`.
 
+## 0.3.0 (prepared 2026-11-24; released when a maintainer approves it)
+
+Drafts and finish. **Projects saved by 0.3 use schema 3 and do not open in 0.2** (decision 0006);
+0.1 and 0.2 projects open in 0.3 unchanged.
+
+- Drafts: keep the manuscript as it is and carry on with a new draft; compare drafts chapter by
+  chapter and scene by scene; write any draft again; choose the draft that exports (and that
+  Wordsmith Book typesets). A document set's earlier drafts come in as drafts.
+- The interface in Spanish as well as English, following the computer's language or chosen in
+  the command palette; more languages can be added as catalogs.
+- Polish: the inspector's and windows' texts translate too; lint clean-up.
+
 ## 0.2.0 (prepared 2026-11-24; released when a maintainer approves it)
 
 Daily-work completeness. **Projects saved by 0.2 use schema 2 and do not open in 0.1**

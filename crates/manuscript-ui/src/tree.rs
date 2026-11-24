@@ -281,13 +281,13 @@ pub fn tree<K: Clone + PartialEq + Hash + std::fmt::Debug + Send + Sync + 'stati
             }
         }
     });
-    if released && let Some(item) = state.dragging.take() {
-        if let Some((i, zone)) = hover_target
-            && let Some(target) = rows.get(i)
-            && target.key != item
-        {
-            events.push(TreeEvent::Drop { item, target: target.key.clone(), zone });
-        }
+    if released
+        && let Some(item) = state.dragging.take()
+        && let Some((i, zone)) = hover_target
+        && let Some(target) = rows.get(i)
+        && target.key != item
+    {
+        events.push(TreeEvent::Drop { item, target: target.key.clone(), zone });
     }
     events
 }

@@ -198,7 +198,7 @@ pub fn view(ui: &mut Ui, s: &mut Session, mv: &mut MediaView, id: ItemId) -> Opt
                 mv.editing = Some(id);
             }
             ui.horizontal(|ui| {
-                let l = ui.label("Address");
+                let l = ui.label(crate::i18n::tr("Address"));
                 let r = ui.add(egui::TextEdit::singleline(&mut mv.address).desired_width(ui.available_width() - 140.0)).labelled_by(l.id);
                 if r.lost_focus() && mv.address.trim() != address {
                     match s.run("link.set", &json!({ "id": id.as_text(), "address": mv.address })) {

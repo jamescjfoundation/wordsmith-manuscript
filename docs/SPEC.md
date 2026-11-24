@@ -227,7 +227,8 @@ turn it into behavior.
    Research, "(First Draft)", "(Second Draft)" and "(Draft)" into the Manuscript; files without a
    role go to the Manuscript. Several files of one draft ("Part 1", "Part 2" or numbered names) are
    merged in name order into one manuscript. When a set has more than one draft, the latest draft
-   goes into the Manuscript and earlier ones into Research as folders (drafts proper come at 0.3).
+   goes into the Manuscript and earlier ones become drafts (DRF-1, from 0.3; into Research as
+   folders before that).
    The rules are editable and saved in `project.toml`. [D]
 6. **Markdown and plain text** (IMP-5): split by heading (Markdown) or by a chosen separator line
    (default: a line holding only `***` or `#`). [D]

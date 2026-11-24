@@ -252,8 +252,8 @@ pub fn view(ui: &mut Ui, s: &mut Session, v: &mut BoardView, selected: Option<It
         }
     };
     ui.horizontal(|ui| {
-        ui.heading("Board");
-        if ui.button("Add Card").clicked() {
+        ui.heading(crate::i18n::tr("Board"));
+        if ui.button(crate::i18n::tr("Add Card")).clicked() {
             run(s, "board.addCard", json!({ "title": "New card" }));
         }
         let on_board = selected.is_some_and(|i| st.items.values().any(|x| *x == i));
