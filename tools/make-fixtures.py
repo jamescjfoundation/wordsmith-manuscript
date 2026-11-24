@@ -162,6 +162,46 @@ def rtf(path, pars):
         f.write("".join(out))
 
 
+def html_page(path, pars, title):
+    """A serial's chapter page: the chapters in an <article>, inside a page with navigation, a
+    header and a footer written for the test (the import leaves those out)."""
+    body = []
+    for p in pars:
+        text = "".join(f"<em>{escape(t)}</em>" if it else escape(t) for t, it in runs(p))
+        body.append(f"<h2>{text}</h2>" if is_heading(p) else f"<p>{text}</p>")
+    page = (
+        "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><title>"
+        + escape(title)
+        + "</title><style>body { font-family: serif; }</style><script>var visits = 0;</script></head>\n<body>\n"
+        + "<header><p>A serial in weekly parts</p></header>\n<nav><a href=\"index.html\">Contents</a> <a href=\"part-2.html\">Next part</a></nav>\n"
+        + "<article>\n"
+        + "\n".join(body)
+        + "\n</article>\n<footer><p>Posted for readers of the serial.</p></footer>\n</body></html>\n"
+    )
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(page)
+
+
+def opml(path, pars, title):
+    """The novel's chapters as an outline: three volumes of chapters, each chapter's first
+    paragraph as its note (written for the test from the public-domain text)."""
+    chapters = []
+    for i, p in enumerate(pars):
+        if is_heading(p):
+            first = next((q for q in pars[i + 1:] if not is_heading(q) and not q.startswith("[Illustration")), "")
+            chapters.append((p.rstrip("]").rstrip("."), ITALIC.sub(r"\1", first)))
+    third = (len(chapters) + 2) // 3
+    out = ['<?xml version="1.0" encoding="UTF-8"?>', '<opml version="2.0">', f"<head><title>{escape(title)}</title></head>", "<body>"]
+    for v in range(3):
+        out.append(f'  <outline text="Volume {v + 1}">')
+        for name, note in chapters[v * third:(v + 1) * third]:
+            out.append(f'    <outline text="{escape(name, {chr(34): "&quot;"})}" _note="{escape(note, {chr(34): "&quot;"})}"/>')
+        out.append("  </outline>")
+    out += ["</body>", "</opml>", ""]
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(out))
+
+
 def read(name):
     with open(os.path.join(ROOT, "novels", name), encoding="utf-8") as f:
         return f.read()
@@ -173,6 +213,13 @@ def main():
     docx(os.path.join(ROOT, "documents", "pride-and-prejudice.docx"), pride)
     odt(os.path.join(ROOT, "documents", "pride-and-prejudice.odt"), pride)
     rtf(os.path.join(ROOT, "documents", "pride-and-prejudice.rtf"), pride)
+    # A web serial's page (IMP-7): the first five chapters.
+    starts = [i for i, p in enumerate(pride) if is_heading(p)]
+    os.makedirs(os.path.join(ROOT, "web"), exist_ok=True)
+    html_page(os.path.join(ROOT, "web", "pride-and-prejudice-part-1.html"), pride[starts[0]:starts[5]], "Pride and Prejudice, part 1")
+    # An outline (IMP-8).
+    os.makedirs(os.path.join(ROOT, "outlines"), exist_ok=True)
+    opml(os.path.join(ROOT, "outlines", "pride-and-prejudice.opml"), pride, "Pride and Prejudice")
 
     # The v0.1 test set: Great Expectations in six files of one draft, about ten chapters each.
     great = paragraphs(read("great-expectations.txt"))

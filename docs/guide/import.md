@@ -19,6 +19,17 @@ DOCX, ODT, RTF, Markdown, HTML and plain text.
   Underlined text becomes italic (or is left plain). Fonts, sizes and colors are dropped and listed.
 - Plain text joins hard-wrapped lines into paragraphs (or keeps every line), and text with no
   chapters is split at separator lines.
+- **Web pages** (a draft or a serial's chapter saved from a browser): when the page marks its text
+  as an article or main part, only that is imported; its menus, header and footer are left out,
+  and the import report says so. Scripts and styles are never imported.
+
+## Outlines
+
+An OPML file from an outliner becomes binder items: each outline line an item titled by it, its
+note the item's synopsis. Lines with lines under them become folders, the rest documents. A title
+like "Part Two", "Book I", "Volume 3", "Act One" or "Chapter 12" sets the role; otherwise the
+shape does (the innermost lines are scenes, the lines above them chapters, anything above parts).
+Every word of every title and note is checked.
 
 ## A set of documents
 

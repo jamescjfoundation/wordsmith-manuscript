@@ -33,6 +33,9 @@ the Heading 1 style and the texts' `_underscored_` words in italic.
 | `documents/pride-and-prejudice.rtf` | `novels/pride-and-prejudice.txt` |
 | `document-set/Great Expectations (First Draft) 1.docx` to `6.docx` | `novels/great-expectations.txt`, split before chapters 11, 21, 31, 41 and 51: the six-file document set of the v0.1 test |
 
+| `web/pride-and-prejudice-part-1.html` | `novels/pride-and-prejudice.txt`, chapters 1 to 5 as a serial's web page: the chapters in an `<article>`, with a header, navigation, footer, style and script written for the test around it |
+| `outlines/pride-and-prejudice.opml` | `novels/pride-and-prejudice.txt`: three "Volume" outlines of the chapters, each chapter's first paragraph as its note |
+
 **Still to add:** DOCX, ODT and RTF versions saved by at least two different word processors (plan
 step M0.5). The build machine has no word processor, so these come from a person who has them: open
 `novels/pride-and-prejudice.txt` in each, apply Heading 1 to the chapter titles, save as DOCX, ODT

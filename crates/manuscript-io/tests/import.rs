@@ -155,3 +155,34 @@ fn every_novel_fixture_imports_with_a_passing_check() {
         assert!(plan.items.len() > 10, "{f}");
     }
 }
+
+#[test]
+fn a_web_serial_page_imports_its_article_word_for_word() {
+    let path = fixture("web/pride-and-prejudice-part-1.html");
+    let plan = plan_file(&path, &Rules::default(), &TextRules::default()).unwrap();
+    assert!(plan.report.check.as_ref().is_some_and(|c| c.passed()), "{:?}", plan.report.check);
+    let chapters = plan.items.iter().filter(|i| i.role == Role::Chapter).count();
+    assert_eq!(chapters, 5);
+    let words: Vec<String> = plan.items.iter().flat_map(|i| i.text.body.plain_paragraphs()).collect();
+    let all = words.join(" ");
+    assert!(all.contains("It is a truth universally acknowledged"));
+    for chrome in ["Next part", "weekly parts", "Posted for readers", "visits"] {
+        assert!(!all.contains(chrome), "{chrome} is page chrome, not the text");
+    }
+    assert!(plan.report.dropped.keys().any(|k| k.contains("navigation")));
+    // Every word of the article, in order, against the source text.
+    let html = std::fs::read_to_string(&path).unwrap();
+    let article = wordsmith_manuscript_io::import::page_text(&html).unwrap();
+    assert!(article.contains("Chapter I.]") && !article.contains("<nav>"));
+}
+
+#[test]
+fn an_outline_becomes_the_binder_with_synopses() {
+    let plan = plan_file(&fixture("outlines/pride-and-prejudice.opml"), &Rules::default(), &TextRules::default()).unwrap();
+    assert!(plan.report.check.as_ref().is_some_and(|c| c.passed()), "{:?}", plan.report.check);
+    let parts: Vec<&str> = plan.items.iter().filter(|i| i.role == Role::Part).map(|i| i.title.as_str()).collect();
+    assert_eq!(parts, ["Volume 1", "Volume 2", "Volume 3"]);
+    let chapters: Vec<_> = plan.items.iter().filter(|i| i.depth == 1).collect();
+    assert_eq!(chapters.len(), 61);
+    assert!(chapters[0].text.meta.synopsis.starts_with("It is a truth universally acknowledged"));
+}
