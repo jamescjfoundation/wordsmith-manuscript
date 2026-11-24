@@ -188,7 +188,7 @@ impl Manuscript {
         }
         let text = s.project.text(id).map(|t| t.body.clone()).unwrap_or_default();
         let mut ed = editor::Editor::new(id, &text, self.registry.clone());
-        ed.smart.lang = s.project.settings.book.language.clone();
+        ed.smart = typing::Smart::of(&s.project.settings);
         self.editor = Some(ed);
     }
 
@@ -199,6 +199,10 @@ impl Manuscript {
             self.editor = None;
             return;
         };
+        let smart = typing::Smart::of(&s.project.settings);
+        if let Some(ed) = self.editor.as_mut() {
+            ed.smart = smart;
+        }
         let Some(ed) = self.editor.as_ref() else { return };
         if crate::stitch::is_stitched(ed) {
             return;

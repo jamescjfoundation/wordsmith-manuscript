@@ -79,6 +79,14 @@ pub fn specs() -> Vec<Spec> {
             "Remove everything in the Trash for good (asks first in the app).",
             true,
         ),
+        spec(
+            "settings.typing",
+            "Smart Typing",
+            "",
+            r#"{"quotes"?: bool, "dashes"?: bool, "ellipsis"?: bool, "language"?: string}"#,
+            "Switch the smart typing rules on or off, and set the project's language (whose quotation marks are used).",
+            true,
+        ),
         spec("binder.list", "List Binder", "", r#"{"area"?: area}"#, "The binder's items: id, title, kind, role, depth.", false),
         spec("edit.undo", "Undo", "Mod+Z", "{}", "Undo the last change.", true),
         spec("edit.redo", "Redo", "Mod+Shift+Z", "{}", "Redo the last undone change.", true),
@@ -319,6 +327,28 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Outcome {
             Ok(json!({ "removed": n, "words": words }))
         }
         "binder.list" => Ok(rows_json(&s.project, area_param(v, "area")?)),
+        "settings.typing" => {
+            let mut typing = s.project.settings.extra.get("typing").cloned().unwrap_or_else(|| json!({}));
+            for k in ["quotes", "dashes", "ellipsis"] {
+                if let Some(b) = v.get(k).and_then(Value::as_bool) {
+                    typing[k] = json!(b);
+                }
+            }
+            let lang = opt_str(v, "language").map(str::trim).map(str::to_owned);
+            if let Some(l) = &lang
+                && (l.is_empty() || !l.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
+            {
+                return Err(format!("`{l}` is not a language tag (such as en, fr or de-CH)"));
+            }
+            s.change("Smart Typing", &[], &[], |p| {
+                p.settings.extra.insert("typing".into(), typing);
+                if let Some(l) = lang {
+                    p.settings.book.language = l;
+                }
+                Ok(())
+            })?;
+            Ok(json!({}))
+        }
         "edit.undo" => Ok(json!({ "undone": s.undo() })),
         "edit.redo" => Ok(json!({ "redone": s.redo() })),
         other => {

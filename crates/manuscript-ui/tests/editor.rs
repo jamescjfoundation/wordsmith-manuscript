@@ -172,3 +172,14 @@ fn the_view_shows_text_and_takes_typing() {
     h.run();
     assert_eq!(h.state().ed.paragraph(0).unwrap().text, "Truly, It was a dark night.");
 }
+
+#[test]
+fn smart_typing_follows_the_project_settings() {
+    let mut s = wordsmith_manuscript_ui::session::Session::new(wordsmith_manuscript_model::Project::new());
+    s.run("settings.typing", &json!({ "quotes": false, "language": "de" })).unwrap();
+    let smart = wordsmith_manuscript_ui::typing::Smart::of(&s.project.settings);
+    assert!(!smart.quotes && smart.dashes && smart.lang == "de");
+    assert!(s.run("settings.typing", &json!({ "language": "not a tag" })).is_err());
+    s.undo();
+    assert!(wordsmith_manuscript_ui::typing::Smart::of(&s.project.settings).quotes);
+}

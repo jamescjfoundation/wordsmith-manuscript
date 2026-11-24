@@ -23,6 +23,15 @@ impl Default for Smart {
     }
 }
 
+impl Smart {
+    /// The project's rules: its language, and the switches kept in its settings under `typing`.
+    pub fn of(settings: &wordsmith_manuscript_model::Settings) -> Smart {
+        let t = settings.extra.get("typing");
+        let flag = |k: &str| t.and_then(|v| v.get(k)).and_then(serde_json::Value::as_bool).unwrap_or(true);
+        Smart { quotes: flag("quotes"), dashes: flag("dashes"), ellipsis: flag("ellipsis"), lang: settings.book.language.clone() }
+    }
+}
+
 /// A replacement made, so Backspace can undo it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Replaced {
