@@ -5,19 +5,37 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 use std::process::ExitCode;
+use std::time::Instant;
 
-use jcj_shell::Shell;
 use jcj_shell::egui;
+use jcj_shell::prefs::{Prefs, PrefsFile};
+use jcj_shell::{App, Shell};
+use wordsmith_manuscript_ui::view::ViewPrefs;
 use wordsmith_manuscript_ui::{Manuscript, NAME, brand};
+
+type PrefsOf = Prefs<ViewPrefs>;
 
 struct Window {
     shell: Shell,
     app: Manuscript,
+    prefs: Option<PrefsFile<PrefsOf>>,
+}
+
+impl Window {
+    fn save_prefs(&mut self, force: bool) {
+        if let Some(f) = self.prefs.as_mut() {
+            let p = Prefs { shell: self.shell.prefs(), app: self.app.view.clone() };
+            if let Err(e) = f.save(&p, Instant::now(), force) {
+                self.app.status = format!("Preferences could not be saved: {e}");
+            }
+        }
+    }
 }
 
 impl eframe::App for Window {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.shell.ui(ui, &mut self.app);
+        self.save_prefs(false);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -25,19 +43,30 @@ impl eframe::App for Window {
         if let Err(e) = self.app.close() {
             eprintln!("could not save on close: {e}");
         }
+        self.save_prefs(true);
     }
 }
 
 fn main() -> ExitCode {
-    let shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens())
+    let mut shell = Shell::new(NAME, env!("CARGO_PKG_VERSION"), brand::tokens())
         .with_options(jcj_shell::ShellOptions { start_window: true, ..jcj_shell::ShellOptions::default() });
     let mut app = Manuscript::new();
-    if let Some(path) = std::env::args_os().nth(1) {
-        if let Err(e) = app.open(std::path::Path::new(&path)) {
-            app.status = e;
+    let mut prefs = None;
+    if let Some(dir) = jcj_shell::prefs::settings_dir("wordsmith-manuscript", NAME) {
+        let (file, p, problem) = PrefsFile::<PrefsOf>::open(&dir);
+        shell.apply_prefs(&p.shell, &app.panels());
+        app.view = p.app.bounded();
+        if let Some(m) = problem {
+            app.status = m;
         }
+        prefs = Some(file);
     }
-    let window = Window { shell, app };
+    if let Some(path) = std::env::args_os().nth(1)
+        && let Err(e) = app.open(std::path::Path::new(&path))
+    {
+        app.status = e;
+    }
+    let window = Window { shell, app, prefs };
     let mut viewport = egui::ViewportBuilder::default().with_title(NAME).with_app_id("org.jcjfoundation.manuscript");
     if let Ok(icon) = eframe::icon_data::from_png_bytes(brand::ICON_256) {
         viewport = viewport.with_icon(icon);

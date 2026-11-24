@@ -42,3 +42,29 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
         widgets::small(ui, shell, cmds, &Control::new("write.lineBreak").label("Line Break"));
     });
 }
+
+/// The View tab: focus mode, themes, the page and the text column.
+pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
+    let focus = app.focus.is_some();
+    let sepia = app.view.surface == crate::brand::EditorSurface::Sepia;
+    let typewriter = app.view.typewriter;
+    let dim = app.view.dim_in_focus;
+    let cmds: &dyn Commands = &*app;
+    widgets::group(ui, shell, "Focus", |ui, shell| {
+        widgets::big(ui, shell, cmds, &Control::new("view.focus").label("Focus Mode").on(focus));
+        widgets::small(ui, shell, cmds, &Control::new("view.typewriter").label("Typewriter Scrolling").on(typewriter));
+        widgets::small(ui, shell, cmds, &Control::new("view.dimAround").label("Dim Around the Caret").on(dim));
+    });
+    widgets::group(ui, shell, "Theme", |ui, shell| {
+        let theme = jcj_shell::commands::shell_ids::THEME;
+        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "light" })).label("Light"));
+        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "dark" })).label("Dark"));
+        widgets::small(ui, shell, cmds, &Control::new("view.sepia").label("Sepia Page").on(sepia));
+    });
+    widgets::group(ui, shell, "Text", |ui, shell| {
+        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": 1 })).label("Larger"));
+        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": -1 })).label("Smaller"));
+        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": 60 })).label("Wider"));
+        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": -60 })).label("Narrower"));
+    });
+}

@@ -20,6 +20,7 @@ pub mod stitch;
 pub mod texts;
 pub mod tree;
 pub mod typing;
+pub mod view;
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -63,6 +64,12 @@ pub struct Manuscript {
     pub editor_focused: bool,
     /// The find bar.
     pub find: findbar::FindBar,
+    /// The view preferences.
+    pub view: view::ViewPrefs,
+    /// Focus mode: the chrome it hid, while on.
+    pub focus: Option<view::Chrome>,
+    fullscreen: Option<bool>,
+    pending_unfocus: bool,
     registry: std::sync::Arc<jcj_engine::Registry>,
 }
 
@@ -92,6 +99,10 @@ impl Manuscript {
             look: editor::EditorLook::default(),
             editor_focused: false,
             find: findbar::FindBar::default(),
+            view: view::ViewPrefs::default(),
+            focus: None,
+            fullscreen: None,
+            pending_unfocus: false,
             registry: editor::registry(),
         }
     }
@@ -299,6 +310,12 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        v.push(CommandInfo::new("view.focus", "Focus Mode", "F11"));
+        v.push(CommandInfo::new("view.sepia", "Sepia Page", ""));
+        v.push(CommandInfo::new("view.typewriter", "Typewriter Scrolling", ""));
+        v.push(CommandInfo::new("view.dimAround", "Dim Around the Caret", ""));
+        v.push(CommandInfo::new("view.textSize", "Text Size", ""));
+        v.push(CommandInfo::new("view.width", "Text Width", ""));
         v.push(CommandInfo::new("find.show", "Find and Replace", "Mod+F"));
         v.push(CommandInfo::new("find.next", "Find Next", "Mod+G"));
         v.push(CommandInfo::new("find.previous", "Find Previous", "Mod+Shift+G"));
@@ -350,19 +367,27 @@ impl App for Manuscript {
 
     fn document_ui(&mut self, ui: &mut egui::Ui, shell: &mut Shell) {
         self.draw_document(ui, shell);
+        if std::mem::take(&mut self.pending_unfocus) && self.focus.is_some() {
+            shell.run(Cmd::new("view.focus"));
+        }
     }
 
     fn panels(&self) -> Vec<PanelSpec> {
+        if self.focus.is_some() {
+            return Vec::new();
+        }
         vec![PanelSpec::new(BINDER_PANEL, "Binder", "list", Side::Left)]
     }
 
     fn ribbon_tabs(&self) -> Vec<jcj_shell::TabSpec> {
-        vec![jcj_shell::TabSpec::new("write", "Write", "W")]
+        vec![jcj_shell::TabSpec::new("write", "Write", "W"), jcj_shell::TabSpec::new("view", "View", "V")]
     }
 
     fn ribbon_ui(&mut self, tab: &str, ui: &mut egui::Ui, shell: &mut Shell) {
-        if tab == "write" {
-            ribbon::write_tab(self, ui, shell);
+        match tab {
+            "write" => ribbon::write_tab(self, ui, shell),
+            "view" => ribbon::view_tab(self, ui, shell),
+            _ => {}
         }
     }
 
@@ -525,6 +550,9 @@ impl Manuscript {
 
 impl Manuscript {
     fn run_cmd(&mut self, cmd: &Cmd, shell: &mut Shell) -> Result<(), String> {
+        if let Some(r) = self.view_command(cmd, shell) {
+            return r;
+        }
         if cmd.id == "find.show" {
             self.find.show();
             return Ok(());
@@ -653,8 +681,20 @@ impl Manuscript {
             ui.centered_and_justified(|ui| ui.label("No project open. Use File › New or File › Open."));
             return;
         }
-        self.look.dark = ui.visuals().dark_mode;
-        findbar::ui(self, ui);
+        if let Some(f) = self.fullscreen.take() {
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Fullscreen(f));
+        }
+        if self.focus.is_some() && ui.input(|i| i.key_pressed(egui::Key::Escape)) && self.editor.as_ref().is_none_or(|e| e.menu.is_none()) {
+            self.leave_focus_now();
+        }
+        let typewriter = self.view.typewriter || self.focus.is_some();
+        self.look = self.view.look(ui.visuals().dark_mode, self.focus.is_some());
+        if let Some(ed) = self.editor.as_mut() {
+            ed.typewriter = typewriter;
+        }
+        if self.focus.is_none() {
+            findbar::ui(self, ui);
+        }
         match self.editor.as_mut() {
             Some(ed) => {
                 let resp = ed.ui(ui, &self.look);
@@ -729,6 +769,76 @@ impl Manuscript {
             self.open_item(id);
         } else {
             self.status = "This link points at an item no longer in the project.".into();
+        }
+    }
+}
+
+impl Manuscript {
+    fn view_command(&mut self, cmd: &Cmd, shell: &mut Shell) -> Option<Result<(), String>> {
+        let num = |k: &str| cmd.params.get(k).and_then(|v| v.as_f64()).map(|v| v as f32);
+        match cmd.id.as_str() {
+            "view.focus" => {
+                match self.focus.take() {
+                    Some(chrome) => {
+                        shell.options.ribbon = chrome.ribbon;
+                        shell.options.quick_row = chrome.quick_row;
+                        shell.options.status_bar = chrome.status_bar;
+                        self.fullscreen = Some(false);
+                    }
+                    None => {
+                        self.focus = Some(view::Chrome {
+                            ribbon: shell.options.ribbon,
+                            quick_row: shell.options.quick_row,
+                            status_bar: shell.options.status_bar,
+                        });
+                        shell.options.ribbon = false;
+                        shell.options.quick_row = false;
+                        shell.options.status_bar = false;
+                        self.fullscreen = Some(true);
+                        self.find.open = false;
+                    }
+                }
+                Some(Ok(()))
+            }
+            "view.sepia" => {
+                self.view.surface =
+                    if self.view.surface == brand::EditorSurface::Sepia { brand::EditorSurface::Theme } else { brand::EditorSurface::Sepia };
+                self.relayout();
+                Some(Ok(()))
+            }
+            "view.typewriter" => {
+                self.view.typewriter = !self.view.typewriter;
+                Some(Ok(()))
+            }
+            "view.dimAround" => {
+                self.view.dim_in_focus = !self.view.dim_in_focus;
+                Some(Ok(()))
+            }
+            "view.textSize" => {
+                let size = num("size").unwrap_or(self.view.size + num("by").unwrap_or(1.0));
+                self.view = view::ViewPrefs { size, ..self.view.clone() }.bounded();
+                self.relayout();
+                Some(Ok(()))
+            }
+            "view.width" => {
+                let width = num("width").unwrap_or(self.view.width + num("by").unwrap_or(40.0));
+                self.view = view::ViewPrefs { width, ..self.view.clone() }.bounded();
+                self.relayout();
+                Some(Ok(()))
+            }
+            _ => None,
+        }
+    }
+
+    /// Leave focus mode from inside the frame (Escape).
+    fn leave_focus_now(&mut self) {
+        // The shell's options are put back the next time a command reaches the app; Escape queues one.
+        self.pending_unfocus = true;
+    }
+
+    fn relayout(&mut self) {
+        if let Some(ed) = self.editor.as_mut() {
+            ed.relayout();
         }
     }
 }
