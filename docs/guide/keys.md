@@ -17,6 +17,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Find and Replace | `Mod+F` |
 | Find in Project | `Mod+Shift+F` |
 | Focus Mode | `F11` |
+| Go to the Other Pane | `Mod+Alt+O` |
 | Italic | `Mod+I` |
 | Link | `Mod+K` |
 | Move Down | `Mod+Alt+Down` |
@@ -40,6 +41,7 @@ command palette. This page is made from the commands (`manuscript-ui/tests/guide
 | Scene Break | `Mod+Shift+Enter` |
 | Search the Project | `Mod+Alt+F` |
 | Small Caps | `Mod+Alt+K` |
+| Split Side by Side | `Mod+Alt+\` |
 | Take Snapshot | `Mod+Alt+S` |
 | Undo | `Mod+Z` |
 | Verse | `Mod+Alt+V` |

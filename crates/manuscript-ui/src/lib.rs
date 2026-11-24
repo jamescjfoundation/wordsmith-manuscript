@@ -98,6 +98,13 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// The other pane's editor, when the editor is split (ED-6).
+    pub other: Option<editor::Editor>,
+    /// How the editor is split.
+    pub split: jcj_shell::split::Split,
+    split_state: jcj_shell::split::SplitState,
+    /// Which pane is active (0 the first, 1 the second).
+    pub active_pane: usize,
     /// Whether the editor had the keyboard last (undo goes to it then).
     pub editor_focused: bool,
     /// The find bar.
@@ -164,6 +171,10 @@ impl Manuscript {
             import_rules: wordsmith_manuscript_io::mapping::Rules::default(),
             import_join: true,
             editor: None,
+            other: None,
+            split: jcj_shell::split::Split::None,
+            split_state: jcj_shell::split::SplitState::default(),
+            active_pane: 0,
             look: editor::EditorLook::default(),
             editor_focused: false,
             find: findbar::FindBar::default(),
@@ -263,14 +274,34 @@ impl Manuscript {
 
     /// Write the editor's text back into the project if it changed (a save point).
     pub fn write_back(&mut self) {
-        let (Some(ed), Some(s)) = (self.editor.as_mut(), self.session.as_mut()) else { return };
-        if !ed.is_dirty() {
-            return;
+        let Some(s) = self.session.as_mut() else { return };
+        for ed in [self.editor.as_mut(), self.other.as_mut()].into_iter().flatten() {
+            if !ed.is_dirty() {
+                continue;
+            }
+            if crate::stitch::write_back(ed, &mut s.project) {
+                s.touch();
+            }
+            ed.written = ed.revision;
         }
-        if crate::stitch::write_back(ed, &mut s.project) {
-            s.touch();
+    }
+
+    /// Whether the other pane holds `id`, alone or in a stitched view (one item is only ever
+    /// editable in one pane, so no edit can overwrite another; here it opens read-only).
+    fn held_elsewhere(&self, id: ItemId) -> bool {
+        self.other.as_ref().is_some_and(|o| if stitch::is_stitched(o) { stitch::dividers(&o.session.doc).contains(&id) } else { o.item == id })
+    }
+
+    /// Back to one pane: the remaining editor, read-only only because of the other, is editable
+    /// again (reloaded, so it shows what the other pane wrote).
+    fn one_pane(&mut self) {
+        self.write_back();
+        self.other = None;
+        self.split = jcj_shell::split::Split::None;
+        self.active_pane = 0;
+        if self.editor.as_ref().is_some_and(|e| e.read_only) {
+            self.reload_editor();
         }
-        ed.written = ed.revision;
     }
 
     /// Open the editor on an item (writing the current one back first).
@@ -292,6 +323,10 @@ impl Manuscript {
         let mut ed = editor::Editor::new(id, &text, self.registry.clone());
         ed.smart = typing::Smart::of(&s.project.settings);
         ed.spell = Some(spelling::SpellCache::new(&s.project));
+        if self.held_elsewhere(id) {
+            ed.read_only = true;
+            self.status = "This document is open for editing in the stitched view in the other pane; here it is read-only.".into();
+        }
         self.editor = Some(ed);
     }
 
@@ -329,7 +364,10 @@ impl Manuscript {
             };
             stitch::items_under(&s.project, root)
         };
-        let ed = stitch::open(&s.project, &items, self.registry.clone()).ok_or("there is no text to show")?;
+        let mut ed = stitch::open(&s.project, &items, self.registry.clone()).ok_or("there is no text to show")?;
+        if items.iter().any(|i| self.held_elsewhere(*i)) {
+            ed.read_only = true;
+        }
         self.editor = Some(ed);
         if let Some(e) = self.editor.as_mut() {
             e.smart = typing::Smart::of(&s.project.settings);
@@ -401,6 +439,10 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("sprint.start", "Start a Writing Sprint", ""));
         v.push(CommandInfo::new("filter.set", "Filter", ""));
         v.push(CommandInfo::new("filter.clear", "Show All Items", ""));
+        v.push(CommandInfo::new("view.split", "Split Side by Side", "Mod+Alt+\\"));
+        v.push(CommandInfo::new("view.splitStacked", "Split Top and Bottom", ""));
+        v.push(CommandInfo::new("view.unsplit", "One Pane", ""));
+        v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
         v.push(CommandInfo::new("view.corkboard", "Corkboard", "Mod+2"));
         v.push(CommandInfo::new("view.outline", "Outline", "Mod+3"));
@@ -781,6 +823,25 @@ impl Manuscript {
             }
             _ => {}
         }
+        if cmd.id == "view.otherPane" {
+            if self.split == jcj_shell::split::Split::None {
+                return Err("the editor is not split".into());
+            }
+            self.switch_pane();
+            return Ok(());
+        }
+        if matches!(cmd.id.as_str(), "view.split" | "view.splitStacked" | "view.unsplit") {
+            self.write_back();
+            self.split = match cmd.id.as_str() {
+                "view.split" => jcj_shell::split::Split::Side,
+                "view.splitStacked" => jcj_shell::split::Split::Stacked,
+                _ => jcj_shell::split::Split::None,
+            };
+            if self.split == jcj_shell::split::Split::None {
+                self.one_pane();
+            }
+            return Ok(());
+        }
         if cmd.id == "find.show" {
             self.find.show();
             return Ok(());
@@ -959,34 +1020,125 @@ impl Manuscript {
                 self.open_item(d);
             }
         }
+        if self.split != jcj_shell::split::Split::None && self.focus.is_none() {
+            self.split_panes(ui);
+            return;
+        }
+        self.editor_pane(ui);
+    }
+
+    /// The active editor, its outcomes handled (errors, words added, links followed and previewed).
+    fn editor_pane(&mut self, ui: &mut egui::Ui) {
         match self.editor.as_mut() {
             Some(ed) => {
                 let resp = ed.ui(ui, &self.look);
                 ed.menu_ui(ui.ctx());
                 self.editor_focused = resp.has_focus() || (self.editor_focused && !ui.input(|i| i.pointer.any_pressed()));
-                if let Some(e) = ed.error.take() {
-                    self.status = e;
-                }
-                let word = ed.add_word.take();
-                let follow = ed.follow.take();
-                let hover = ed.hover_link.clone();
-                if let Some(w) = word {
-                    let r = self.session.as_mut().map(|s| s.run("spelling.addWord", &json!({ "word": w })).map(|_| ()));
-                    if let Some(Err(e)) = r {
-                        self.status = e;
-                    }
-                    self.sync_editor();
-                }
-                if let Some((target, at)) = hover {
-                    self.link_preview(ui, &target, at);
-                }
-                if let Some(target) = follow {
-                    self.follow_link(&target);
-                }
+                self.after_editor(ui);
             }
             None => {
                 ui.centered_and_justified(|ui| ui.label("Select a document in the binder to write in it."));
             }
+        }
+    }
+
+    fn after_editor(&mut self, ui: &egui::Ui) {
+        let Some(ed) = self.editor.as_mut() else { return };
+        if let Some(e) = ed.error.take() {
+            self.status = e;
+        }
+        let word = ed.add_word.take();
+        let follow = ed.follow.take();
+        let hover = ed.hover_link.clone();
+        if let Some(w) = word {
+            let r = self.session.as_mut().map(|s| s.run("spelling.addWord", &json!({ "word": w })).map(|_| ()));
+            if let Some(Err(e)) = r {
+                self.status = e;
+            }
+            self.sync_editor();
+        }
+        if let Some((target, at)) = hover {
+            self.link_preview(ui, &target, at);
+        }
+        if let Some(target) = follow {
+            self.follow_link(&target);
+        }
+    }
+
+    /// Two editors (ED-6): the active pane takes the binder's selection; a click makes the other
+    /// one active.
+    fn split_panes(&mut self, ui: &mut egui::Ui) {
+        let title = |e: &Option<editor::Editor>, s: &Option<Session>| {
+            e.as_ref()
+                .and_then(|e| {
+                    s.as_ref()
+                        .and_then(|s| s.project.binder.get(e.item))
+                        .map(|i| if stitch::is_stitched(e) { format!("{} and after", i.title) } else { i.title.clone() })
+                })
+                .unwrap_or_else(|| "Empty".into())
+        };
+        let (t0, t1) = if self.active_pane == 0 {
+            (title(&self.editor, &self.session), title(&self.other, &self.session))
+        } else {
+            (title(&self.other, &self.session), title(&self.editor, &self.session))
+        };
+        match jcj_shell::split::tabs(ui, ui.make_persistent_id("manuscript-panes"), &[t0, t1], self.active_pane) {
+            Some(jcj_shell::split::TabEvent::Select(i)) if i != self.active_pane => self.switch_pane(),
+            Some(jcj_shell::split::TabEvent::Close(i)) => {
+                self.write_back();
+                if i == self.active_pane {
+                    self.editor = self.other.take();
+                }
+                self.one_pane();
+                return;
+            }
+            _ => {}
+        }
+        let look = self.look.clone();
+        let active = self.active_pane;
+        let (first, second) = if active == 0 { (&mut self.editor, &mut self.other) } else { (&mut self.other, &mut self.editor) };
+        let mut state = self.split_state;
+        let draw = |ui: &mut egui::Ui, e: &mut Option<editor::Editor>| match e.as_mut() {
+            Some(ed) => {
+                ed.ui(ui, &look);
+                ed.menu_ui(ui.ctx());
+            }
+            None => {
+                ui.centered_and_justified(|ui| ui.label("Select a document in the binder to open it here."));
+            }
+        };
+        let clicked = jcj_shell::split::split(
+            ui,
+            ui.make_persistent_id("manuscript-split"),
+            self.split,
+            &mut state,
+            |ui| draw(ui, first),
+            |ui| draw(ui, second),
+        );
+        self.split_state = state;
+        if let Some(c) = clicked
+            && c != self.active_pane
+        {
+            self.switch_pane();
+        }
+        self.editor_focused = true;
+        self.after_editor(ui);
+    }
+
+    /// Make the other pane the active one.
+    pub fn switch_pane(&mut self) {
+        self.write_back();
+        std::mem::swap(&mut self.editor, &mut self.other);
+        self.active_pane = 1 - self.active_pane;
+        // A read-only pane shows what the other pane has written since.
+        if self.editor.as_ref().is_some_and(|e| e.read_only) {
+            self.reload_editor();
+            if let Some(e) = self.editor.as_mut() {
+                e.read_only = true;
+            }
+        }
+        if let Some(id) = self.editor.as_ref().map(|e| e.item) {
+            self.binder.selected = Some(id);
         }
     }
 }
