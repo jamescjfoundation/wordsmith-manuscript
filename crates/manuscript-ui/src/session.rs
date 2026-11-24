@@ -70,6 +70,8 @@ struct Before {
     settings: Settings,
     texts: BTreeMap<ItemId, Option<ItemText>>,
     entries: BTreeMap<ItemId, Option<Entry>>,
+    /// The stored drafts, for commands that change them (kept only then: they can be large).
+    drafts: Option<BTreeMap<String, wordsmith_manuscript_model::drafts::DraftBody>>,
 }
 
 /// How often a packed backup is made while the writer works.
@@ -205,7 +207,12 @@ impl Session {
             None => BTreeMap::new(),
         };
         files.retain(|k, _| {
-            !(k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/") || k == "project.toml" || k == "binder.toml")
+            !(k.starts_with("text/")
+                || k.starts_with("bible/")
+                || k.starts_with("snapshots/")
+                || k.starts_with("drafts/")
+                || k == "project.toml"
+                || k == "binder.toml")
         });
         files.extend(wordsmith_manuscript_format::files::render(&self.project).map_err(|e| e.to_string())?);
         for (id, bytes) in &self.media {
@@ -433,13 +440,17 @@ impl Session {
             settings: self.project.settings.clone(),
             texts: texts.iter().map(|id| (*id, self.project.texts.get(id).cloned())).collect(),
             entries: entries.iter().map(|id| (*id, self.project.entries.get(id).cloned())).collect(),
+            drafts: None,
         }
     }
 
     fn restore(&mut self, b: &Before) -> Before {
         let ids: Vec<ItemId> = b.texts.keys().copied().collect();
         let eids: Vec<ItemId> = b.entries.keys().copied().collect();
-        let now = self.snapshot(&b.label, &ids, &eids);
+        let mut now = self.snapshot(&b.label, &ids, &eids);
+        if let Some(d) = &b.drafts {
+            now.drafts = Some(std::mem::replace(&mut self.project.drafts, d.clone()));
+        }
         self.project.binder = b.binder.clone();
         self.project.settings = b.settings.clone();
         for (id, t) in &b.texts {
@@ -477,6 +488,41 @@ impl Session {
         let before = self.snapshot(label, texts, entries);
         match f(&mut self.project) {
             Ok(v) => {
+                self.undo.push(before);
+                if self.undo.len() > MAX_UNDO {
+                    self.undo.remove(0);
+                }
+                self.redo.clear();
+                self.revision += 1;
+                Ok(v)
+            }
+            Err(e) => {
+                self.restore(&before);
+                Err(e)
+            }
+        }
+    }
+
+    /// Run a change to the drafts as one undo step: the stored drafts and every text the
+    /// Manuscript area holds before and after are kept.
+    pub fn change_drafts<T>(&mut self, label: &str, f: impl FnOnce(&mut Project) -> Result<T, String>) -> Result<T, String> {
+        let mut ids: Vec<ItemId> = self.project.binder.rows_of(wordsmith_manuscript_model::Area::Manuscript).iter().map(|r| r.item.id).collect();
+        for d in self.project.drafts.values() {
+            ids.extend(d.binder.rows().iter().map(|r| r.item.id));
+        }
+        ids.sort();
+        ids.dedup();
+        let mut before = self.snapshot(label, &ids, &[]);
+        before.drafts = Some(self.project.drafts.clone());
+        let had: std::collections::HashSet<ItemId> = self.project.texts.keys().copied().collect();
+        match f(&mut self.project) {
+            Ok(v) => {
+                // Texts the change added (items given new ids) go again on undo.
+                for id in self.project.texts.keys() {
+                    if !had.contains(id) {
+                        before.texts.entry(*id).or_insert(None);
+                    }
+                }
                 self.undo.push(before);
                 if self.undo.len() > MAX_UNDO {
                     self.undo.remove(0);

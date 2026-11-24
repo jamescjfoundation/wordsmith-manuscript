@@ -151,7 +151,7 @@ pub fn pack_current(project: &Project, root: Option<&Path>) -> Result<Vec<u8>, E
         Some(r) => folder_files(r)?,
         None => BTreeMap::new(),
     };
-    files.retain(|k, _| !(k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/")));
+    files.retain(|k, _| !(k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/") || k.starts_with("drafts/")));
     files.extend(files::render(project)?);
     pack_files(&files)
 }

@@ -14,7 +14,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
-use wordsmith_manuscript_model::{Kind, Project};
+use wordsmith_manuscript_model::{Area, Kind, Project};
 
 use crate::{Error, files, limits};
 
@@ -217,6 +217,37 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
         };
         index.insert(rel, Stamp { disk: h, model });
     }
+    // Stored drafts (schema 3): each draft's manuscript tree and texts.
+    for info in project.settings.drafts.clone() {
+        if !files::draft_id_ok(&info.id) {
+            return Err(Error::Damaged { file: "project.toml".into(), why: format!("`{}` is not a draft id", info.id) });
+        }
+        let rel = format!("drafts/{}/binder.toml", info.id);
+        let Some((text, h)) = src.read(&rel, limits::MAX_BINDER_FILE)? else { continue };
+        let binder = files::read_binder(&text).map_err(|e| match e {
+            Error::Damaged { why, .. } => Error::Damaged { file: rel.clone(), why },
+            other => other,
+        })?;
+        if Area::ALL.iter().any(|a| *a != Area::Manuscript && !binder.area(*a).is_empty()) {
+            return Err(Error::Damaged { file: rel, why: "a draft holds only a manuscript".into() });
+        }
+        index.insert(rel, Stamp { disk: h, model: hash(files::write_binder(&binder)?.as_bytes()) });
+        let mut body = wordsmith_manuscript_model::drafts::DraftBody { binder, ..Default::default() };
+        let rows: Vec<_> = body.binder.rows().into_iter().filter(|r| r.item.kind.has_text()).map(|r| r.item.id).collect();
+        for id in rows {
+            let rel = format!("drafts/{}/text/{id}.md", info.id);
+            let Some((text, h)) = src.read(&rel, limits::MAX_TEXT_FILE)? else { continue };
+            total += text.len() as u64;
+            if total > limits::MAX_PROJECT_TEXT {
+                return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
+            }
+            let t = files::read_item(&text, &rel)?;
+            let m = if t.is_empty() { hash(b"") } else { hash(files::write_item(&t)?.as_bytes()) };
+            body.texts.insert(id, t);
+            index.insert(rel, Stamp { disk: h, model: m });
+        }
+        project.drafts.insert(info.id.clone(), body);
+    }
     let ids: Vec<_> = project.binder.rows().into_iter().map(|r| r.item.id).collect();
     for id in ids {
         let dir = format!("snapshots/{id}");
@@ -349,7 +380,10 @@ impl Folder {
         let stale: Vec<String> = self
             .index
             .keys()
-            .filter(|k| (k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/")) && !keep.contains(&k.as_str()))
+            .filter(|k| {
+                (k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/") || k.starts_with("drafts/"))
+                    && !keep.contains(&k.as_str())
+            })
             .cloned()
             .collect();
         for rel in stale {

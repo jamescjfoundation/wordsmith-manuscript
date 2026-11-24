@@ -25,6 +25,11 @@ pub fn write_project(settings: &Settings) -> Result<String, Error> {
     toml::to_string(&file).map_err(|e| Error::Write(format!("project.toml: {e}")))
 }
 
+/// Whether a draft id can name a folder: letters, digits and hyphens, 1 to 64 of them.
+pub fn draft_id_ok(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+}
+
 /// The schema version a `project.toml` declares.
 pub fn schema_of(text: &str) -> Result<u32, Error> {
     let table: toml::Table = text.parse().map_err(|e| Error::Damaged { file: "project.toml".into(), why: short(&e) })?;
@@ -275,6 +280,21 @@ pub fn render(project: &Project) -> Result<Vec<(String, Vec<u8>)>, Error> {
             }
         }
     }
+    for info in &project.settings.drafts {
+        if !draft_id_ok(&info.id) {
+            return Err(Error::Write(format!("`{}` is not a draft id", info.id)));
+        }
+        let Some(body) = project.drafts.get(&info.id) else { continue };
+        for row in body.binder.rows() {
+            if let Some(t) = body.texts.get(&row.item.id)
+                && !t.is_empty()
+                && row.item.kind.has_text()
+            {
+                out.push((format!("drafts/{}/text/{}.md", info.id, row.item.id), write_item(t)?.into_bytes()));
+            }
+        }
+        out.push((format!("drafts/{}/binder.toml", info.id), write_binder(&body.binder)?.into_bytes()));
+    }
     out.push(("project.toml".into(), write_project(&project.settings)?.into_bytes()));
     out.push(("binder.toml".into(), write_binder(&project.binder)?.into_bytes()));
     Ok(out)
@@ -292,16 +312,16 @@ mod tests {
         s.book.author = "A. Writer".into();
         s.targets.manuscript = Some(90_000);
         let text = write_project(&s).unwrap();
-        assert!(text.starts_with("schema = 2\n"));
+        assert!(text.starts_with("schema = 3\n"));
         assert_eq!(read_project(&text).unwrap(), s);
         assert_eq!(write_project(&read_project(&text).unwrap()).unwrap(), text);
     }
 
     #[test]
     fn a_newer_schema_is_refused_clearly() {
-        let text = write_project(&Settings::default()).unwrap().replacen("schema = 2", "schema = 3", 1);
+        let text = write_project(&Settings::default()).unwrap().replacen("schema = 3", "schema = 4", 1);
         let err = read_project(&text).unwrap_err();
-        assert_eq!(err, Error::Newer { found: 3, supported: 2 });
+        assert_eq!(err, Error::Newer { found: 4, supported: 3 });
         assert!(err.to_string().contains("newer version"));
         assert_eq!(read_project("title = 'x'\n").unwrap_err(), Error::NotAProject);
     }

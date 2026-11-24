@@ -19,6 +19,8 @@ pub struct Project {
     pub entries: BTreeMap<ItemId, Entry>,
     /// Snapshots of items' texts, oldest first, by item.
     pub snapshots: BTreeMap<ItemId, Vec<crate::Snapshot>>,
+    /// Stored drafts' manuscripts, by draft id (DRF-1; the list and names are in the settings).
+    pub drafts: BTreeMap<String, crate::drafts::DraftBody>,
 }
 
 impl Project {

@@ -9,6 +9,7 @@ pub mod bible;
 mod binder;
 pub mod diff;
 pub mod doc;
+pub mod drafts;
 pub mod entries;
 mod id;
 mod meta;

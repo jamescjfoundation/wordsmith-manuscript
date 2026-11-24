@@ -53,3 +53,10 @@ added.
 Written for the test by `tools/make-notes-fixture.py` (deterministic): 200 Markdown notes about an
 invented coastal town in `Characters/`, `Places/` and `Lore/`, with YAML front matter, aliases,
 two `[[links]]` each (one with display text) and three links that name no note.
+
+### Projects of older schemas (`tests/fixtures/projects/`)
+
+Written for the test: `schema-1/The Lighthouse.wsm` (a chapter of two scenes with a synopsis, a
+comment and a bible entry, as schema 1 writes them) and `schema-2/The Lighthouse.wsm` (the same,
+schema 2, with a revision pass mark and the project's passes). `crates/manuscript-format/tests/versions.rs`
+opens both, checks every word, and saves them as the current schema.

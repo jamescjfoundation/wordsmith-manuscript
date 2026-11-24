@@ -15,6 +15,7 @@ pub mod collections;
 pub mod commands;
 pub mod comments;
 pub mod cork;
+pub mod drafts;
 pub mod editor;
 pub mod entry_types;
 pub mod exports;
@@ -132,6 +133,8 @@ pub struct Manuscript {
     pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
     pub showing: Option<String>,
+    /// The drafts window (DRF-1).
+    pub drafts_view: drafts::DraftsView,
     /// The "Offered fixes" inbox (plan 9.2 item 4).
     pub offers_view: offers::InboxView,
     /// How many offered fixes wait (looked up with the outside check).
@@ -228,6 +231,7 @@ impl Manuscript {
             history_dir: None,
             outside_checked: None,
             offers_view: offers::InboxView::default(),
+            drafts_view: drafts::DraftsView::default(),
             offers_pending: 0,
             history_view: history::HistoryView::default(),
             entry_types: entry_types::TypesView::default(),
@@ -603,6 +607,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.history", "Writing History", ""));
         v.push(CommandInfo::new("view.entryTypes", "Entry Types", ""));
         v.push(CommandInfo::new("view.offers", "Offered Fixes", ""));
+        v.push(CommandInfo::new("view.drafts", "Drafts", ""));
         v.push(CommandInfo::new("file.saveTemplate", "Save as Template", ""));
         v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
@@ -1129,6 +1134,11 @@ impl Manuscript {
             user_templates::delete(&dir, t.strip_prefix("user:").unwrap_or(t))?;
             return Ok(());
         }
+        if cmd.id == "view.drafts" {
+            self.write_back();
+            self.drafts_view.open = true;
+            return Ok(());
+        }
         if cmd.id == "view.offers" {
             self.offers_view.open = true;
             return Ok(());
@@ -1316,6 +1326,15 @@ impl Manuscript {
                 self.binder.selected = Some(id);
                 self.open_item(id);
                 self.mode = ViewMode::Editor;
+            }
+        }
+        if let Some(s) = self.session.as_mut() {
+            let rev = s.revision();
+            if let Some(e) = drafts::window(ui.ctx(), s, &mut self.drafts_view).into_iter().last() {
+                self.status = e;
+            }
+            if self.session.as_ref().is_some_and(|s| s.revision() != rev) {
+                self.sync_editor();
             }
         }
         if std::mem::take(&mut self.binder.open_types) {

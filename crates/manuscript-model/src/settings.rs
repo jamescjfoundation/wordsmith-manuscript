@@ -192,6 +192,15 @@ pub struct Settings {
     pub targets: Targets,
     /// Custom fields.
     pub fields: Vec<FieldDef>,
+    /// The working draft's name (empty: "First Draft") (DRF-1).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub draft_name: String,
+    /// The stored drafts, oldest first (their manuscripts are in `drafts/<id>/`).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub drafts: Vec<crate::drafts::DraftInfo>,
+    /// The draft that exports (empty: the working draft).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub export_draft: String,
     /// Words the spelling check accepts in this project, besides bible names.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub words: Vec<String>,
@@ -216,6 +225,9 @@ impl Default for Settings {
             targets: Targets::default(),
             fields: vec![FieldDef { name: POV_FIELD.into(), kind: FieldKind::Text, choices: Vec::new() }],
             words: Vec::new(),
+            draft_name: String::new(),
+            drafts: Vec::new(),
+            export_draft: String::new(),
             extra: Default::default(),
         }
     }

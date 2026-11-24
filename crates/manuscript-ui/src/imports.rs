@@ -113,6 +113,40 @@ pub fn place_many(s: &mut Session, targets: Vec<Target>, label: &str) -> Result<
     Ok(made)
 }
 
+/// Each Manuscript item's title path ("Part One/Chapter 2/Scene 1") with its id.
+fn title_paths(p: &wordsmith_manuscript_model::Project) -> std::collections::HashMap<String, ItemId> {
+    let mut out = std::collections::HashMap::new();
+    let mut stack: Vec<String> = Vec::new();
+    for r in p.binder.rows_of(Area::Manuscript) {
+        stack.truncate(r.depth);
+        stack.push(r.item.title.clone());
+        out.entry(stack.join("/")).or_insert(r.item.id);
+    }
+    out
+}
+
+/// A stored draft made from a plan; items whose title path the working draft has take its ids.
+fn draft_body(plan: &mapping::Plan, paths: &std::collections::HashMap<String, ItemId>) -> wordsmith_manuscript_model::drafts::DraftBody {
+    let mut body = wordsmith_manuscript_model::drafts::DraftBody::default();
+    let mut parents: Vec<Option<ItemId>> = vec![None];
+    let mut stack: Vec<String> = Vec::new();
+    let mut used = std::collections::HashSet::new();
+    for it in &plan.items {
+        stack.truncate(it.depth);
+        stack.push(it.title.clone());
+        let id = paths.get(&stack.join("/")).copied().filter(|i| used.insert(*i)).unwrap_or_else(ItemId::new);
+        let parent = parents.get(it.depth).copied().flatten();
+        let place = parent.map_or(Place::end_of(Area::Manuscript), |pid| Place::inside(Area::Manuscript, pid));
+        let _ = body.binder.insert(place, Item::with_id(id, it.kind, it.title.clone()).role(it.role));
+        if !it.text.is_empty() {
+            body.texts.insert(id, it.text.clone());
+        }
+        parents.truncate(it.depth + 1);
+        parents.push(Some(id));
+    }
+    body
+}
+
 /// Place a plan's items at the end of `into` (or the Manuscript), as one undo step.
 pub fn place(s: &mut Session, plan: mapping::Plan, into: Option<ItemId>, label: &str) -> Result<Vec<ItemId>, String> {
     // Ids first, so the undo step knows every text it adds.
@@ -242,7 +276,40 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
                 }
                 targets.push(Target { area, folder: (!one).then_some(name), plan });
             }
+            let latest_name = set.draft_name.clone();
             let made = place_many(s, targets, "Import Document Set")?;
+            // Earlier drafts become stored drafts; their chapters and scenes take the ids of the
+            // latest draft's ones with the same titles in the same place, so drafts compare
+            // scene by scene.
+            if !set.earlier.is_empty() {
+                for (name, plan) in &set.earlier {
+                    if let Some(c) = &plan.report.check
+                        && !c.passed()
+                    {
+                        return Err(format!("the import was stopped after the latest draft: the words of {name} do not match ({c})"));
+                    }
+                }
+                let earlier = set.earlier;
+                s.change_drafts("Import Earlier Drafts", |p| {
+                    let paths = title_paths(p);
+                    let mut stored = Vec::new();
+                    for (name, plan) in earlier {
+                        let body = draft_body(&plan, &paths);
+                        stored.push((name, body));
+                    }
+                    if p.settings.drafts.is_empty() && p.settings.draft_name.is_empty() && !latest_name.is_empty() {
+                        p.settings.draft_name.clone_from(&latest_name);
+                    }
+                    for (name, body) in stored {
+                        let did = ItemId::new().as_text();
+                        let created = wordsmith_manuscript_model::snapshot::stamp(std::time::SystemTime::now());
+                        p.drafts.insert(did.clone(), body);
+                        p.settings.drafts.push(wordsmith_manuscript_model::drafts::DraftInfo { id: did, name, created });
+                    }
+                    Ok(())
+                })?;
+                checks.push(json!({ "earlier_drafts": s.project.settings.drafts.len() }));
+            }
             if v.get("names").is_some() {
                 s.project.settings.extra.insert("document_set".into(), serde_json::to_value(&set_rules).map_err(|e| e.to_string())?);
                 s.touch();

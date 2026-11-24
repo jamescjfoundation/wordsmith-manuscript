@@ -1,0 +1,37 @@
+schema = 1
+
+[[item]]
+area = "manuscript"
+id = "00000000-0000-7000-8000-00000000000a"
+kind = "folder"
+role = "chapter"
+title = "Chapter One"
+
+[[item]]
+area = "manuscript"
+parent = "00000000-0000-7000-8000-00000000000a"
+id = "00000000-0000-7000-8000-000000000001"
+kind = "text"
+role = "scene"
+title = "The Rock"
+
+[[item]]
+area = "manuscript"
+parent = "00000000-0000-7000-8000-00000000000a"
+id = "00000000-0000-7000-8000-000000000002"
+kind = "text"
+role = "scene"
+title = "The Lamp"
+
+[[item]]
+area = "bible"
+id = "00000000-0000-7000-8000-000000000014"
+kind = "folder"
+title = "Characters"
+
+[[item]]
+area = "bible"
+parent = "00000000-0000-7000-8000-000000000014"
+id = "00000000-0000-7000-8000-000000000015"
+kind = "entry"
+title = "Mara"

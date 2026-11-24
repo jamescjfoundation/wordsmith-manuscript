@@ -1,0 +1,41 @@
+schema = 2
+statuses = ["To do", "First draft", "Revised draft", "Final draft", "Done"]
+keywords = []
+
+[book]
+title = "The Lighthouse"
+author = "A. Writer"
+language = "en"
+
+[[labels]]
+name = "Idea"
+color = "#8E7CC3"
+
+[[labels]]
+name = "Action"
+color = "#C0504D"
+
+[[labels]]
+name = "Romance"
+color = "#D67FA3"
+
+[[labels]]
+name = "Mystery"
+color = "#4F81BD"
+
+[[labels]]
+name = "Backstory"
+color = "#9BBB59"
+
+[targets]
+
+[[fields]]
+name = "Point of view"
+
+[extra.revisions]
+current = "Blue"
+mode = false
+
+[[extra.revisions.sets]]
+name = "Blue"
+color = "#A9C8F2"

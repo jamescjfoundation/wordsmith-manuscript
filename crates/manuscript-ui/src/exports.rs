@@ -71,7 +71,8 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             let target = Target::from_extension(&format)
                 .or_else(|| serde_json::from_value(json!(format)).ok())
                 .ok_or_else(|| format!("`{format}` is not a format Manuscript exports"))?;
-            let out = export::export(&s.project, &options, target)?;
+            // The draft chosen for export (DRF-1).
+            let out = export::export(&wordsmith_manuscript_model::drafts::exported(&s.project), &options, target)?;
             if !out.check.passed() {
                 return Err(format!("the export was not written: its words do not match the manuscript ({})", out.check));
             }
@@ -112,8 +113,8 @@ pub fn special(s: &mut Session, format: &str, path: &Path, o: &Options, v: &Valu
     let run = |s: &mut Session| -> Outcome {
         let std = standard_of(s, v)?;
         let out = match format {
-            "manuscript-pdf" | "pdf" => standard::pdf(&s.project, o, &std)?,
-            _ => standard::docx(&s.project, o, &std)?,
+            "manuscript-pdf" | "pdf" => standard::pdf(&wordsmith_manuscript_model::drafts::exported(&s.project), o, &std)?,
+            _ => standard::docx(&wordsmith_manuscript_model::drafts::exported(&s.project), o, &std)?,
         };
         if !out.check.passed() {
             return Err(format!("the export was not written: its words do not match the manuscript ({})", out.check));

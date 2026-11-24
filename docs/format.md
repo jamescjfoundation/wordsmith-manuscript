@@ -1,6 +1,6 @@
 # The Wordsmith Manuscript project format
 
-Schema version 2. This file specifies every file of a project and the text dialect. The code is
+Schema version 3. This file specifies every file of a project and the text dialect. The code is
 `crates/manuscript-format`; its tests check each example here.
 
 ## The folder
@@ -16,10 +16,16 @@ My Novel.wsm/
   media/<id>.<ext>              images, PDFs and other files
   scripts/<id>.wss              screenplays, in Wordsmith Script's own format (from 1.0)
   snapshots/<id>/<UTC time>.md  named, dated copies of one item's text
+  drafts/<draft id>/binder.toml a stored draft's manuscript tree (the Manuscript area only)
+  drafts/<draft id>/text/<id>.md its texts, in the same form as text/
   conflicts/<UTC time> <file>   a file changed elsewhere, kept before this copy wrote over it
   .recovery/                    unsaved work while the app runs
 ```
 
+- **Drafts** (DRF-1): the Manuscript area is the working draft. Each stored draft listed in
+  `project.toml` (`[[drafts]]`, ids of letters, digits and hyphens) keeps its manuscript in
+  `drafts/<id>/`: a `binder.toml` holding only Manuscript items, and its texts. Items keep their
+  ids from draft to draft, so the same scene can be compared across drafts.
 - **Conflicts** (FIL-4): a save never writes over a file that changed on disk since it was read
   (another device, a sync service) without first copying it to `conflicts/`, named by the time
   and the file's path with `/` as `-`. The app reads in files changed only elsewhere, and keeps a
@@ -37,7 +43,7 @@ My Novel.wsm/
 ## `project.toml`
 
 ```toml
-schema = 2
+schema = 3
 statuses = ["To do", "First draft", "Revised draft", "Final draft", "Done"]
 
 [book]
@@ -74,7 +80,7 @@ One `[[item]]` per item, depth first, area by area (`manuscript`, `bible`, `rese
 `trash`), so every parent comes before its children and the file's order is the binder's order.
 
 ```toml
-schema = 2
+schema = 3
 
 [[item]]
 area = "manuscript"
@@ -245,3 +251,4 @@ Marks nested deeper than 32 levels read the rest of the paragraph as plain text.
 | --- | --- | --- |
 | 1 | 0.1 | First version |
 | 2 | 0.2 | Revision pass marks (`{rev=N}`) and the project's revision passes; a version 1 project reads unchanged (decision 0005) |
+| 3 | 0.3 | Drafts: `draft_name`, `[[drafts]]` (`id`, `name`, `created`) and `export_draft` in `project.toml`, each stored draft in `drafts/<id>/`; versions 1 and 2 read unchanged, each tested with a fixture project (decision 0006) |

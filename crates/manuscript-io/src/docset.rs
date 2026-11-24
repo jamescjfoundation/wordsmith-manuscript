@@ -2,7 +2,8 @@
 //! Importing a set of documents (IMP-2, SPEC 15.5): each file is placed by the role its name
 //! gives in parentheses ("(Plan)" into Notes, "(Rough Work)" into Research, a draft into the
 //! manuscript); several files of one draft are merged in name order into one manuscript; when a
-//! set holds several drafts, the latest goes into the manuscript and the others into Research.
+//! set holds several drafts, the latest goes into the manuscript and the others become stored
+//! drafts (DRF-1).
 //! The name rules are editable and kept in the project.
 
 use std::cmp::Ordering;
@@ -227,6 +228,8 @@ pub struct SetPlan {
     pub draft_name: String,
     /// Everything else: (where, folder title, plan).
     pub others: Vec<(Dest, String, Plan)>,
+    /// The earlier drafts, oldest first: (name, plan). They become stored drafts (DRF-1).
+    pub earlier: Vec<(String, Plan)>,
 }
 
 /// Plan a set's import.
@@ -250,7 +253,7 @@ pub fn plan_set(paths: &[PathBuf], set_rules: &SetRules, rules: &Rules, text: &T
             out.manuscript = Some(plan);
             out.draft_name = name;
         } else {
-            out.others.push((Dest::Research, name, plan));
+            out.earlier.push((name, plan));
         }
     }
     for f in files.iter().filter(|f| f.dest != Dest::Draft) {

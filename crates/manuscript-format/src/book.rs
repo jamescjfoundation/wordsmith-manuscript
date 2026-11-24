@@ -203,8 +203,10 @@ fn section(p: &Project, item: &Item, n: &mut Counter) -> Option<Section> {
     })
 }
 
-/// The book view of a project in memory.
+/// The book view of a project in memory: of the draft chosen for export (DRF-1).
 pub fn from_project(p: &Project) -> Book {
+    let exported = wordsmith_manuscript_model::drafts::exported(p);
+    let p = &exported;
     let mut n = Counter { parts: 0, chapters: 0 };
     let mut front = Vec::new();
     let mut body = Vec::new();

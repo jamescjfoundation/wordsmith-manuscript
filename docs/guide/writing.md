@@ -87,3 +87,14 @@ over a link to see what it points at; command-click to go there.
 Focus mode (F11) shows the text alone, full screen, keeping the line you type at the same height.
 Escape leaves. The View tab also has typewriter scrolling, a sepia page, light and dark themes, and
 the text size and column width (which never change exports).
+
+## Drafts
+
+View › Drafts lists the draft you are writing and the drafts you have kept. **New Draft** keeps the
+manuscript exactly as it is now under its current name ("First Draft") and you carry on writing
+the new one ("Second Draft") in the binder; notes, research and the story bible are shared by all
+drafts. **Compare** shows a kept draft beside the one you are writing, chapter by chapter and
+scene by scene: what was added, cut or changed, with the words. **Write This** makes a kept draft
+the one you write again (the other is kept in its place). **Export This** chooses the draft File ›
+Export writes and Wordsmith Book typesets. Importing a set of documents with several drafts makes
+the latest the one you write and keeps the earlier ones as drafts.
