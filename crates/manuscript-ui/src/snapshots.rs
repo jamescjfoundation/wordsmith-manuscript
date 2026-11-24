@@ -105,6 +105,18 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Option<Outcome> {
             })?;
             Ok(json!({}))
         })(),
+        "snapshot.rename" => (|| {
+            let item = id_param(v, "id")?;
+            let taken = str_param(v, "taken")?.to_owned();
+            let name = str_param(v, "name")?.trim().to_owned();
+            if name.is_empty() {
+                return Err("a snapshot needs a name".into());
+            }
+            let snap = s.project.snapshots.get_mut(&item).and_then(|l| l.iter_mut().find(|x| x.taken == taken)).ok_or("no such snapshot")?;
+            snap.name = name;
+            s.touch();
+            Ok(json!({}))
+        })(),
         "snapshot.delete" => (|| {
             let item = id_param(v, "id")?;
             let taken = str_param(v, "taken")?.to_owned();

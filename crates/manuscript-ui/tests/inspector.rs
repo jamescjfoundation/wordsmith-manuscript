@@ -104,6 +104,10 @@ fn snapshots_take_list_restore_and_delete() {
     assert!(list[1]["name"].as_str().unwrap().starts_with("Before restoring"));
     s.undo();
     assert_eq!(s.project.texts[&id(1)].body, Text::from_paragraphs(&["Rewritten."]));
+    run(&mut s, "snapshot.rename", json!({ "id": i, "taken": taken, "name": "Draft before the storm" }));
+    assert_eq!(s.project.snapshots[&id(1)][0].name, "Draft before the storm");
+    let got = s.run("snapshot.get", &json!({ "id": i, "taken": taken })).unwrap();
+    assert_eq!(got["text"], "The keeper came.\n");
     run(&mut s, "snapshot.delete", json!({ "id": i, "taken": taken }));
     assert_eq!(s.run("snapshot.list", &json!({ "id": i })).unwrap().as_array().unwrap().len(), 1);
 }
