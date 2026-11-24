@@ -224,21 +224,21 @@ kept until a second app wanted it (core decision 0014) into the core: Manuscript
 app, so the rule "a second app already needs it" now applies. Promotions also need a follow-up
 pull request in Script.
 
-| Id | Change | Kind | Needed by |
-| --- | --- | --- | --- |
-| C1 | Template chooser and start window | Promote from Script | M1.4 |
-| C2 | Writing statistics, session targets and the sprint timer | Promote from Script | M7.1 |
-| C3 | Document tabs and split view | Promote from Script | v0.2 (ED-6) |
-| C4 | The app names itself in PDF metadata (known core gap) | Core fix | M6.2 |
-| C5 | A tree widget with drag and drop (binder) | Build in app first, `core-candidate` | M1.3 |
-| C6 | A sortable, editable table widget (outline) | Build in app first, `core-candidate` | M3.2 |
-| C7 | Search across many documents with an index | Build in app first, `core-candidate` | M7.3 |
-| C8 | Editing several documents as one (stitched view) | Build in app first, `core-candidate` | M2.3 |
-| C9 | Word-for-word verification of an import or export | Build in app first, `core-candidate` | M5.1 |
-| C10 | Grammar hints (Harper) beside spelling | Core (`jcj-proof`) | v0.2 (ED-9) |
-| C11 | Story board lanes | Promote from Script | v1.0 (PLN-4) |
-| C12 | EPUB import (known core gap) | Core | v1.0 (IMP-9) |
-| C13 | Entries: typed records with field templates, links, backlinks and a name list, stored as Markdown files with front matter (the story bible's general part, section 5.6) | Build in app first, `core-candidate`; promote when Script uses it | M4.1; promoted in R4 |
+| Id | Change | Kind | Needed by | Core issue |
+| --- | --- | --- | --- | --- |
+| C1 | Template chooser and start window | Promote from Script | M1.4 | [#2](https://github.com/jamescjfoundation/open-source-core/issues/2) |
+| C2 | Writing statistics, session targets and the sprint timer | Promote from Script | M7.1 | [#3](https://github.com/jamescjfoundation/open-source-core/issues/3) |
+| C3 | Document tabs and split view | Promote from Script | v0.2 (ED-6) | [#4](https://github.com/jamescjfoundation/open-source-core/issues/4) |
+| C4 | The app names itself in PDF metadata (known core gap) | Core fix | M6.2 | [#5](https://github.com/jamescjfoundation/open-source-core/issues/5) |
+| C5 | A tree widget with drag and drop (binder) | Build in app first, `core-candidate` | M1.3 | [#6](https://github.com/jamescjfoundation/open-source-core/issues/6) |
+| C6 | A sortable, editable table widget (outline) | Build in app first, `core-candidate` | M3.2 | [#7](https://github.com/jamescjfoundation/open-source-core/issues/7) |
+| C7 | Search across many documents with an index | Build in app first, `core-candidate` | M7.3 | [#8](https://github.com/jamescjfoundation/open-source-core/issues/8) |
+| C8 | Editing several documents as one (stitched view) | Build in app first, `core-candidate` | M2.3 | [#9](https://github.com/jamescjfoundation/open-source-core/issues/9) |
+| C9 | Word-for-word verification of an import or export | Build in app first, `core-candidate` | M5.1 | [#10](https://github.com/jamescjfoundation/open-source-core/issues/10) |
+| C10 | Grammar hints (Harper) beside spelling | Core (`jcj-proof`) | v0.2 (ED-9) | [#11](https://github.com/jamescjfoundation/open-source-core/issues/11) |
+| C11 | Story board lanes | Promote from Script | v1.0 (PLN-4) | [#12](https://github.com/jamescjfoundation/open-source-core/issues/12) |
+| C12 | EPUB import (known core gap) | Core | v1.0 (IMP-9) | [#13](https://github.com/jamescjfoundation/open-source-core/issues/13) |
+| C13 | Entries: typed records with field templates, links, backlinks and a name list, stored as Markdown files with front matter (the story bible's general part, section 5.6) | Build in app first, `core-candidate`; promote when Script uses it | M4.1; promoted in R4 | [#14](https://github.com/jamescjfoundation/open-source-core/issues/14) |
 
 "Build in app first" items are marked `// core-candidate:` in code with a core issue labelled
 `core-candidate`, and move once they work and a second app wants them.
@@ -583,7 +583,7 @@ with the Wordsmith Book plan and written up as `docs/book-handoff.md` in step M6
 
 | Milestone | Release | Result | State |
 | --- | --- | --- | --- |
-| M0 Foundations | – | Repository from the template, rules, spec, brand | Not started |
+| M0 Foundations | – | Repository from the template, rules, spec, brand | Done 2026-11-24 (spec awaits review) |
 | M1 Project | 0.1 | Format, binder, saving, templates | Not started |
 | M2 Editor | 0.1 | Manuscript styles, stitched view, find, spelling, focus | Not started |
 | M3 Plan | 0.1 | Inspector, corkboard, outline, filters | Not started |
