@@ -42,3 +42,12 @@ good once the project is saved.
 Mod+D (or right-click › Bookmark) bookmarks the selected item; its title then sits in the row of
 bookmarks above the binder, one click away from anywhere in the project. Press Mod+D again, or
 right-click › Remove Bookmark, to take it off. Items in the Trash leave the row until restored.
+
+## Pictures, PDFs and web links
+
+Research can hold more than notes. Right-click Research (or a folder in it) › Add Image or PDF…
+and type the file's path: PNG, JPEG, GIF and WebP pictures and PDFs up to 64 MB are copied into
+the project's `media` folder, so they travel with it, in packed `.wsmz` files and backups too.
+Add Web Link… keeps a web address; nothing is downloaded. Select one to see it in the editor
+area: a picture fits the width, a PDF shows the text of each page (Open in Another App shows the
+pages themselves once the project is saved), and a link shows its address with Open in Browser.

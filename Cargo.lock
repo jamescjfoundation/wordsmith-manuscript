@@ -5463,6 +5463,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "egui_kittest",
+ "image",
  "jcj-agents",
  "jcj-board",
  "jcj-doc",

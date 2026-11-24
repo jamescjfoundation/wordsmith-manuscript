@@ -22,6 +22,7 @@ pub mod find;
 pub mod findbar;
 pub mod imports;
 pub mod inspector;
+pub mod media;
 pub mod outline;
 pub mod progress;
 pub mod ribbon;
@@ -102,6 +103,8 @@ pub struct Manuscript {
     pub editor: Option<editor::Editor>,
     /// How the editor looks.
     pub look: editor::EditorLook,
+    /// Pictures and PDFs loaded for the media viewer (BND-6).
+    pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
     pub showing: Option<String>,
     /// The snapshot comparison window (INS-5).
@@ -182,6 +185,7 @@ impl Manuscript {
             other: None,
             compare: snapshots::CompareView::default(),
             showing: None,
+            media_view: media::MediaView::default(),
             split: jcj_shell::split::Split::None,
             split_state: jcj_shell::split::SplitState::default(),
             active_pane: 0,
@@ -1146,7 +1150,17 @@ impl Manuscript {
                 self.after_editor(ui);
             }
             None => {
-                ui.centered_and_justified(|ui| ui.label("Select a document in the binder to write in it."));
+                let shown = self.binder.selected.filter(|id| self.session.as_ref().and_then(|s| s.project.binder.get(*id)).is_some_and(media::shows));
+                match (shown, self.session.as_mut()) {
+                    (Some(id), Some(s)) => {
+                        if let Some(e) = media::view(ui, s, &mut self.media_view, id) {
+                            self.status = e;
+                        }
+                    }
+                    _ => {
+                        ui.centered_and_justified(|ui| ui.label("Select a document in the binder to write in it."));
+                    }
+                }
             }
         }
     }

@@ -37,6 +37,8 @@ pub struct BinderView {
     pub confirm_empty: bool,
     /// Items hidden by the filters (SRC-3); their ancestors stay as context.
     pub hidden: HashSet<ItemId>,
+    /// Asking for a picture's or PDF's path (`false`) or a web address (`true`), and where it goes.
+    pub add_media: Option<(bool, String, Option<ItemId>)>,
 }
 
 fn hex(s: &str) -> Option<Color32> {
@@ -192,6 +194,7 @@ pub fn panel(ui: &mut Ui, s: &mut Session, view: &mut BinderView) -> Vec<String>
     keys(ui, s, view, &mut errors);
     menu(ui, s, view, &mut errors);
     confirm_empty(ui, s, view, &mut errors);
+    add_media(ui, s, view, &mut errors);
     errors
 }
 
@@ -267,6 +270,16 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                         run("binder.new", json!({ "area": a.key() }));
                         close = true;
                     }
+                    if a == Area::Research {
+                        if ui.button("Add Image or PDF…").clicked() {
+                            run("ask-media", json!(false));
+                            close = true;
+                        }
+                        if ui.button("Add Web Link…").clicked() {
+                            run("ask-media", json!(true));
+                            close = true;
+                        }
+                    }
                     if ui.button("New Folder").clicked() {
                         run("binder.newFolder", json!({ "area": a.key() }));
                         close = true;
@@ -287,6 +300,16 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
                         if ui.button("New Folder After").clicked() {
                             run("binder.newFolder", json!({ "after": id.as_text() }));
                             close = true;
+                        }
+                        if s.project.binder.area_of(id) == Some(Area::Research) && item.as_ref().is_some_and(|i| i.kind.can_hold_children()) {
+                            if ui.button("Add Image or PDF Inside…").clicked() {
+                                run("ask-media", json!(false));
+                                close = true;
+                            }
+                            if ui.button("Add Web Link Inside…").clicked() {
+                                run("ask-media", json!(true));
+                                close = true;
+                            }
                         }
                     }
                     ui.separator();
@@ -348,6 +371,9 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
     for (id, v) in todo {
         if id == "confirm-empty" {
             view.confirm_empty = true;
+        } else if id == "ask-media" {
+            let inside = if let Node::Item(i) = node { Some(i) } else { None };
+            view.add_media = Some((v == json!(true), String::new(), inside));
         } else if let Err(e) = s.run(id, &v) {
             errors.push(e);
         }
@@ -358,6 +384,42 @@ fn menu(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<St
     let clicked_away = ui.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer();
     if close || clicked_away || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
         view.menu = None;
+    }
+}
+
+fn add_media(ui: &mut Ui, s: &mut Session, view: &mut BinderView, errors: &mut Vec<String>) {
+    let Some((link, text, inside)) = view.add_media.as_mut() else { return };
+    let mut done = false;
+    egui::Window::new(if *link { "Add Web Link" } else { "Add Image or PDF" })
+        .collapsible(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ui.ctx(), |ui| {
+            let label = if *link { "Web address" } else { "File (PNG, JPEG, GIF, WebP or PDF)" };
+            let l = ui.label(label);
+            let r = ui.add(egui::TextEdit::singleline(text).desired_width(360.0)).labelled_by(l.id);
+            let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            ui.horizontal(|ui| {
+                if ui.button("Add").clicked() || enter {
+                    let mut v = if *link { json!({ "address": text.trim() }) } else { json!({ "path": text.trim() }) };
+                    if let Some(i) = inside {
+                        v["inside"] = json!(i.as_text());
+                    }
+                    match s.run(if *link { "link.new" } else { "media.import" }, &v) {
+                        Ok(out) => {
+                            view.selected = out["id"].as_str().and_then(|i| i.parse().ok());
+                            done = true;
+                        }
+                        Err(e) => errors.push(e),
+                    }
+                }
+                if ui.button("Cancel").clicked() {
+                    done = true;
+                }
+            });
+        });
+    if done {
+        view.add_media = None;
     }
 }
 

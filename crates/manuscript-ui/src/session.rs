@@ -40,6 +40,8 @@ pub struct Session {
     saved: u64,
     last_backup: Option<Instant>,
     backups_dir: Option<PathBuf>,
+    /// Media added since the last save (images, PDFs), by item: written into `media/` on save.
+    pub media: BTreeMap<ItemId, Vec<u8>>,
 }
 
 /// The result of a command: a JSON value for agents and the command line.
@@ -51,7 +53,17 @@ pub const MAX_UNDO: usize = 200;
 impl Session {
     /// A session on a project that has no folder yet.
     pub fn new(project: Project) -> Session {
-        Session { project, folder: None, undo: Vec::new(), redo: Vec::new(), revision: 0, saved: 0, last_backup: None, backups_dir: None }
+        Session {
+            project,
+            folder: None,
+            undo: Vec::new(),
+            redo: Vec::new(),
+            revision: 0,
+            saved: 0,
+            last_backup: None,
+            backups_dir: None,
+            media: BTreeMap::new(),
+        }
     }
 
     /// Open the project folder at `path` (the folder, its `project.toml`, or a `.wsmz` to unpack
@@ -110,30 +122,103 @@ impl Session {
         self.revision += 1;
     }
 
-    /// Save into the project folder (recovery copy first, removed after).
+    /// Save into the project folder (recovery copy first, removed after). New media files are
+    /// written before the binder that names them.
     pub fn save(&mut self) -> Result<(), String> {
+        let root = self.root().ok_or("the project has no folder yet: use Save As")?.to_path_buf();
+        self.write_media(&root, &self.media.clone())?;
+        self.media.clear();
         let folder = self.folder.as_mut().ok_or("the project has no folder yet: use Save As")?;
         pack::save_safely(folder, &self.project).map_err(|e| e.to_string())?;
         self.saved = self.revision;
         Ok(())
     }
 
-    /// Save into a new folder and continue there.
+    /// Save into a new folder and continue there (media copied along).
     pub fn save_as(&mut self, root: &Path) -> Result<(), String> {
+        let media = self.all_media()?;
+        if root.join("project.toml").exists() {
+            return Err("a project already exists here".into());
+        }
+        std::fs::create_dir_all(root).map_err(|e| format!("{}: {e}", root.display()))?;
+        self.write_media(root, &media)?;
         let folder = Folder::create(root, &self.project).map_err(|e| e.to_string())?;
         self.folder = Some(folder);
+        self.media.clear();
         self.saved = self.revision;
         Ok(())
     }
 
-    /// Save the project as one packed file (`.wsmz`), leaving the folder as it is.
+    /// Save the project as one packed file (`.wsmz`), leaving the folder as it is: the folder's
+    /// files (media among them), the texts as they are now, and media not saved yet.
     pub fn save_packed(&self, file: &Path) -> Result<(), String> {
-        let bytes = match self.root() {
-            Some(root) if !self.is_dirty() => pack::pack_folder(root),
-            _ => pack::pack_project(&self.project),
+        let mut files = match self.root() {
+            Some(root) => pack::folder_files(root).map_err(|e| e.to_string())?,
+            None => BTreeMap::new(),
+        };
+        files.retain(|k, _| {
+            !(k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/") || k == "project.toml" || k == "binder.toml")
+        });
+        files.extend(wordsmith_manuscript_format::files::render(&self.project).map_err(|e| e.to_string())?);
+        for (id, bytes) in &self.media {
+            if let Some(path) = self.media_path(*id) {
+                files.insert(path, bytes.clone());
+            }
         }
-        .map_err(|e| e.to_string())?;
+        let bytes = pack::pack_files(&files).map_err(|e| e.to_string())?;
         jcj_project_write(file, &bytes)
+    }
+
+    /// Where a media item's file is inside the project (`media/<id>.<ext>`).
+    pub fn media_path(&self, id: ItemId) -> Option<String> {
+        self.project
+            .binder
+            .get(id)
+            .filter(|i| i.kind == wordsmith_manuscript_model::Kind::Media)
+            .and_then(wordsmith_manuscript_format::files::path_of)
+    }
+
+    /// A media item's bytes: added since the last save, or from the project folder.
+    pub fn media_bytes(&self, id: ItemId) -> Result<Vec<u8>, String> {
+        if let Some(b) = self.media.get(&id) {
+            return Ok(b.clone());
+        }
+        let path = self.media_path(id).ok_or("this item is not a media file")?;
+        let root = self.root().ok_or("the file is not in the project")?;
+        let full = root.join(&path);
+        let len = std::fs::metadata(&full).map_err(|e| format!("{path}: {e}"))?.len();
+        if len > crate::media::MAX_BYTES {
+            return Err(format!("{path} is larger than {} MB", crate::media::MAX_BYTES >> 20));
+        }
+        std::fs::read(&full).map_err(|e| format!("{path}: {e}"))
+    }
+
+    /// Every media item's bytes (for Save As).
+    fn all_media(&self) -> Result<BTreeMap<ItemId, Vec<u8>>, String> {
+        let mut out = BTreeMap::new();
+        for r in self.project.binder.rows() {
+            if r.item.kind == wordsmith_manuscript_model::Kind::Media {
+                match self.media_bytes(r.item.id) {
+                    Ok(b) => {
+                        out.insert(r.item.id, b);
+                    }
+                    // A file already missing from the old folder cannot be copied; the item stays.
+                    Err(_) if !self.media.contains_key(&r.item.id) => {}
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    fn write_media(&self, root: &Path, media: &BTreeMap<ItemId, Vec<u8>>) -> Result<(), String> {
+        let mut disk = wordsmith_manuscript_format::folder::Disk::new(root);
+        for (id, bytes) in media {
+            if let Some(path) = self.media_path(*id) {
+                wordsmith_manuscript_format::folder::Sink::write(&mut disk, &path, bytes).map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
     }
 
     /// Keep the unsaved state in `.recovery/` (between saves, while editing).
