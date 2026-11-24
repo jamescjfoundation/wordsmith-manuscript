@@ -100,6 +100,7 @@ pub fn specs() -> Vec<Spec> {
     v.extend(crate::bible::specs());
     v.extend(crate::imports::specs());
     v.extend(crate::exports::specs());
+    v.extend(crate::progress::specs());
     v
 }
 
@@ -388,6 +389,9 @@ pub fn run(s: &mut Session, id: &str, v: &Value) -> Outcome {
                 return out;
             }
             if let Some(out) = crate::exports::run(s, other, v) {
+                return out;
+            }
+            if let Some(out) = crate::progress::run(s, other, v) {
                 return out;
             }
             Err(format!("unknown command {other}"))

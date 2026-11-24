@@ -18,6 +18,7 @@ pub mod findbar;
 pub mod imports;
 pub mod inspector;
 pub mod outline;
+pub mod progress;
 pub mod ribbon;
 pub mod session;
 pub mod snapshots;
@@ -109,6 +110,8 @@ pub struct Manuscript {
     pub cork: cork::CorkView,
     /// The bible entry form.
     pub entry: bible::EntryView,
+    /// The writing session's statistics, for the open project.
+    pub progress: Option<progress::Progress>,
     /// The folder the corkboard and outline show (follows the binder's selection).
     pub view_root: Option<ItemId>,
     /// The filter on binder, corkboard and outline.
@@ -163,6 +166,7 @@ impl Manuscript {
             cork: cork::CorkView::default(),
             entry: bible::EntryView::default(),
             view_root: None,
+            progress: None,
             filter: filter::Filter::default(),
             filtered_at: u64::MAX,
             view: view::ViewPrefs::default(),
@@ -191,6 +195,7 @@ impl Manuscript {
         self.recovered = s.root().and_then(wordsmith_manuscript_format::pack::recovered).filter(|r| *r != s.project);
         self.session = Some(s);
         self.binder = BinderView::default();
+        self.progress = None;
         self.status = "Opened.".into();
         Ok(())
     }
@@ -382,6 +387,8 @@ impl Commands for Manuscript {
             CommandInfo { icon: "undo".into(), ..CommandInfo::new(ids::UNDO, "Undo", "Mod+Z") },
             CommandInfo { icon: "redo".into(), ..CommandInfo::new(ids::REDO, "Redo", "Mod+Shift+Z") },
         ];
+        v.push(CommandInfo::new("session.reset", "Start a New Session", ""));
+        v.push(CommandInfo::new("sprint.start", "Start a Writing Sprint", ""));
         v.push(CommandInfo::new("filter.set", "Filter", ""));
         v.push(CommandInfo::new("filter.clear", "Show All Items", ""));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
@@ -543,7 +550,9 @@ impl App for Manuscript {
             ui.separator();
         }
         if let Some(s) = &self.session {
-            ui.label(format!("Manuscript: {} words", binder::format_words(s.project.manuscript_words())));
+            let pr = self.progress.get_or_insert_with(|| progress::Progress::start(&s.project));
+            pr.observe(s);
+            pr.ui(ui, &s.project);
         }
         if !self.status.is_empty() {
             ui.separator();
@@ -552,7 +561,7 @@ impl App for Manuscript {
     }
 
     fn file_pages(&self) -> Vec<PageSpec> {
-        vec![PageSpec::new("import", "Import", "import")]
+        vec![PageSpec::new("import", "Import", "import"), PageSpec::new("targets", "Targets", "target")]
     }
 
     fn file_page_ui(&mut self, page: &Page, ui: &mut egui::Ui, shell: &mut Shell) {
@@ -606,6 +615,7 @@ impl App for Manuscript {
             }
             Page::App(id) if id == "import" => self.import_page(ui),
             Page::Export => self.export_page(ui),
+            Page::App(id) if id == "targets" => self.targets_page(ui),
             _ => {}
         }
     }
@@ -671,6 +681,20 @@ impl Manuscript {
             };
             if let Some(s) = self.session.as_ref() {
                 self.binder.hidden = filter::hidden(&s.project, &self.filter);
+            }
+            return Ok(());
+        }
+        if cmd.id == "session.reset" {
+            if let Some(p) = self.progress.as_mut() {
+                p.writing.reset();
+            }
+            return Ok(());
+        }
+        if cmd.id == "sprint.start" {
+            let minutes = cmd.params.get("minutes").and_then(|m| m.as_u64()).unwrap_or(15).clamp(1, 240);
+            if let Some(s) = self.session.as_ref() {
+                let p = self.progress.get_or_insert_with(|| progress::Progress::start(&s.project));
+                p.writing.start_sprint(std::time::Duration::from_secs(minutes * 60), Instant::now());
             }
             return Ok(());
         }
@@ -1195,5 +1219,72 @@ impl Manuscript {
             ui.separator();
             ui.monospace(&self.export_report);
         }
+    }
+}
+
+impl Manuscript {
+    fn targets_page(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Targets");
+        let Some(s) = self.session.as_mut() else {
+            ui.label("Open a project first.");
+            return;
+        };
+        let t = s.project.settings.targets.clone();
+        let mut manuscript = t.manuscript.map(|n| n.to_string()).unwrap_or_default();
+        let mut session = t.session.map(|n| n.to_string()).unwrap_or_default();
+        let mut deadline = t.deadline.clone();
+        let mut days: Vec<bool> = wordsmith_manuscript_model::DAYS.iter().map(|d| t.writing_days.iter().any(|x| x == d)).collect();
+        let mut changed = false;
+        egui::Grid::new("targets").num_columns(2).show(ui, |ui| {
+            let l = ui.label("Manuscript (words)");
+            changed |= ui.text_edit_singleline(&mut manuscript).labelled_by(l.id).lost_focus();
+            ui.end_row();
+            let l = ui.label("Deadline (YYYY-MM-DD)");
+            changed |= ui.text_edit_singleline(&mut deadline).labelled_by(l.id).lost_focus();
+            ui.end_row();
+            ui.label("Writing days");
+            ui.horizontal(|ui| {
+                for (d, on) in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].iter().zip(days.iter_mut()) {
+                    changed |= ui.checkbox(on, *d).changed();
+                }
+            });
+            ui.end_row();
+            let l = ui.label("This session (words)");
+            changed |= ui.text_edit_singleline(&mut session).labelled_by(l.id).lost_focus();
+            ui.end_row();
+        });
+        if changed {
+            let num = |s: &str| s.trim().replace(',', "").parse::<u64>().ok();
+            let writing_days: Vec<&str> = wordsmith_manuscript_model::DAYS.iter().zip(&days).filter(|(_, on)| **on).map(|(d, _)| *d).collect();
+            let params =
+                json!({ "manuscript": num(&manuscript), "session": num(&session), "deadline": deadline.trim(), "writing_days": writing_days });
+            if let Err(e) = s.run("targets.set", &params) {
+                self.status = e;
+            }
+        }
+        let c = progress::manuscript_counts(&s.project);
+        ui.separator();
+        ui.label(format!(
+            "The manuscript: {} words, {} characters ({} without spaces).",
+            binder::format_words(c.words),
+            binder::format_words(c.chars),
+            binder::format_words(c.chars_no_spaces)
+        ));
+        if let Some(n) = progress::daily_need(&s.project, progress::today()) {
+            ui.label(format!("To meet the deadline: {} words a writing day.", binder::format_words(n)));
+        }
+        ui.horizontal(|ui| {
+            if ui.button("Start a 15-Minute Sprint").clicked()
+                && let Some(s) = self.session.as_ref()
+            {
+                let p = self.progress.get_or_insert_with(|| progress::Progress::start(&s.project));
+                p.writing.start_sprint(std::time::Duration::from_secs(15 * 60), Instant::now());
+            }
+            if ui.button("Start a New Session").clicked()
+                && let Some(p) = self.progress.as_mut()
+            {
+                p.writing.reset();
+            }
+        });
     }
 }
