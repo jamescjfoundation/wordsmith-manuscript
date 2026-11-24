@@ -71,6 +71,8 @@ fn main() -> ExitCode {
             app.status = m;
         }
         prefs = Some(file);
+        // The writing history is kept on this computer, beside the preferences.
+        app.history_dir = Some(dir.join("history"));
     }
     if let Some(path) = std::env::args_os().nth(1)
         && let Err(e) = app.open(std::path::Path::new(&path))

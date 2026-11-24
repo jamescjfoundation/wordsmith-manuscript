@@ -4,7 +4,7 @@
 //! days; the session's target; per-item targets (shown in the outline and inspector). The
 //! session and the day's words come from the core's writing statistics (`jcj_shell::writing`).
 
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 
 use jcj_shell::egui::Ui;
 use jcj_shell::writing::{Day, Writing, progress_bar, words_per_day};
@@ -73,7 +73,7 @@ pub fn daily_need(p: &Project, today: Day) -> Option<usize> {
 
 /// Today in the local zone (UTC when the zone is not known).
 pub fn today() -> Day {
-    Day::of(SystemTime::now(), 0)
+    crate::history::local_today()
 }
 
 /// The writing session of an open project.

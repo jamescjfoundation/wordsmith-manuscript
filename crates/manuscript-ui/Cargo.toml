@@ -26,6 +26,7 @@ jcj-board = { workspace = true }
 jcj-agents = { workspace = true }
 serde = { workspace = true }
 chrono = { workspace = true }
+sha2 = { workspace = true }
 image = { workspace = true }
 serde_json = { workspace = true }
 regex = "1"

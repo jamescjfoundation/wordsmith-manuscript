@@ -58,6 +58,12 @@ File › Targets sets the manuscript's word target, a deadline and your writing 
 for this session. The status bar shows your progress and how many words a writing day the
 deadline needs. Start a timed sprint there too.
 
+**Writing History** (on File › Targets, or in the command palette) shows a calendar of the words
+written each day, darker for busier days, with the month's total, your best day and your current
+streak. Deleted words count against the day, so the numbers stay honest. The history is yours
+alone: it is kept on this computer beside the app's preferences, never in the project, so it does
+not travel with the project or show up for anyone you share it with.
+
 ## Collections
 
 A collection is a list of items beside the binder; the items stay where they are. Right-click an

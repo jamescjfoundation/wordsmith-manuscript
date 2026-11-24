@@ -21,6 +21,7 @@ pub mod fields;
 pub mod filter;
 pub mod find;
 pub mod findbar;
+pub mod history;
 pub mod imports;
 pub mod inspector;
 pub mod media;
@@ -125,6 +126,10 @@ pub struct Manuscript {
     pub media_view: media::MediaView,
     /// The collection shown in place of the binder (SRC-2).
     pub showing: Option<String>,
+    /// Where writing histories are kept on this computer (the app's settings folder), if anywhere.
+    pub history_dir: Option<std::path::PathBuf>,
+    /// The writing history window (PRG-3).
+    pub history_view: history::HistoryView,
     /// The snapshot comparison window (INS-5).
     pub compare: snapshots::CompareView,
     /// The other pane's editor, when the editor is split (ED-6).
@@ -202,6 +207,8 @@ impl Manuscript {
             editor: None,
             other: None,
             compare: snapshots::CompareView::default(),
+            history_dir: None,
+            history_view: history::HistoryView::default(),
             showing: None,
             media_view: media::MediaView::default(),
             board: board::BoardView::default(),
@@ -248,6 +255,7 @@ impl Manuscript {
             Session::open(path)?
         };
         self.recovered = s.root().and_then(wordsmith_manuscript_format::pack::recovered).filter(|r| *r != s.project);
+        self.keep_history();
         self.session = Some(s);
         self.binder = BinderView::default();
         self.progress = None;
@@ -255,8 +263,34 @@ impl Manuscript {
         Ok(())
     }
 
+    /// Start counting this session's words, with the project's writing history from this
+    /// computer.
+    pub fn start_progress(&mut self) {
+        if self.progress.is_some() {
+            return;
+        }
+        let Some(s) = self.session.as_ref() else { return };
+        let mut p = progress::Progress::start(&s.project);
+        if let (Some(dir), Some(root)) = (self.history_dir.as_ref(), s.root()) {
+            p.writing.history = history::load(dir, root);
+        }
+        self.progress = Some(p);
+    }
+
+    /// Keep the writing history on this computer (not in the project).
+    pub fn keep_history(&mut self) {
+        let (Some(dir), Some(p), Some(root)) = (self.history_dir.as_ref(), self.progress.as_ref(), self.session.as_ref().and_then(Session::root))
+        else {
+            return;
+        };
+        if let Err(e) = history::save(dir, root, &p.writing.history) {
+            self.status = e;
+        }
+    }
+
     /// Close the open project: save if needed, back up.
     pub fn close(&mut self) -> Result<(), String> {
+        self.keep_history();
         if let Some(s) = self.session.as_mut() {
             s.close()?;
         }
@@ -500,6 +534,7 @@ impl Commands for Manuscript {
         v.push(CommandInfo::new("view.split", "Split Side by Side", "Mod+Alt+\\"));
         v.push(CommandInfo::new("view.splitStacked", "Split Top and Bottom", ""));
         v.push(CommandInfo::new("view.unsplit", "One Pane", ""));
+        v.push(CommandInfo::new("view.history", "Writing History", ""));
         v.push(CommandInfo::new("write.comment", "Add Comment", "Mod+Alt+M"));
         v.push(CommandInfo::new("view.otherPane", "Go to the Other Pane", "Mod+Alt+O"));
         v.push(CommandInfo::new("view.editor", "Editor", "Mod+1"));
@@ -603,6 +638,7 @@ impl App for Manuscript {
         if s.backup_due(Instant::now()) {
             s.backup()?;
         }
+        self.keep_history();
         Ok(())
     }
 
@@ -803,10 +839,12 @@ impl App for Manuscript {
             }
             ui.separator();
         }
-        if let Some(s) = &self.session {
-            let pr = self.progress.get_or_insert_with(|| progress::Progress::start(&s.project));
-            pr.observe(s);
-            pr.ui(ui, &s.project);
+        if self.session.is_some() {
+            self.start_progress();
+            if let (Some(pr), Some(s)) = (self.progress.as_mut(), self.session.as_ref()) {
+                pr.observe(s);
+                pr.ui(ui, &s.project);
+            }
         }
         if !self.status.is_empty() {
             ui.separator();
@@ -946,8 +984,8 @@ impl Manuscript {
         }
         if cmd.id == "sprint.start" {
             let minutes = cmd.params.get("minutes").and_then(|m| m.as_u64()).unwrap_or(15).clamp(1, 240);
-            if let Some(s) = self.session.as_ref() {
-                let p = self.progress.get_or_insert_with(|| progress::Progress::start(&s.project));
+            self.start_progress();
+            if let Some(p) = self.progress.as_mut() {
                 p.writing.start_sprint(std::time::Duration::from_secs(minutes * 60), Instant::now());
             }
             return Ok(());
@@ -981,6 +1019,11 @@ impl Manuscript {
                 return Ok(());
             }
             _ => {}
+        }
+        if cmd.id == "view.history" {
+            self.start_progress();
+            self.history_view.open = true;
+            return Ok(());
         }
         if cmd.id == "write.comment" {
             return self.add_comment();
@@ -1027,6 +1070,7 @@ impl Manuscript {
                 let s = self.session.as_mut().ok_or("no project is open")?;
                 s.save()?;
                 self.status = "Saved.".into();
+                self.keep_history();
                 Ok(())
             }
             ids::NEW => {
@@ -1125,6 +1169,9 @@ impl Manuscript {
         }
         if let Some(s) = self.session.as_ref() {
             snapshots::compare_window(ui.ctx(), s, &mut self.compare);
+        }
+        if let Some(p) = self.progress.as_ref() {
+            history::window(ui.ctx(), &p.writing.history, &mut self.history_view, progress::today());
         }
         if self.recovered.is_some() {
             ui.horizontal(|ui| {
@@ -1731,11 +1778,14 @@ impl Manuscript {
             ui.label(format!("To meet the deadline: {} words a writing day.", binder::format_words(n)));
         }
         ui.horizontal(|ui| {
-            if ui.button("Start a 15-Minute Sprint").clicked()
-                && let Some(s) = self.session.as_ref()
-            {
-                let p = self.progress.get_or_insert_with(|| progress::Progress::start(&s.project));
-                p.writing.start_sprint(std::time::Duration::from_secs(15 * 60), Instant::now());
+            if ui.button("Start a 15-Minute Sprint").clicked() {
+                self.start_progress();
+                if let Some(p) = self.progress.as_mut() {
+                    p.writing.start_sprint(std::time::Duration::from_secs(15 * 60), Instant::now());
+                }
+            }
+            if ui.button("Writing History").clicked() {
+                self.history_view.open = true;
             }
             if ui.button("Start a New Session").clicked()
                 && let Some(p) = self.progress.as_mut()
