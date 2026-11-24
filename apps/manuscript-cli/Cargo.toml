@@ -1,0 +1,21 @@
+[package]
+name = "wordsmith-manuscript-cli"
+description = "Wordsmith Manuscript on the command line: convert, export, counts, verify, report"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wordsmith-manuscript-model = { workspace = true }
+wordsmith-manuscript-format = { workspace = true }
+wordsmith-manuscript-io = { workspace = true }
+
+[[bin]]
+name = "manuscript-cli"
+path = "src/main.rs"

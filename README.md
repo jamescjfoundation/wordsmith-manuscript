@@ -8,10 +8,18 @@ It is built on [open-source-core](https://github.com/jamescjfoundation/open-sour
 foundation's shared base, alongside
 [Wordsmith Script](https://github.com/jamescjfoundation/wordsmith-script).
 
-**Status:** planning. The build plan is [docs/PLAN.md](docs/PLAN.md); work follows its milestones
-in order.
+**Status:** in development toward 0.1. The build plan is [docs/PLAN.md](docs/PLAN.md); progress is
+recorded in [docs/progress.md](docs/progress.md).
 
 ## License
 
-MIT OR Apache-2.0, at your option (license files arrive with the first code, step M0.1 of the
-plan).
+MIT OR Apache-2.0, at your option. Built on open-source-core, which is based on WordCraft by the
+ArtCraft team (see [NOTICE](NOTICE)).
+
+## Building
+
+```sh
+cargo run -p wordsmith-manuscript             # the desktop app
+cargo run -p wordsmith-manuscript-cli -- help # the command line
+cargo xtask ci                                # the full gate
+```

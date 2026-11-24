@@ -1,0 +1,6 @@
+/target
+/dist
+.DS_Store
+*.swp
+# Private working notes and private manuscripts for local test runs (never committed).
+/.private

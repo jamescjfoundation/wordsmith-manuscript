@@ -1,0 +1,23 @@
+Wordsmith Manuscript
+Copyright (c) 2026 the Wordsmith Manuscript contributors
+
+Licensed under either of
+  * Apache License, Version 2.0 (LICENSE-APACHE)
+  * MIT license (LICENSE-MIT)
+at your option.
+
+Wordsmith Manuscript is built on open-source-core
+(github.com/jamescjfoundation/open-source-core, MIT OR Apache-2.0), which is
+based on WordCraft by the ArtCraft team. WordCraft and craft-libs are
+copyright (c) 2026 ArtCraft Team and their contributors, MIT OR Apache-2.0,
+used as dependencies through the core at pinned versions.
+
+The ArtCraft and WordCraft names, wordmarks and logos are not licensed to this
+project and are not used by it. The plain-text credit above is the only
+reference to them.
+
+Third-party assets (fonts and similar) are listed with their own licenses in
+ATTRIBUTION.md. Some Rust dependencies are under the Zlib, Unicode-3.0, IJG,
+BSL-1.0 and CDLA-Permissive-2.0 licenses, as well as MIT, Apache-2.0, BSD and
+ISC; the core's decision 0001 lists which ones and why. `cargo xtask
+third-party-licenses` writes every shipped dependency's license text.

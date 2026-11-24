@@ -1,0 +1,119 @@
+# Wordsmith Manuscript: a novel and long-form writing app on open-source-core.
+[workspace]
+resolver = "3"
+members = [
+    "crates/manuscript-model",
+    "crates/manuscript-format",
+    "crates/manuscript-io",
+    "crates/manuscript-ui",
+    "apps/manuscript",
+    "apps/manuscript-cli",
+    "apps/manuscript-web",
+    "xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jamescjfoundation/wordsmith-manuscript"
+publish = false
+
+[workspace.dependencies]
+# Ours
+wordsmith-manuscript-model = { path = "crates/manuscript-model" }
+wordsmith-manuscript-format = { path = "crates/manuscript-format" }
+wordsmith-manuscript-io = { path = "crates/manuscript-io" }
+wordsmith-manuscript-ui = { path = "crates/manuscript-ui" }
+
+# The core, at a release tag. Apps use only jcj- interface crates (never jcj-upstream, WordCraft or
+# craft-libs); `cargo xtask layers` checks it. Move all of them together.
+jcj-doc = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-layout = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-engine = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-output = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-interchange = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-proof = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-project = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-features = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-theme = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-board = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-shell = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+jcj-agents = { git = "https://github.com/jamescjfoundation/open-source-core", tag = "v0.1.1" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Already in the core's lock file (plan section 14).
+toml = "1"
+uuid = { version = "1", features = ["v7", "serde"] }
+zip = { version = "3", default-features = false, features = ["deflate"] }
+sha2 = "0.11"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+egui_kittest = "0.37"
+proptest = { version = "1", default-features = false, features = ["std"] }
+# The window, at the egui version the core pins (the patch block points it at the same fork).
+eframe = { version = "0.37", default-features = false, features = ["accesskit", "glow", "wayland", "x11"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+cognitive_complexity = "deny"
+wildcard_imports = "deny"
+too_many_arguments = "deny"
+dbg_macro = "warn"
+type_complexity = "allow"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+debug = 0
+
+# The core's patch block: written by `cargo xtask sync`, checked by `cargo xtask sync --check`.
+# Never edit it here.
+# BEGIN jcj patch block
+[patch."https://github.com/storytold/wordcraft"]
+# Our fork's `jcj` branch: WordCraft v0.18.1 plus the patches in docs/UPSTREAM.md.
+wordcraft-geom = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-doc = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-fonts = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-layout = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-render = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-pdf = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-engine = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-mcp = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-control-key = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-docx = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+wordcraft-formats = { git = "https://github.com/jamescjfoundation/wordcraft", rev = "73717786b6a01a93fba79892f04a2f2d3380a761" }
+
+[patch.crates-io]
+# Required by craft-pdf: the backend rejects writers that failed during unwinding (as WordCraft).
+krilla = { git = "https://github.com/storytold/craft-libs", rev = "6e03f65bf45181db77ba6229716e6624db9eb25b" }
+# Required by craft-pdf's reader: craft-libs' Hayro snapshot with its input limits and fixes for
+# malformed files (as craft-libs builds it).
+hayro-syntax = { git = "https://github.com/storytold/craft-libs", rev = "6e03f65bf45181db77ba6229716e6624db9eb25b" }
+hayro-interpret = { git = "https://github.com/storytold/craft-libs", rev = "6e03f65bf45181db77ba6229716e6624db9eb25b" }
+hayro-cmap = { git = "https://github.com/storytold/craft-libs", rev = "6e03f65bf45181db77ba6229716e6624db9eb25b" }
+hayro-postscript = { git = "https://github.com/storytold/craft-libs", rev = "6e03f65bf45181db77ba6229716e6624db9eb25b" }
+hayro-jbig2 = { git = "https://github.com/storytold/craft-libs", rev = "6e03f65bf45181db77ba6229716e6624db9eb25b" }
+# egui 0.37 and winit on storytold's forks, at the commits WordCraft v0.18.1 pins.
+ecolor = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+emath = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+epaint = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui-winit = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui-wgpu = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_glow = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_kittest = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+eframe = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+winit = { git = "https://github.com/storytold/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }
+# END jcj patch block

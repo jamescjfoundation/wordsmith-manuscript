@@ -1,0 +1,7 @@
+# Text files are LF on every checkout: golden and round-trip tests compare bytes.
+* text=auto eol=lf
+*.docx binary
+*.odt binary
+*.rtf binary
+*.pdf binary
+*.wsmz binary

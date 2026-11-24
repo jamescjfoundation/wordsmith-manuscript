@@ -1,0 +1,23 @@
+[package]
+name = "wordsmith-manuscript-ui"
+description = "Wordsmith Manuscript's views: binder, editor, corkboard, outline, inspector, bible"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wordsmith-manuscript-model = { workspace = true }
+wordsmith-manuscript-format = { workspace = true }
+wordsmith-manuscript-io = { workspace = true }
+jcj-doc = { workspace = true }
+jcj-engine = { workspace = true }
+jcj-shell = { workspace = true }
+jcj-theme = { workspace = true }
+jcj-board = { workspace = true }
+jcj-agents = { workspace = true }

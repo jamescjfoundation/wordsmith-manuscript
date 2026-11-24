@@ -1,0 +1,15 @@
+[package]
+name = "wordsmith-manuscript-web"
+description = "Wordsmith Manuscript on the web (a placeholder until the core supports a web build)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

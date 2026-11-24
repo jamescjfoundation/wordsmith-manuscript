@@ -1,0 +1,21 @@
+[package]
+name = "wordsmith-manuscript"
+description = "Wordsmith Manuscript, the desktop app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wordsmith-manuscript-ui = { workspace = true }
+jcj-shell = { workspace = true }
+eframe = { workspace = true }
+
+[[bin]]
+name = "wordsmith-manuscript"
+path = "src/main.rs"

@@ -1,0 +1,10 @@
+# Decisions
+
+Decisions about Wordsmith Manuscript's own behavior, one file each, numbered in order:
+`NNNN-title.md` with four parts: **Context**, **Decision**, **Consequences**, **Revisit when**.
+Decisions about interfaces shared by the foundation's apps go in open-source-core's
+`docs/decisions/`, never here.
+
+| Number | Title |
+| --- | --- |
+| [0001](0001-built-on-open-source-core.md) | Built on open-source-core |
