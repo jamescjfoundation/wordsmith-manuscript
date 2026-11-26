@@ -17,7 +17,7 @@ States:
 The rows, the markers in the code and the core's issues are kept in step. Each app-first and
 copy-kept row's issue is open, labelled `core-candidate`, and names the file here that holds the
 code. A marker is written `core-candidate: open-source-core#N`, and `cargo xtask docs` fails on
-one that names no issue. Last checked against the issues and core v0.1.18 on 2026-11-26.
+one that names no issue. Last checked against the issues and core v0.1.20 on 2026-11-26.
 
 ## Markers in the code
 
@@ -27,7 +27,6 @@ one that names no issue. Last checked against the issues and core v0.1.18 on 202
 | C7 | Search across many documents with an index | `crates/manuscript-ui/src/search.rs` | [#8](https://github.com/jamescjfoundation/open-source-core/issues/8) | app-first |
 | C8 | Editing several documents as one (the stitched view) | `crates/manuscript-ui/src/stitch.rs` | [#9](https://github.com/jamescjfoundation/open-source-core/issues/9) | app-first |
 | C11 | Story board lanes | `crates/manuscript-ui/src/lanes.rs` | [#12](https://github.com/jamescjfoundation/open-source-core/issues/12) | app-first. The plan meant a promotion from Wordsmith Script; code never moves between app repositories, so lanes were built here |
-| – | The word list and the word-level comparison of two texts | `crates/manuscript-model/src/words.rs` (`words`), `crates/manuscript-model/src/diff.rs` | [#31](https://github.com/jamescjfoundation/open-source-core/issues/31), after [#10](https://github.com/jamescjfoundation/open-source-core/issues/10) and [#17](https://github.com/jamescjfoundation/open-source-core/issues/17) | copy kept: see [below](#the-word-list-and-the-comparison) |
 | – | Interface translation catalogs | `crates/manuscript-ui/src/i18n.rs` | [#32](https://github.com/jamescjfoundation/open-source-core/issues/32), after [#18](https://github.com/jamescjfoundation/open-source-core/issues/18) | copy kept: see [below](#translation-catalogs) |
 | – | Notes in the EPUB reading copy | `crates/manuscript-io/src/export.rs` (`notes_as_endnotes`) | [#33](https://github.com/jamescjfoundation/open-source-core/issues/33), after [#21](https://github.com/jamescjfoundation/open-source-core/issues/21) | copy kept: see [below](#notes-in-the-epub-reading-copy) |
 
@@ -40,37 +39,16 @@ one that names no issue. Last checked against the issues and core v0.1.18 on 202
 | C3 | Document tabs and split view | [#4](https://github.com/jamescjfoundation/open-source-core/issues/4) | released in core v0.1.3, used (`jcj_shell::split`). The issue is still open |
 | C4 | The PDF names the app that made it | [#5](https://github.com/jamescjfoundation/open-source-core/issues/5) | open. The standard manuscript PDF carries the upstream engine's name as its producer (`docs/golden.md`, "Known gap") |
 | C5 | A tree widget with drag and drop (the binder) | [#6](https://github.com/jamescjfoundation/open-source-core/issues/6) | released in core v0.1.8, used since 2026-11-26: the binder draws with `jcj_shell::tree` and this repository's copy (`manuscript-ui/src/tree.rs`) is gone |
-| C9 | Word-for-word verification of an import or export | [#10](https://github.com/jamescjfoundation/open-source-core/issues/10) | released in core v0.1.9, used since 2026-11-26: `wordsmith_manuscript_io::verify` is the core's `jcj_features::verify` under the old name and this repository's copy (`manuscript-io/src/verify.rs`) is gone. The model crate's word list is the row above |
+| C9 | Word-for-word verification of an import or export | [#10](https://github.com/jamescjfoundation/open-source-core/issues/10) | released in core v0.1.9, used since 2026-11-26: `wordsmith_manuscript_io::verify` is the core's `jcj_features::verify` under the old name and this repository's copy (`manuscript-io/src/verify.rs`) is gone |
 | C10 | Grammar hints beside spelling | [#11](https://github.com/jamescjfoundation/open-source-core/issues/11) | not needed: `jcj_proof::check` already gave them (progress, R2 ED-9). The issue is still open |
 | C12 | EPUB import | [#13](https://github.com/jamescjfoundation/open-source-core/issues/13) | released in core v0.1.3, used (`jcj_interchange::import` with `Format::Epub`, IMP-9). The issue is still open for what the reader does not keep |
 | C13 | Entries: typed records with templates, links, backlinks and a name list | [#14](https://github.com/jamescjfoundation/open-source-core/issues/14) | released in core v0.1.4 as `jcj-entries`, used (`manuscript-model/src/entries.rs` is this app's layer over it; decision 0004). The entry file format stays here until a second app shares bible folders. The issue is still open |
+| – | The word list and the word-level comparison of two texts, where a model crate can use them | [#31](https://github.com/jamescjfoundation/open-source-core/issues/31), after [#10](https://github.com/jamescjfoundation/open-source-core/issues/10) and [#17](https://github.com/jamescjfoundation/open-source-core/issues/17) | released in core v0.1.20 (`jcj_doc::words`, `jcj_doc::wordiff`), used since 2026-11-26: `manuscript-model`'s `diff` re-exports the core's comparison under the same names and keeps `texts`, its own entry point over this app's text type; `words::words` calls the core's. The copy and the test that compared the two word rules are gone. The rule is written once |
 
 ## What would free each copy
 
 Each of these was re-checked against core v0.1.18 on 2026-11-26. None is a drop-in, and none is
 forced: the open issue says what the core would need to offer.
-
-### The word list and the comparison
-
-`manuscript-model/src/diff.rs` is the code the core released as `jcj_features::wordiff`, except
-for its entry point: `diff::texts(&Text, &Text)` over this app's text type, where the core has
-`documents(&Document, &Document)`. `manuscript-model/src/words.rs` holds `words`, the same rule
-as `jcj_features::verify::words`.
-
-Why they stay: `manuscript-model` is layer 1 and may depend only on `jcj-doc` and `jcj-entries`.
-`jcj-features` needs `jcj-engine` and `jcj-layout`, which the model must never pull in, because
-Wordsmith Book builds on the model. `diff` and `words` are public modules Book can see, and Book
-uses `words::words`.
-
-What the core must offer (#31): `words(text: &str) -> Vec<String>` beside `count_words` in
-`jcj-doc`, or in a crate with no engine or layout dependency; and in the same place the
-comparison over plain paragraphs, with the same names and results as today (`Change`, `Segment`,
-`Diff`, `tokens`, `paragraph`, `paragraphs`). Then `diff.rs` becomes a re-export plus `texts`,
-`words::words` calls the core's, and nothing Book sees changes.
-
-Until then `crates/manuscript-io/tests/words.rs` compares the model's word list with the core's
-on a whole novel and on the hard cases, so the two cannot drift apart unseen. The rule was
-written three times; it is now written twice.
 
 ### Translation catalogs
 
