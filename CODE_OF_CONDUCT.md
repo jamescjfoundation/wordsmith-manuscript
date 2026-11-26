@@ -1,8 +1,8 @@
 # Code of conduct
 
-Wordsmith Manuscript is made by volunteers for writers. We want everyone who
-takes part, in issues, pull requests, reviews and discussions, to be treated
-with respect.
+This project is made by volunteers for the people who use it. We want everyone
+who takes part, in issues, pull requests, reviews and discussions, to be
+treated with respect.
 
 ## Expected
 
