@@ -6,8 +6,10 @@
 //! the rest are whole paragraphs added or removed. Words, the spaces between them and each
 //! punctuation mark are the units, so a changed comma shows as a changed comma.
 //!
-//! core-candidate: open-source-core#17. The core's comparison (`jcj-features` compare) marks whole paragraphs; this
-//! word-level refinement would serve any foundation app's compare.
+//! core-candidate: open-source-core#31. The core has this code as `jcj_features::wordiff` (core
+//! issue #17, release 0.1.9), but this crate may not depend on `jcj-features` (layer 1, and
+//! Wordsmith Book builds on it). The copy goes when the core offers the comparison where a model
+//! crate can use it; [`texts`] stays, as this app's entry point. `docs/core-candidates.md`.
 
 use crate::Text;
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! The stitched view (ED-2, plan section 5.5): several items edited as one text.
 //!
-//! core-candidate: open-source-core issue #9 (C8).
+//! core-candidate: open-source-core#9 (C8).
 
 use jcj_doc::{ExtKey, HasExt, Paragraph};
 use wordsmith_manuscript_model::ItemId;

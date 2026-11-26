@@ -1,8 +1,8 @@
 # Notes for coding agents (and people)
 
 This app is built on [open-source-core](https://github.com/jamescjfoundation/open-source-core),
-the J. C. J. Foundation's shared base. The core holds what every app needs; this repository holds
-only what is about this app.
+The James C. J. Foundation's shared base. The core holds what every app needs; this repository
+holds only what is about this app.
 
 The blocks below marked `open-source-core` are the core's rules, which every app carries word for
 word. `cargo xtask sync` writes them from the pinned core release and `cargo xtask sync --check`
@@ -233,7 +233,9 @@ writers: a step whose result a writer will notice also gets its line there.
    trips are compared with reviewed reference files. A change that alters them is deliberate,
    reviewed and recorded in `docs/golden.md`.
 4. **Fixtures** are public-domain texts or written for the test, each recorded in
-   `docs/fixtures.md`. Private manuscripts stay in `.private/`.
+   `docs/fixtures.md`. One written for another Wordsmith repository's tests (Script's `.wss`
+   files, one per format version) may be copied unchanged, with where it came from recorded.
+   Private manuscripts stay in `.private/`.
 5. **The brand is the kit's.** The logos, icons and palette card in `assets/brand/`, and the
    `README.md` beside them, are copies from the Wordsmith brand kit
    (`brand/wordsmith-manuscript/production/` in the wordsmith repository). They are never
@@ -269,9 +271,23 @@ Two other Wordsmith apps meet this one
   - **Today:** nothing in this repository's gate builds Book, so a break shows only when Book
     moves to a new tag. No release tag exists yet; the `book-view` tags are not releases.
 - **Manuscript reads Wordsmith Script's `.wss` files** (`crates/manuscript-io/src/screenplay.rs`)
-  for screenplays kept in a project. The format is Script's (`docs/format.md` in the Script
-  repository). What Manuscript needs of it is asked for in an issue there, never copied from
-  Script's code.
+  for screenplays kept in a project. Script owns the format (`docs/format.md` in the Script
+  repository) and numbers its versions; the reader here is Manuscript's own.
+  - The reader accepts format 1 up to the version it was written for
+    (`screenplay::NEWEST_FORMAT`) and refuses a newer file with a message naming both versions.
+    It never guesses at a format it does not know: a wrong guess shows the writer wrong words.
+  - A new format version arrives as an issue in this repository
+    ([Route B](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-b)).
+    The change that answers it reads Script's `docs/format.md`, teaches the reader the version,
+    raises `NEWEST_FORMAT` and adds that version's fixture, in one change.
+  - `tests/fixtures/scripts/` holds one file per format version the reader accepts and one for
+    the first version it refuses (`docs/fixtures.md`);
+    `crates/manuscript-io/tests/screenplay.rs` fails when a version has no file.
+  - What Manuscript needs of the format is asked for in an issue in the Script repository. Code
+    is never copied from Script; its fixtures may be, with the source recorded.
+  - **Today:** nothing tells this repository when Script adds a version except that issue.
+    Until the reader is taught the version, a script saved by the newer Script shows the
+    refusal instead of its text.
 
 ### Where each crate's code goes
 
@@ -279,7 +295,7 @@ Two other Wordsmith apps meet this one
 | --- | --- | --- | --- |
 | `manuscript-model` | 1 | Project, binder, roles, metadata, targets, bible entries, links, the semantic text of an item | `jcj-doc`, `jcj-entries` |
 | `manuscript-format` | 2 | The project folder, the text dialect, migrations, limits, packing, the read-only book view | model, `jcj-doc`, `jcj-project` |
-| `manuscript-io` | 3 | Import mapping, document sets, the verifier, exports, the standard manuscript layout, the `.wss` reader | format, model, `jcj-doc`, `jcj-project`, `jcj-interchange`, `jcj-layout`, `jcj-output`, `jcj-features`, `jcj-proof` |
+| `manuscript-io` | 3 | Import mapping, document sets, exports with their word-for-word check (the core's `verify`), the standard manuscript layout, the `.wss` reader | format, model, `jcj-doc`, `jcj-project`, `jcj-interchange`, `jcj-layout`, `jcj-output`, `jcj-features`, `jcj-proof` |
 | `manuscript-ui` | 4 | Views, commands, ribbon tabs, panels, agent tools | io, format, model, everything io may use, `jcj-engine`, `jcj-shell`, `jcj-theme`, `jcj-board`, `jcj-agents` |
 | `apps/manuscript`, `apps/manuscript-cli`, `apps/manuscript-web` | 5 | The desktop app, the command line, a placeholder for the web build | the crates above, and the `jcj-` crates they use directly (`jcj-shell`, `jcj-interchange`, `jcj-agents`) |
 
@@ -287,5 +303,18 @@ Two other Wordsmith apps meet this one
 and this one must say the same. It does not check the programs in `apps/`. A crate of ours or of
 the core that a row does not list is a failure; other libraries are not its business.
 `manuscript-model` and `manuscript-format` never depend on interface or engine code: Wordsmith
-Book builds on them. The core changes Manuscript has asked for, each with its core issue, are in
-plan section 5.4.
+Book builds on them.
+
+### Code that waits for the core
+
+`docs/core-candidates.md` lists every core change Manuscript has asked for and every
+`// core-candidate:` marker here, with its core issue and state. Plan section 5.4 is the list as
+the plan was written; the ledger is what is true now.
+
+- A marker is written `core-candidate: open-source-core#N` and names an open core issue that
+  says what the core would need to offer. `cargo xtask docs` fails on a marker with no issue.
+- A marker, its row in the ledger and its issue change together. When the core releases what a
+  marker waits for, move onto the core's code and delete the copy here in the same change that
+  moves the pin, or say in the ledger exactly why the copy stays and which open issue would
+  free it.
+- **Today:** nothing checks the ledger against the markers or the issues; it is kept by hand.

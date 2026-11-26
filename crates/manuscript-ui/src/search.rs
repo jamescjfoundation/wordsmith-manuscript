@@ -2,7 +2,7 @@
 //! Project search (SRC-1, SPEC 11): every word of every text, synopsis, note and bible entry,
 //! answered from an index built in the background.
 //!
-//! core-candidate: open-source-core issue #8 (C7). The index maps each word (lowercased, letters
+//! core-candidate: open-source-core#8 (C7). The index maps each word (lowercased, letters
 //! and digits) to the documents holding it; a query narrows the documents by its words, then the
 //! exact search ([`crate::find`]) runs on those alone. Patterns and queries without a whole word
 //! scan everything. A plain in-memory index answers a 300,000-word project well within the plan's

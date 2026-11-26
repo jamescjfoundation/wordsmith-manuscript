@@ -5,11 +5,11 @@
 use std::collections::HashSet;
 
 use jcj_shell::egui::{self, Color32, Ui};
+use jcj_shell::tree::{TreeEvent, TreeRow, TreeState, Zone, tree};
 use serde_json::json;
 use wordsmith_manuscript_model::{Area, ItemId, Kind, Place, Project, Role};
 
 use crate::session::Session;
-use crate::tree::{TreeEvent, TreeRow, TreeState, Zone, tree};
 
 /// A row of the binder: an area heading or an item.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

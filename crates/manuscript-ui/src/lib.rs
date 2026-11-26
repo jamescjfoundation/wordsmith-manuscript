@@ -45,7 +45,6 @@ pub mod stitch;
 pub mod table;
 pub mod texts;
 pub mod timeline;
-pub mod tree;
 pub mod typing;
 pub mod user_templates;
 pub mod view;

@@ -118,15 +118,16 @@ for personal information, security problems, names and copied code. Report secur
 privately, as [SECURITY.md](SECURITY.md) says.
 
 The app is built on
-[open-source-core](https://github.com/jamescjfoundation/open-source-core), the J. C. J.
-Foundation's shared base for its desktop apps. The document model, layout, PDF, the command
-engine, document import and export, spelling and grammar, the window around the text (ribbon,
-panels, File page, preferences, updates), cards and boards, the general story-bible layer and the
-agent server all come from its `jcj-` crates. This repository holds what is about long-form
-writing: the binder and its roles, the project format, the stitched view, the corkboard, outline,
-lanes and timeline, the story bible's types, compile and the standard manuscript, import mapping
-and the hand-off to Wordsmith Book. `AGENTS.md` says how a change that belongs in the core is
-made, how the Wordsmith repositories fit together, and what Wordsmith Book relies on here.
+[open-source-core](https://github.com/jamescjfoundation/open-source-core),
+The James C. J. Foundation's shared base for its desktop apps. The document model, layout, PDF,
+the command engine, document import and export, spelling and grammar, the window around the text
+(ribbon, panels, File page, preferences, updates), cards and boards, the general story-bible
+layer and the agent server all come from its `jcj-` crates. This repository holds what is about
+long-form writing: the binder and its roles, the project format, the stitched view, the
+corkboard, outline, lanes and timeline, the story bible's types, compile and the standard
+manuscript, import mapping and the hand-off to Wordsmith Book. `AGENTS.md` says how a change that
+belongs in the core is made, how the Wordsmith repositories fit together, and what Wordsmith Book
+relies on here.
 
 Before anything goes to `main`, run the gate:
 

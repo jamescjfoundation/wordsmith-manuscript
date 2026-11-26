@@ -213,8 +213,10 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
 /// references as superscript numbers. Returns the words this adds (the numbers and the "Notes"
 /// headings), which the word check leaves out.
 ///
-/// core-candidate: open-source-core#21. The core's EPUB writer (`jcj-interchange` epub) leaves notes out; once it
-/// writes them (as EPUB footnotes), this goes.
+/// core-candidate: open-source-core#33. The core's EPUB writer keeps notes since release 0.1.12
+/// (core issue #21), but numbers them from 1 in each chapter file and adds the English word
+/// "Back" under each, which a caller can neither change nor learn. This goes when the caller
+/// can choose the numbering and the added words and be told them. `docs/core-candidates.md`.
 fn notes_as_endnotes(doc: &mut Document) -> Vec<String> {
     let mut added: Vec<String> = Vec::new();
     let mut body: Vec<Arc<jcj_doc::Block>> = Vec::new();

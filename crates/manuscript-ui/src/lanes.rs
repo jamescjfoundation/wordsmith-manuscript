@@ -8,7 +8,7 @@
 //! Scenes in no lane sit in the last row. Dragging a card to another lane links the scene to that
 //! thread instead (or sets its point of view), as one undo step.
 //!
-//! core-candidate: open-source-core issue #12 (C11, story board lanes). The plan meant to promote
+//! core-candidate: open-source-core#12 (C11, story board lanes). The plan meant to promote
 //! Wordsmith Script's lanes into the core; code never moves between app repositories, so this is
 //! built here until the core has lanes both apps can use.
 

@@ -6,8 +6,10 @@
 //! English, so a partial translation never hides anything. The language is a preference; by
 //! default it follows the computer's.
 //!
-//! core-candidate: open-source-core#18. The core has no translation catalog yet; the plan meant ACC-4 to go through
-//! one. This is the app's own until a second app needs it.
+//! core-candidate: open-source-core#32. The core has catalogs now (`jcj-i18n`, core issue #18,
+//! release 0.1.13) and the shell's own texts go through them. This module stays until two
+//! things are settled: the lookups reachable through `jcj-shell` (#32), and the choice, which
+//! writers will see, that the shell's texts follow the language too. `docs/core-candidates.md`.
 
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};

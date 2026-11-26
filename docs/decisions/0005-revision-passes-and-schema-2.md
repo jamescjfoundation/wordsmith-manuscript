@@ -1,6 +1,6 @@
 # 0005: Revision passes, and schema 2 of the format
 
-Date: 2026-11-24. Status: accepted.
+Date: 2026-11-24 · Status: accepted
 
 ## Context
 

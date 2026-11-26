@@ -1,6 +1,7 @@
 # 0004: The story bible in two layers
 
-Date: 2026-11-24. Status: accepted.
+Date: 2026-11-24 · Status: accepted · Amended 2026-11-26 (the general layer is now the core's
+`jcj-entries`, core decision 0016)
 
 ## Context
 
@@ -37,3 +38,14 @@ would write data one of them owns.
 ## Revisit when
 
 Script's plan to use entries is written, or a second storage form (one file per bible) is needed.
+
+## Amended 2026-11-26
+
+The general entries layer moved to the core in core release 0.1.4 as `jcj-entries` (core issue
+#14;
+[core decision 0016](https://github.com/jamescjfoundation/open-source-core/blob/main/docs/decisions/0016-entries-and-translations.md)),
+as "Consequences" foresaw, though before Script adopted entries. `manuscript-model::entries` is
+now this app's layer over it: the core's entry and backlink types with Manuscript's ids and
+text, and what reads Manuscript's text (the `wsm:` links). It carries no `core-candidate` marker
+any more. Storage and Manuscript's own layer are as decided above; the entry file format stays
+in this repository.

@@ -1,6 +1,7 @@
 # 0001: Built on open-source-core
 
-Date: 2026-11-24. Status: accepted.
+Date: 2026-11-24 · Status: accepted · Amended 2026-11-26 (the pin; where the layer table is; which
+shared pieces have moved to the core)
 
 ## Context
 
@@ -43,3 +44,20 @@ long-form writing app needs all of them, plus a project made of many documents.
 
 The core changes its project container in a way that serves many-document projects directly, or a
 third app needs the same folder format.
+
+## Amended 2026-11-26
+
+The decision stands. Since it was written:
+
+- **The pin.** The app builds on core v0.1.18, not v0.1.1. The pin is the tag on the `jcj-` lines
+  of `Cargo.toml`; `cargo xtask core-pin` says how far behind the newest core it is.
+- **The layer table.** It is in `AGENTS.md` ("Where each crate's code goes") and in `APP_LAYERS`
+  in `xtask/src/main.rs`, which the check reads. Plan section 5.2 shows the table as first
+  planned.
+- **Wordsmith Book** builds on `manuscript-model` as well as `manuscript-format`, at a
+  `book-view` tag (`docs/book-handoff.md`), so the model stays free of interface and engine code
+  too.
+- **Shared ideas.** The binder tree, the verifier and the entries layer have moved to the core
+  (`jcj_shell::tree`, `jcj_features::verify`, `jcj-entries`) and this app uses the core's. The
+  outline table and the stitched view are still here, marked. `docs/core-candidates.md` lists
+  every marked piece with its core issue and state.

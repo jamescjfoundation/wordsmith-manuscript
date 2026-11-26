@@ -61,3 +61,8 @@ with its word and scene counts; give it a synopsis, label and status like any it
 on the corkboard and in the outline. To change it, Open in Another App opens it in Wordsmith
 Script; when Script saves, the changes show here. Screenplays are not part of the manuscript's
 exports.
+
+Wordsmith Script's file format has numbered versions. If a script was saved in a newer format
+than your Wordsmith Manuscript reads, the item says so, naming both formats, instead of showing
+text that might be wrong; the file itself is kept untouched. Update Wordsmith Manuscript to read
+it.

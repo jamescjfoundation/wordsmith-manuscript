@@ -1,6 +1,7 @@
 # 0007: Series and a shared story bible
 
-Date: 2026-11-24. Status: accepted.
+Date: 2026-11-24 · Status: accepted · Amended 2026-11-26 (the entries layer is in the core; no
+Script project joins a series yet)
 
 ## Context
 
@@ -39,3 +40,9 @@ folder's backup beside it.
 
 Script joins series (the entries layer in the core), or writers want parts of a bible private to
 one book.
+
+## Amended 2026-11-26
+
+The entries layer has been in the core since core release 0.1.4 (`jcj-entries`), so the
+condition under "Script" is met. No Wordsmith Script project joins a series yet: Script does
+not read or write a series folder. Only Manuscript projects join.

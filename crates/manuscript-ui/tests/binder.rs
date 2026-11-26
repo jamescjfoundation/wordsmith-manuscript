@@ -7,11 +7,11 @@ use std::time::Instant;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use jcj_shell::egui;
+use jcj_shell::tree::Zone;
 use serde_json::{Value, json};
 use wordsmith_manuscript_model::{Area, Item, ItemId, Kind, Place, Project, Role};
 use wordsmith_manuscript_ui::binder::{self, BinderView, Node};
 use wordsmith_manuscript_ui::session::Session;
-use wordsmith_manuscript_ui::tree::Zone;
 
 fn id(n: u64) -> ItemId {
     ItemId::from_counter(n)

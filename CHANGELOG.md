@@ -12,7 +12,9 @@ Beyond the single book. No format change: 1.0 reads and writes schema 3.
 - The story bible's general layer now comes from the core (`jcj-entries`, core 0.1.4), ready for
   Wordsmith Script's characters.
 - Screenplays in a project: Wordsmith Script files kept as Script wrote them, shown read-only
-  with their counts, opened in Script to edit.
+  with their counts, opened in Script to edit. A script saved in a newer format than this
+  version reads is refused with a message naming both formats, never shown with words that may
+  be wrong; braces in a script of Script's first format are shown as typed.
 - Relationships between bible entries, read from both sides.
 - Thread lanes (plot threads or points of view) and a timeline of the story's own dates.
 - Suggested bible links from the names a scene mentions.

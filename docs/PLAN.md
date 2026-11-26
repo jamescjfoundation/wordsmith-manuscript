@@ -2,8 +2,8 @@
 
 As of 2026-11-24. Status: accepted as the build plan; changed only by pull request.
 
-Wordsmith Manuscript is the J. C. J. Foundation's open-source app for writing novels and other long
-work: a binder of parts, chapters and scenes; index cards on a corkboard; an outline table; a story
+Wordsmith Manuscript is The James C. J. Foundation's open-source app for writing novels and other
+long work: a binder of parts, chapters and scenes; index cards on a corkboard; an outline table; a story
 bible of characters, places and plot threads beside the text; word targets; snapshots; and exports
 that give an editor a standard manuscript and give Wordsmith Book a finished book to typeset.
 
@@ -202,6 +202,12 @@ Each layer calls only the layers under it; `cargo xtask layers` gets this app's 
 
 `manuscript-format` must stay free of interface and engine code: Wordsmith Book depends on it.
 
+> Note, 2026-11-26: this is the table as planned. The table in force is in `AGENTS.md` ("Where
+> each crate's code goes") and in `APP_LAYERS` in `xtask/src/main.rs`, which
+> `cargo xtask app-layers` reads. It differs: the model also uses `jcj-entries`, each row lists
+> every `jcj-` crate it may use, and Wordsmith Book builds on the model as well as the format
+> crate.
+
 ### 5.3 What the core gives Manuscript
 
 | Need | Core crate | How Manuscript uses it |
@@ -244,6 +250,9 @@ pull request in Script.
 
 "Build in app first" items are marked `// core-candidate:` in code with a core issue labelled
 `core-candidate`, and move once they work and a second app wants them.
+
+> Note, 2026-11-26: this is the table as planned. What each change's state is now, which pieces
+> have moved to the core, and every marker with its issue: `docs/core-candidates.md`.
 
 ### 5.5 The stitched view (C8)
 

@@ -43,9 +43,9 @@ the Heading 1 style and the texts' `_underscored_` words in italic.
 **Still to add:** DOCX, ODT and RTF versions saved by at least two different word processors (plan
 step M0.5). The build machine has no word processor, so these come from a person who has them: open
 `novels/pride-and-prejudice.txt` in each, apply Heading 1 to the chapter titles, save as DOCX, ODT
-and RTF, and add the files here with the program's name and version written as "an open-source
-word processor, version N" or similar (no product names in the repository). Remove the program's
-name from the files' generator metadata before committing.
+and RTF, and add the files here with the program's name and version (naming a program to state
+where a file came from is allowed, `AGENTS.md`, own rule 1). Remove any person's name, user name
+and machine detail from the files' metadata before committing.
 
 ## Written-for-test inputs
 
@@ -64,3 +64,24 @@ Written for the test: `schema-1/The Lighthouse.wsm` (a chapter of two scenes wit
 comment and a bible entry, as schema 1 writes them) and `schema-2/The Lighthouse.wsm` (the same,
 schema 2, with a revision pass mark and the project's passes). `crates/manuscript-format/tests/versions.rs`
 opens both, checks every word, and saves them as the current schema.
+
+### Wordsmith Script files, one per format version (`tests/fixtures/scripts/`)
+
+Manuscript reads Wordsmith Script's `.wss` files with its own reader
+(`crates/manuscript-io/src/screenplay.rs`). `crates/manuscript-io/tests/screenplay.rs` reads one
+file per version of Script's format: every version the reader accepts must have a file here, and
+so must the first version it refuses.
+
+| File | Format | Where it came from |
+| --- | --- | --- |
+| `v1-short.wss` | 1 | Copied unchanged from the Wordsmith Script repository, `crates/wordsmith-format/tests/fixtures/v1-short.wss` (written for Script's tests; MIT OR Apache-2.0), on 2026-11-26 |
+| `v2-notes.wss` | 2 | The same folder's `v2-notes.wss`, copied unchanged the same day |
+| `v3-revisions.wss` | 3 | The same folder's `v3-revisions.wss`, copied unchanged the same day |
+| `v4-styles.wss` | 4 | The same folder's `v4-styles.wss`, copied unchanged the same day |
+| `v5-ext.wss` | 5 | The same bytes as Script's fixture of that name (`crates/wordsmith-format/tests/fixtures/v5-ext.wss` in wordsmith-script): the settings' `ext` and `trackChanges`, a note's anchor, escapes, an empty line inside a paragraph |
+| `v6-newer.wss` | 6 | Written for the test: `v5-ext.wss` with the first line naming format 6. No format 6 exists; the file stands for one the reader was not written for, and must be refused |
+
+The copies are test data, not code, and are never edited here: when Script changes one of its
+fixtures, the copy is taken again. When Script adds a format version, its fixture for that
+version is copied here in the change that teaches the reader the new version, and the "newer"
+file moves up one.

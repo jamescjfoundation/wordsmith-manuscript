@@ -21,6 +21,11 @@ pub fn chars_no_spaces(text: &str) -> usize {
 
 /// The words of `text` in order, each exactly as written (punctuation attached), by the same
 /// rule as [`count`]: `words(t).len() == count(t)` for text without Han ideographs or kana.
+///
+/// core-candidate: open-source-core#31. This is the rule of the core's word-for-word check
+/// (`jcj_features::verify::words`), written again because this crate may not depend on
+/// `jcj-features`. `manuscript-io/tests/words.rs` keeps the two the same until the core offers
+/// the list where a model crate can use it.
 pub fn words(text: &str) -> Vec<String> {
     text.split(char::is_whitespace).filter(|w| w.chars().any(char::is_alphanumeric)).map(str::to_owned).collect()
 }

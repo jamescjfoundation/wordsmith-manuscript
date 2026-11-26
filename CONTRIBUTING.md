@@ -38,6 +38,7 @@ Manuscript's own.
 | `docs/book-handoff.md` | The contract with Wordsmith Book, which builds on the model and format crates |
 | `docs/guide` | The user guide |
 | `docs/decisions` | Why things are the way they are |
+| `docs/core-candidates.md` | Every core change asked for and every `core-candidate` marker, with its core issue and state |
 | `docs/progress.md` | One line per finished step |
 | `tests/fixtures`, `tests/golden` | Public-domain and written-for-test inputs (`docs/fixtures.md`); reviewed reference outputs (`docs/golden.md`) |
 

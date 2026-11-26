@@ -55,7 +55,7 @@ fn main() -> ExitCode {
             name: NAME,
             tagline: "Write novels and other long work",
             repo: "jamescjfoundation/wordsmith-manuscript",
-            developer: "The J. C. J. Foundation",
+            developer: "The James C. J. Foundation",
             version: env!("CARGO_PKG_VERSION"),
             // Updates are installed in place on Linux and Windows; on macOS the update check
             // offers the download.

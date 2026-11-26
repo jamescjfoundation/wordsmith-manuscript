@@ -2,7 +2,7 @@
 //! A table of rows with columns the caller defines: sort by a column, edit a cell in place, drag
 //! rows to reorder, rows indented as a tree, and only the rows in view drawn.
 //!
-//! core-candidate: open-source-core issue #7 (C6). Nothing here knows about manuscripts.
+//! core-candidate: open-source-core#7 (C6). Nothing here knows about manuscripts.
 
 use std::hash::Hash;
 

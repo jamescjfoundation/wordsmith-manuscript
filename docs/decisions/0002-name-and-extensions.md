@@ -1,6 +1,6 @@
 # 0002: The name and the file extensions
 
-Date: 2026-11-24. Status: accepted.
+Date: 2026-11-24 · Status: accepted
 
 ## Context
 

@@ -15,4 +15,7 @@ pub mod notes;
 pub mod opml;
 pub mod screenplay;
 pub mod standard;
-pub mod verify;
+
+/// The word-for-word check (plan section 8, own rule 2): the core's, under the name this crate
+/// has always given it. Every import and export here proves its words with it.
+pub use jcj_features::verify;

@@ -1,6 +1,6 @@
 # 0003: Our own reader for the text dialect
 
-Date: 2026-11-24. Status: accepted.
+Date: 2026-11-24 · Status: accepted
 
 ## Context
 
