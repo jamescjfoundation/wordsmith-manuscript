@@ -7,7 +7,7 @@ section 9.2). Manuscript writes the words and structure; Book designs and typese
 
 1. **Book opens the Manuscript project directly**: a project folder (`.wsm`) or a packed project
    (`.wsmz`), through `wordsmith-manuscript-format`'s read-only `book` module, depended on at a
-   release tag of this repository:
+   `book-view` tag of this repository (see [Tags](#tags)):
    - `book::open_folder(path)` and `book::open_packed(bytes)` give a `book::Book`;
    - `book::from_project(&project)` gives the same from a project in memory.
    EPUB is only an export, never the hand-off. Book converts its own DOCX, Markdown and text
@@ -83,14 +83,45 @@ project; the report lists the metadata Book needs that is not set yet.
 
 ## Versions
 
-The book view has its own version; Book declares which versions it reads. A change that breaks
-Book raises the version and is a minor release of this repository with a "What Book must do"
-note in `CHANGELOG.md`, as the core's changelog does for apps.
+The book view has its own version (`book::VERSION`); Book declares which versions it reads. A
+change that breaks Book raises the version and is a minor release of this repository with a
+"What Book must do" note in `CHANGELOG.md`, as the core's changelog does for apps.
 
 | Version | Manuscript release | Changes |
 | --- | --- | --- |
 | 1 | 0.1 | First version |
 
+## Tags
+
+Book names a tag of this repository on its two `wordsmith-manuscript-` lines. The tags are named
+`book-view-<view version>.<count>`. They are not release tags: no release of Manuscript has been
+published yet. A tag Book may name is never moved or deleted.
+
+Book holds one core release, so the tag it names must be on the core release Book builds on.
+When Manuscript moves to a newer core, the next tag is cut on that commit and Book follows.
+
+| Tag | Book view | Core release | Why it was cut |
+| --- | --- | --- | --- |
+| `book-view-1` | 1 | v0.1.4 | The first book view |
+| `book-view-1.1` | 1 | v0.1.16 | Manuscript moved to a newer core |
+| `book-view-1.2` | 1 | v0.1.17 | Manuscript moved to a newer core |
+
+**Today:** the scheme is only what this table shows, and nothing in this repository's gate builds
+Book, so a break is found when Book moves to a new tag.
+
+## How this contract changes
+
+Manuscript owns this contract
+([project decision 0004](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0004-apps-that-depend-on-apps.md),
+[Route B](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-b)).
+
+- What Book needs is asked for in an issue in this repository. The change is made here, lands
+  here first and is tagged; Book then moves to the tag.
+- A change here to `manuscript-model`, `manuscript-format`, the project schema or the book view
+  is checked against this file before it lands. For anything Book must follow, an issue is opened
+  in the Book repository.
+
 ## Review
 
-This contract awaits review by a person from the Book side (plan step M6.3).
+The Book side's review of this contract is `docs/handoff-review.md` in the Book repository. It
+awaits a person's sign-off there (plan step M6.3).

@@ -11,9 +11,11 @@ cargo xtask ci                   # the full gate (CI runs the same)
 cargo xtask ci --changed         # only the packages your change affects, and their dependents
 cargo run -p wordsmith-manuscript                # the desktop app
 cargo run -p wordsmith-manuscript-cli -- help    # the command line
+cargo xtask screenshots                          # draw the README's pictures again (docs/images/)
 ```
 
-`cargo xtask help` lists every task.
+`cargo xtask help` lists every task. `AGENTS.md` has the rules: the project's, the core's and
+Manuscript's own.
 
 ## Where things are
 
@@ -24,11 +26,20 @@ cargo run -p wordsmith-manuscript-cli -- help    # the command line
 | `crates/manuscript-io` | Import mapping, document sets, verification, exports |
 | `crates/manuscript-ui` | The views, ribbon tabs and panels |
 | `apps/manuscript`, `apps/manuscript-cli` | The desktop app and the command line |
+| `apps/manuscript-web` | A placeholder for the web build, which waits for the core |
+| `assets/brand` | Copies from the Wordsmith brand kit, and the app's own theme and derived icons (`AGENTS.md`, own rule 5) |
+| `assets/i18n` | The interface's translations |
+| `packaging` | What the release needs on Linux, macOS and Windows |
+| `tools` | Scripts that make the fixtures and the derived icons |
+| `xtask` | The gate; the shared modules in it are the core's |
 | `docs/PLAN.md` | The build plan |
 | `docs/SPEC.md` | How the app behaves |
 | `docs/format.md` | The project folder and the text dialect |
+| `docs/book-handoff.md` | The contract with Wordsmith Book, which builds on the model and format crates |
+| `docs/guide` | The user guide |
 | `docs/decisions` | Why things are the way they are |
-| `tests/fixtures` | Public-domain and written-for-test inputs (`docs/fixtures.md`) |
+| `docs/progress.md` | One line per finished step |
+| `tests/fixtures`, `tests/golden` | Public-domain and written-for-test inputs (`docs/fixtures.md`); reviewed reference outputs (`docs/golden.md`) |
 
 <!-- BEGIN open-source-core: contributing -->
 <!-- Owned by open-source-core (template/CONTRIBUTING.md). Change it there, never in a copy: `cargo xtask sync` rewrites the copies. -->
@@ -77,11 +88,18 @@ than "as discussed".
 
 ## Wordsmith Manuscript's own rules
 
+These add to the block above; `AGENTS.md` has them in full.
+
 - Private manuscripts may be used only in local runs from `.private/`, which Git ignores. Each
   fixture in `tests/fixtures` is recorded in `docs/fixtures.md`.
-- Every name in the interface, help, templates and icons is our own. Do not use another product's
-  names or distinctive feature names.
-- Every finished step adds a line to `docs/progress.md`.
+- Every interface name, menu label, feature name, template and icon is our own, never another
+  product's name or its distinctive feature name. Naming another program or file format to state
+  a fact, such as what the app opens, is fine
+  ([project decision 0003](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0003-naming-other-companies-programs-and-formats.md)).
+- Every finished step adds a line to `docs/progress.md`. That is beside the block's
+  `CHANGELOG.md` line, not instead of it: the changelog is for what a writer will notice.
+- Wordsmith Book builds on `manuscript-model` and `manuscript-format`. Check a change to them,
+  to the project schema or to the book view against `docs/book-handoff.md` before it lands.
 
 ## Conduct
 

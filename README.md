@@ -126,17 +126,17 @@ agent server all come from its `jcj-` crates. This repository holds what is abou
 writing: the binder and its roles, the project format, the stitched view, the corkboard, outline,
 lanes and timeline, the story bible's types, compile and the standard manuscript, import mapping
 and the hand-off to Wordsmith Book. `AGENTS.md` says how a change that belongs in the core is
-made.
+made, how the Wordsmith repositories fit together, and what Wordsmith Book relies on here.
 
-Before merging anything to `main`, run the gate:
+Before anything goes to `main`, run the gate:
 
 ```sh
 cargo xtask ci
 ```
 
 It runs rustfmt, the crate-root lint check, a check that no local core link is left, a check that
-the settings shared with the core match the pinned core release (`cargo xtask sync --check`), the
-layers checks (no upstream crate is named here, and each Manuscript crate uses only the layers
+every core dependency names one release (`cargo xtask core-pin`), a check that the files and rules
+shared with the core match the pinned core release (`cargo xtask sync --check`), the layers checks (no upstream crate is named here, and each Manuscript crate uses only the layers
 under it), the asset attribution check, the privacy check, the license allowlist, clippy and all
 tests. CI also runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) for licenses,
 security advisories and crate sources.

@@ -39,7 +39,7 @@ const TASKS: &[(&str, &str)] = &[
     ("core-pin", "every jcj- dependency names one core release tag, and Cargo.lock holds one core"),
     ("sync", "shared settings and the patch block match the pinned core release"),
     ("layers", "only jcj- interfaces of the core are used, never upstream crates or jcj-upstream"),
-    ("app-layers", "each Manuscript crate uses only the layers under it (plan section 5.2)"),
+    ("app-layers", "each Manuscript crate uses only the layers under it (the table in AGENTS.md)"),
     ("assets", "every file under assets/ is named in ATTRIBUTION.md"),
     ("privacy", "no personal details or secrets in files or commit identities"),
     ("licenses", "every dependency's license is on the allowlist"),
@@ -71,7 +71,7 @@ fn main() -> ExitCode {
             Some((n, _)) => run_task(n, &root, &Affected::All),
             None => {
                 println!(
-                    "usage: cargo xtask <ci [--changed] [--base <ref>] | dev-link <core> | dev-unlink | sync [--check] | deny | install-hooks | screenshots>"
+                    "usage: cargo xtask <ci [--changed] [--base <ref>] | dev-link <core> | dev-unlink | sync [--check] | core-pin [--behind] | deny | install-hooks | screenshots | third-party-licenses [file]>"
                 );
                 for (name, about) in TASKS {
                     println!("  {name:<12} {about}");
@@ -208,8 +208,9 @@ fn check_licenses(root: &Path) -> TaskResult {
     report(failures, "licenses are on the allowlist")
 }
 
-/// Wordsmith Manuscript's layers (plan section 5.2): which of the app's own crates and which core
-/// crates each package may use directly. Anything else that is ours or the core's is a failure.
+/// Wordsmith Manuscript's layers (the table in AGENTS.md says the same): which of the app's own
+/// crates and which core crates each package may use directly. Anything else that is ours or the
+/// core's is a failure.
 const APP_LAYERS: &[(&str, &[&str])] = &[
     ("wordsmith-manuscript-model", &["jcj-doc", "jcj-entries"]),
     ("wordsmith-manuscript-format", &["wordsmith-manuscript-model", "jcj-doc", "jcj-project"]),
@@ -255,7 +256,7 @@ fn check_app_layers(root: &Path) -> TaskResult {
         for dep in util::direct_deps(root, pkg)? {
             let ours = dep.starts_with("wordsmith-manuscript") || dep.starts_with("jcj-");
             if ours && !allowed.contains(&dep.as_str()) {
-                failures.push(format!("{pkg} depends on {dep}, which is not under it (plan section 5.2)"));
+                failures.push(format!("{pkg} depends on {dep}, which is not under it (the table in AGENTS.md)"));
             }
         }
     }

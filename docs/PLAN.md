@@ -137,8 +137,10 @@ own rules; `AGENTS.md` in this repository carries them for agents (step M0.1).
    the word would fit. Generic vocabulary (binder, corkboard, outline, inspector, snapshot, target,
    keyword, label, status, collection) is fine. Behavior comes from `docs/SPEC.md` (step M0.3),
    which is built from public manuscript conventions and our own design. Where the spec is silent,
-   design it fresh and record a decision. The maintainers keep the list of names to avoid; if
-   unsure about a name, ask in the pull request.
+   design it fresh and record a decision. Since 2026-11-26 the rule is the project's
+   ([project decision 0003](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0003-naming-other-companies-programs-and-formats.md)):
+   code, documents, commits and fixtures may name another program or file format where that is
+   a fact a reader needs, and no list of names to avoid is kept.
 3. **The writer's words are sacred.** Nothing the writer typed is dropped or rewritten by saving,
    importing, exporting, merging or splitting. Every importer and exporter proves it with a
    word-for-word test (section 11). Text is never "cleaned up" without the writer asking.

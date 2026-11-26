@@ -209,14 +209,20 @@ interface back out is not.
 ## Wordsmith Manuscript's own rules
 
 The build plan is `docs/PLAN.md`; behavior comes from `docs/SPEC.md`; the files are specified in
-`docs/format.md`. Decisions about this app go in `docs/decisions/`, and every finished step adds a
-line to `docs/progress.md`.
+`docs/format.md`. Decisions about this app go in `docs/decisions/`. Every finished step adds a
+line to `docs/progress.md`, which is this repository's record of work. `CHANGELOG.md` is for
+writers: a step whose result a writer will notice also gets its line there.
 
-1. **Our own names and design.** Every interface name, menu label, help text, template and icon is
-   our own. Never use another product's name, trademarks or distinctive feature names, even where
-   the word would fit, and never describe the app as replacing or following another product.
-   Generic vocabulary (binder, corkboard, outline, inspector, snapshot, target, keyword, label,
-   status, collection) is fine. Where the spec is silent, design it fresh and record a decision.
+1. **Our own names and design.** Every interface name, menu label, feature name, template and
+   icon is our own: never another product's name or its distinctive feature name, even where the
+   word would fit, and the app is never described as replacing, following or being inspired by
+   another product. Generic vocabulary (binder, corkboard, outline, inspector, snapshot, target,
+   keyword, label, status, collection) is fine. Code, documents, commit messages and fixtures
+   may name another company, program, service or file format where that is a fact a reader
+   needs: what the app opens or writes, where a convention comes from. People are never named.
+   This is the project's rule
+   ([project decision 0003](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0003-naming-other-companies-programs-and-formats.md)).
+   Where the spec is silent, design it fresh and record a decision.
 2. **The writer's words are sacred.** Nothing the writer typed is dropped or rewritten by saving,
    importing, exporting, merging or splitting. Every importer and exporter proves it with a
    word-for-word test. Text is never "cleaned up" without the writer asking.
@@ -225,6 +231,44 @@ line to `docs/progress.md`.
    reviewed and recorded in `docs/golden.md`.
 4. **Fixtures** are public-domain texts or written for the test, each recorded in
    `docs/fixtures.md`. Private manuscripts stay in `.private/`.
+5. **The brand is the kit's.** The logos, icons and palette card in `assets/brand/`, and the
+   `README.md` beside them, are copies from the Wordsmith brand kit
+   (`brand/wordsmith-manuscript/production/` in the wordsmith repository). They are never
+   edited, recolored or redrawn here: a change starts in the kit and is copied over
+   ([Route F](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-f)). Manuscript's own files in that folder are `tokens.json`,
+   the interface theme in the core's token format (decision 0008; the brand colors in it must
+   match the kit's), and the files `tools/brand-icons.py` makes from the kit's icon: `icon-512.png`,
+   `icon-256.png`, `icon-32.png` and `icon.ico`. Every file under `assets/` is listed in
+   `ATTRIBUTION.md` (`cargo xtask assets`). **Today:** nothing here compares the copies with the
+   kit.
+
+### Manuscript and the other apps
+
+Two other Wordsmith apps meet this one
+([project decision 0004](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0004-apps-that-depend-on-apps.md),
+[Route B](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-b)).
+
+- **Wordsmith Book builds on Manuscript.** Book depends on `wordsmith-manuscript-model` and
+  `wordsmith-manuscript-format` at a tag of this repository named `book-view-1.N`, and reads
+  `.wsm` and `.wsmz` projects through the format crate's `book` module. The contract is
+  `docs/book-handoff.md`, which this repository owns.
+  - A change to either crate, to the project schema or to the book view can break Book. Before
+    it lands, check it against the contract, and open an issue in the Book repository for
+    anything Book must follow.
+  - What Book needs from Manuscript arrives as an issue in this repository. The change is made
+    here, as Manuscript's own change; a change in Book never edits this repository.
+  - Book holds one core release, so it can follow Manuscript to a newer core only through a tag.
+    When Manuscript moves to a newer core, cut the next `book-view-1.N` tag on that commit
+    (`docs/book-handoff.md` lists them). A tag Book may pin is never moved or deleted.
+  - A change that breaks the book view raises its version (`book::VERSION` in
+    `crates/manuscript-format/src/book.rs`), is recorded in `docs/book-handoff.md` with what
+    Book must do, and needs a follow-up in Book.
+  - **Today:** nothing in this repository's gate builds Book, so a break shows only when Book
+    moves to a new tag. No release tag exists yet; the `book-view` tags are not releases.
+- **Manuscript reads Wordsmith Script's `.wss` files** (`crates/manuscript-io/src/screenplay.rs`)
+  for screenplays kept in a project. The format is Script's (`docs/format.md` in the Script
+  repository). What Manuscript needs of it is asked for in an issue there, never copied from
+  Script's code.
 
 ### Where each crate's code goes
 
@@ -232,10 +276,13 @@ line to `docs/progress.md`.
 | --- | --- | --- | --- |
 | `manuscript-model` | 1 | Project, binder, roles, metadata, targets, bible entries, links, the semantic text of an item | `jcj-doc`, `jcj-entries` |
 | `manuscript-format` | 2 | The project folder, the text dialect, migrations, limits, packing, the read-only book view | model, `jcj-doc`, `jcj-project` |
-| `manuscript-io` | 3 | Import mapping, document sets, the verifier, exports, the standard manuscript layout | format, model, `jcj-interchange`, `jcj-layout`, `jcj-output`, `jcj-features`, `jcj-proof` |
-| `manuscript-ui` | 4 | Views, commands, ribbon tabs, panels, agent tools | everything below, `jcj-engine`, `jcj-shell`, `jcj-theme`, `jcj-board`, `jcj-agents` |
-| `apps/*` | 5 | The desktop app, the command line | the crates above |
+| `manuscript-io` | 3 | Import mapping, document sets, the verifier, exports, the standard manuscript layout, the `.wss` reader | format, model, `jcj-doc`, `jcj-project`, `jcj-interchange`, `jcj-layout`, `jcj-output`, `jcj-features`, `jcj-proof` |
+| `manuscript-ui` | 4 | Views, commands, ribbon tabs, panels, agent tools | io, format, model, everything io may use, `jcj-engine`, `jcj-shell`, `jcj-theme`, `jcj-board`, `jcj-agents` |
+| `apps/manuscript`, `apps/manuscript-cli`, `apps/manuscript-web` | 5 | The desktop app, the command line, a placeholder for the web build | the crates above, and the `jcj-` crates they use directly (`jcj-shell`, `jcj-interchange`, `jcj-agents`) |
 
-`manuscript-format` never depends on interface or engine code: Wordsmith Book depends on it.
-`cargo xtask app-layers` checks the table. Code that a second app may want is marked
-`// core-candidate:` with the core issue it belongs to (plan section 5.4).
+`cargo xtask app-layers` enforces rows 1 to 4: its table is `APP_LAYERS` in `xtask/src/main.rs`,
+and this one must say the same. It does not check the programs in `apps/`. A crate of ours or of
+the core that a row does not list is a failure; other libraries are not its business.
+`manuscript-model` and `manuscript-format` never depend on interface or engine code: Wordsmith
+Book builds on them. The core changes Manuscript has asked for, each with its core issue, are in
+plan section 5.4.
