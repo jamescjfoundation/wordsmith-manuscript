@@ -284,22 +284,37 @@ Two other Wordsmith apps meet this one
 [Route B](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-b)).
 
 - **Wordsmith Book builds on Manuscript.** Book depends on `wordsmith-manuscript-model` and
-  `wordsmith-manuscript-format` at a tag of this repository named `book-view-1.N`, and reads
-  `.wsm` and `.wsmz` projects through the format crate's `book` module. The contract is
-  `docs/book-handoff.md`, which this repository owns.
-  - A change to either crate, to the project schema or to the book view can break Book. Before
-    it lands, check it against the contract, and open an issue in the Book repository for
-    anything Book must follow.
+  `wordsmith-manuscript-format` at a tag of this repository, and reads `.wsm` and `.wsmz`
+  projects through them. The contract is `docs/book-handoff.md`, which this repository owns. It
+  lists every item of the two crates Book may use, what the book view gives, and the formats
+  and versions Book reads and writes. Anything not listed may change without notice.
+  - A change to either crate, to the project schema or to the book view can break Book. Two
+    checks say so before it lands. The contract test,
+    `crates/manuscript-format/tests/book_contract.rs`, is in the gate: it uses every listed
+    item the way Book does and fails when its list and the document's differ. The workflow
+    `book-consumer.yml` runs Book's own gate against this checkout when a change touches the
+    two crates or the root `Cargo.toml`, and when run by hand.
+  - An item joins the contract by its row in the document and its use in the test, in one
+    change. For anything Book must follow, open an issue in the Book repository.
   - What Book needs from Manuscript arrives as an issue in this repository. The change is made
     here, as Manuscript's own change; a change in Book never edits this repository.
-  - Book holds one core release, so it can follow Manuscript to a newer core only through a tag.
-    When Manuscript moves to a newer core, cut the next `book-view-1.N` tag on that commit
-    (`docs/book-handoff.md` lists them). A tag Book may pin is never moved or deleted.
-  - A change that breaks the book view raises its version (`book::VERSION` in
-    `crates/manuscript-format/src/book.rs`), is recorded in `docs/book-handoff.md` with what
-    Book must do, and needs a follow-up in Book.
-  - **Today:** nothing in this repository's gate builds Book, so a break shows only when Book
-    moves to a new tag. No release tag exists yet; the `book-view` tags are not releases.
+  - **Tags.** A tag Book may pin is named `book-view-<view version>.<count>`: the view version
+    is `book::VERSION`, and the count rises by one with each tag (`book-view-1`,
+    `book-view-1.1`, ...). Cut the next one when Manuscript moved to a newer core (Book holds
+    one core release, so it can follow only through a tag), when the contract changed, or when
+    a change Book asked for landed. A person or an agent cuts it, annotated, on a commit of
+    `main` where the full gate and the Book consumer workflow both passed, and adds its row to
+    the table in `docs/book-handoff.md`. A tag is never moved or deleted: the repository's
+    ruleset refuses it for `book-view-*` and `v*`. The `book-view` tags are not releases; once
+    Manuscript has releases, a release tag listed in that table is one Book may pin too.
+  - A change that breaks a listed item or the book view raises the view's version
+    (`book::VERSION` in `crates/manuscript-format/src/book.rs`), is recorded in
+    `docs/book-handoff.md` and `CHANGELOG.md` with what Book must do, and needs a follow-up in
+    Book. A new project schema is a change Book must follow as well: the document says how.
+  - **Today:** the contract's list is kept in step with Book's code by hand. Right after a core
+    move the workflow can pass only against a branch of Book that has moved too (its `book-ref`
+    input). Nothing makes a release of Manuscript that writes a new schema wait for a Book that
+    reads it. No release tag exists yet.
 - **Manuscript reads Wordsmith Script's `.wss` files** (`crates/manuscript-io/src/screenplay.rs`)
   for screenplays kept in a project. Script owns the format (`docs/format.md` in the Script
   repository) and numbers its versions; the reader here is Manuscript's own.

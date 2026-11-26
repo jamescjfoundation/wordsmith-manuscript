@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! The book view (plan section 9.2, `docs/book-handoff.md`): a read-only view of a project for
-//! Wordsmith Book. Book opens a project folder or a packed `.wsmz` through this module only, at a
-//! release tag of this repository, and never writes the project.
+//! Wordsmith Book. Book reads a project folder or a packed `.wsmz` with this crate, at a tag of
+//! this repository, asks for its view here, and never writes the writer's project.
 //!
 //! What it gives: the book's metadata; its structure (front matter, parts, chapters and scenes,
 //! back matter), each with its role, title, number and stable id; the content as semantic text
-//! (the text dialect's blocks and marks, notes kept as notes); and the assets.
+//! (the text dialect's blocks and marks, notes kept as notes); and the assets. Revision pass
+//! marks are taken off. A comment's anchor stays on the words it is on, without the comment.
 //!
-//! The view is versioned ([`VERSION`]): a change Book must follow raises it and is a minor
-//! release of this repository with a "What Book must do" note.
+//! `docs/book-handoff.md` is the contract: which items here Book may use, and what follows
+//! from a change to one. `tests/book_contract.rs` uses each of them. The view is versioned
+//! ([`VERSION`]): a change Book must follow raises it, with a "What Book must do" note.
 
 use std::collections::BTreeMap;
 use std::path::Path;

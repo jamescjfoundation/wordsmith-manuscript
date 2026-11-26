@@ -104,7 +104,9 @@ These add to the block above; `AGENTS.md` has them in full.
 - Every finished step adds a line to `docs/progress.md`. That is beside the block's
   `CHANGELOG.md` line, not instead of it: the changelog is for what a writer will notice.
 - Wordsmith Book builds on `manuscript-model` and `manuscript-format`. Check a change to them,
-  to the project schema or to the book view against `docs/book-handoff.md` before it lands.
+  to the project schema or to the book view against `docs/book-handoff.md` before it lands. The
+  contract test in the gate and the "Book consumer" workflow, which runs Book's own gate against
+  the change, do most of that.
 
 ## Conduct
 

@@ -1,0 +1,110 @@
+# Wordsmith Book's gate, run against this checkout. Manuscript's own workflow: the core owns
+# ci.yml and core-pin.yml, and an app's own jobs go in a file of its own.
+#
+# Wordsmith Book builds on two crates of this repository, wordsmith-manuscript-model and
+# wordsmith-manuscript-format, at a tag (docs/book-handoff.md is the contract). A change to
+# either crate can break Book, and this repository's own gate cannot see that: it holds a test
+# of the contract's list, not Book's code. So this workflow checks out Wordsmith Book, links it
+# to the two crates of this checkout and runs Book's whole gate. A change that breaks Book
+# fails here, before it lands, and not when Book next moves to a new tag.
+#
+# When it runs:
+#
+# - on a pull request, and on a push to main, that touches one of the two crates, the root
+#   Cargo.toml (which holds the versions the two crates build on) or this file;
+# - by hand (Actions, "Book consumer", "Run workflow"), against any branch here and any branch,
+#   tag or commit of Book. A tag Book may pin is cut only on a commit this workflow passed on.
+#
+# The paths matter: Book's gate builds and tests all of Book, which takes most of an hour on a
+# hosted runner. Nothing is cached, because a run is rare and the caches of the build that runs
+# on every push are worth more.
+#
+# How the link works: Book names this repository as a provider in its xtask/src/main.rs, so
+# `cargo xtask dev-link manuscript=<folder>` in Book writes a Cargo patch into a folder Git
+# ignores, and `cargo xtask ci --linked` runs Book's gate against it (core decision 0015; both
+# commands are the core's, from release 0.1.20). No file Git tracks is changed in either
+# checkout.
+#
+# A build holds one core release. Right after Manuscript moves to a newer core, Book's main
+# still names the older one: the first step says so and stops, and the run is repeated by hand
+# against a branch of Book that has moved (docs/book-handoff.md, "Tags").
+#
+# Only GitHub's own actions, pinned to full commit SHAs, as in the core's workflows. The token
+# can read and nothing else.
+name: Book consumer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/manuscript-model/**"
+      - "crates/manuscript-format/**"
+      - "Cargo.toml"
+      - ".github/workflows/book-consumer.yml"
+  pull_request:
+    paths:
+      - "crates/manuscript-model/**"
+      - "crates/manuscript-format/**"
+      - "Cargo.toml"
+      - ".github/workflows/book-consumer.yml"
+  workflow_dispatch:
+    inputs:
+      book-ref:
+        description: "The branch, tag or commit of Wordsmith Book to build (empty: its default branch)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: book-consumer-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_RETRY: "10"
+  RUST_BACKTRACE: "short"
+
+jobs:
+  book:
+    name: Wordsmith Book's gate against this checkout
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out Wordsmith Manuscript
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: wordsmith-manuscript
+          persist-credentials: false
+      - name: Check out Wordsmith Book
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: jamescjfoundation/wordsmith-book
+          ref: ${{ inputs.book-ref }}
+          path: wordsmith-book
+          persist-credentials: false
+          fetch-depth: 0 # Book's privacy check reads every commit identity
+      - name: One core release in both
+        run: |
+          core() {
+            grep -o 'open-source-core", *\(tag\|rev\) *= *"[^"]*"' "$1/Cargo.toml" | sed 's/.*"\([^"]*\)"$/\1/' | sort -u | tr '\n' ' '
+          }
+          manuscript=$(core wordsmith-manuscript)
+          book=$(core wordsmith-book)
+          echo "Wordsmith Manuscript builds on core: $manuscript"
+          echo "Wordsmith Book builds on core: $book"
+          if [ "$manuscript" != "$book" ]; then
+            echo "::error::Wordsmith Manuscript builds on core $manuscript and this commit of Wordsmith Book on core $book. A build holds one core release, so Book cannot build on this commit yet. Run this workflow by hand with a branch of Book that is on core $manuscript as its book-ref input (docs/book-handoff.md, Tags)."
+            exit 1
+          fi
+      - name: Toolchain
+        working-directory: wordsmith-book
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Link Book to this checkout's crates
+        working-directory: wordsmith-book
+        run: cargo xtask dev-link manuscript=../wordsmith-manuscript
+      - name: Book's gate, linked
+        working-directory: wordsmith-book
+        run: cargo xtask ci --linked
