@@ -349,6 +349,7 @@ being cut as above, because the core moves more often than Manuscript is release
 | `book-view-1.3` | 1 | v0.1.18 | Manuscript moved to a newer core |
 | `book-view-1.4` | 1 | v0.1.20 | Manuscript moved to a newer core |
 | `book-view-1.5` | 1 | v0.1.20 | The contract is written as a list with a test, and the Book consumer workflow exists. The model's word list and comparison are the core's (`jcj_doc`), with the same names and results. Nothing Book uses changed, so Book has nothing to do but move its two lines |
+| `book-view-1.6` | 1 | v0.1.21 | Manuscript moved to a newer core |
 
 ## How this contract is kept
 
