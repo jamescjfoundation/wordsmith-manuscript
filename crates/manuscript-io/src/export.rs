@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use jcj_doc::para::InlineObject;
 use jcj_doc::{Align, CharProps, Document, Paragraph, Part, PartKind};
-use jcj_interchange::Format;
+use jcj_interchange::{EpubOptions, Format, NoteBacklink, NoteNumbering};
 use serde::{Deserialize, Serialize};
 use wordsmith_manuscript_model::doc as mdoc;
 use wordsmith_manuscript_model::{Inline, Inlines, ItemId, Project};
@@ -209,66 +209,55 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
     (doc, left_out)
 }
 
-/// For the EPUB reading copy: each chapter's notes as numbered endnotes at its end, the note
-/// references as superscript numbers. Returns the words this adds (the numbers and the "Notes"
-/// headings), which the word check leaves out.
+/// How the EPUB reading copy shows notes: numbered once through the book, listed at the end of
+/// their chapter under a "Notes" heading, each number where a note is called a link to the note.
+/// The core's writer does all of it (`jcj_interchange::export_epub`) and says which words it
+/// added, so the word check can count exactly those.
+fn reading_copy_notes() -> EpubOptions {
+    EpubOptions::default().note_numbering(NoteNumbering::Continuous).note_heading("Notes").note_backlink(NoteBacklink::None)
+}
+
+/// The word check of an EPUB reading copy: the file's words, read back in the order they stand
+/// in it (`found`), against the manuscript's text (`body`), its notes (`notes`) and the words
+/// the writer added for them (`added`: the note numbers and the "Notes" headings).
 ///
-/// core-candidate: open-source-core#33. The core's EPUB writer keeps notes since release 0.1.12
-/// (core issue #21), but numbers them from 1 in each chapter file and adds the English word
-/// "Back" under each, which a caller can neither change nor learn. This goes when the caller
-/// can choose the numbering and the added words and be told them. `docs/core-candidates.md`.
-fn notes_as_endnotes(doc: &mut Document) -> Vec<String> {
-    let mut added: Vec<String> = Vec::new();
-    let mut body: Vec<Arc<jcj_doc::Block>> = Vec::new();
-    let mut pending: Vec<(u32, u32)> = Vec::new();
-    let mut n = 0u32;
-    let parts = doc.parts.clone();
-    let flush = |body: &mut Vec<Arc<jcj_doc::Block>>, pending: &mut Vec<(u32, u32)>, added: &mut Vec<String>| {
-        if pending.is_empty() {
-            return;
-        }
-        let mut head = Paragraph::with_text("Notes", CharProps { bold: Some(true), ..CharProps::default() });
-        head.props.style = None;
-        body.push(Arc::new(jcj_doc::Block::Para(head)));
-        added.push("Notes".into());
-        for (num, part) in pending.drain(..) {
-            let paras: Vec<Paragraph> = parts.get(&part).map(|p| p.blocks.iter().filter_map(|b| b.as_para().cloned()).collect()).unwrap_or_default();
-            for (k, mut para) in paras.into_iter().enumerate() {
-                para.props.style = None;
-                if k == 0 {
-                    let _ = para.insert_text(0, &format!("{num}. "), &CharProps::default());
-                    added.push(num.to_string());
-                }
-                body.push(Arc::new(jcj_doc::Block::Para(para)));
-            }
-        }
-    };
-    for block in std::mem::take(&mut doc.body) {
-        let starts_chapter = block.as_para().is_some_and(|p| p.props.style.as_deref() == Some("Heading1"));
-        if starts_chapter {
-            flush(&mut body, &mut pending, &mut added);
-        }
-        let mut block = block;
-        if let jcj_doc::Block::Para(p) = Arc::make_mut(&mut block) {
-            let refs: Vec<(usize, u32)> = p
-                .objects_with_offsets()
-                .filter_map(|(off, o)| if let InlineObject::NoteRef { id, .. } = o { Some((off, *id)) } else { None })
-                .collect();
-            for (off, id) in refs.into_iter().rev() {
-                n += 1;
-                let _ = p.delete(off, off + jcj_doc::para::OBJ.len_utf8());
-                let sup = CharProps { vert_align: Some(jcj_doc::props::VertAlign::Superscript), ..CharProps::default() };
-                let _ = p.insert_text(off, &n.to_string(), &sup);
-                pending.push((n, id));
-                added.push(n.to_string());
-            }
-        }
-        body.push(block);
+/// Without notes nothing is moved or added, so the file holds the text word for word, in
+/// order. With notes the file holds each note at the end of its chapter and a number directly
+/// after the word a note is called at, which a reader of the file takes for one piece with that
+/// word. So the check is made on letters, and twice: the file holds every letter of the text,
+/// the notes and the added words, each as often, and no other; and the letters of the text
+/// stand in the file in their order.
+fn epub_check(body: &[String], notes: &[String], added: &[String], found: &[String]) -> Check {
+    if notes.is_empty() && added.is_empty() {
+        return Check::of(body, found);
     }
-    flush(&mut body, &mut pending, &mut added);
-    doc.body = body;
-    doc.parts.retain(|_, p| !matches!(p.kind, PartKind::Footnote | PartKind::Endnote));
-    added
+    let letters = |words: &[String]| crate::standard::letters(words.iter().map(String::as_str));
+    let have = letters(found);
+    let mut all_wanted: Vec<String> = letters(body).into_iter().chain(letters(notes)).chain(letters(added)).collect();
+    let mut all_found = have.clone();
+    all_wanted.sort();
+    all_found.sort();
+    let every_letter = Check::of(&all_wanted, &all_found);
+    if !every_letter.passed() {
+        return every_letter;
+    }
+    let text = letters(body);
+    let mut rest = have.iter();
+    match text.iter().position(|letter| !rest.any(|f| f == letter)) {
+        None => every_letter,
+        // The text's letter at `at` does not come after the ones before it.
+        Some(at) => {
+            let around = |from: usize, to: usize| text.get(from.min(text.len())..to.min(text.len())).unwrap_or_default().to_vec();
+            Check::Differs(verify::Difference {
+                at,
+                expected: text.get(at).cloned(),
+                found: None,
+                before: around(at.saturating_sub(verify::CONTEXT), at),
+                expected_after: around(at + 1, at + 1 + verify::CONTEXT),
+                found_after: Vec::new(),
+            })
+        }
+    }
 }
 
 /// An export's result: the file's bytes and its checks.
@@ -618,19 +607,10 @@ pub fn export(p: &Project, o: &Options, target: Target) -> Result<Exported, Stri
         }
     }
     if target == Target::Epub {
-        // Two checks: the reading copy's document holds every letter of the manuscript (notes
-        // moved to chapter ends, plus the note numbers), and the file holds that document, word
-        // for word in order.
-        let added = notes_as_endnotes(&mut doc);
-        let bytes = jcj_interchange::export(target.format(), &doc).map_err(|e| e.to_string())?;
-        let written = verify::document_words(&doc);
-        let mut want: Vec<String> = crate::standard::letters(expected.iter().chain(&added).map(String::as_str));
-        let mut have: Vec<String> = crate::standard::letters(written.iter().map(String::as_str));
-        want.sort();
-        have.sort();
-        let moved = Check::of(&want, &have);
-        let check = if moved.passed() { Check::of(&written, &read_back(target.format(), &bytes)?) } else { moved };
-        return Ok(Exported { bytes, check, left_out });
+        let made = jcj_interchange::export_epub(&doc, &reading_copy_notes()).map_err(|e| e.to_string())?;
+        let found = read_back(target.format(), &made.bytes)?;
+        let check = epub_check(&c.words(), &c.note_words(), &made.added_words, &found);
+        return Ok(Exported { bytes: made.bytes, check, left_out });
     }
     let bytes = jcj_interchange::export(target.format(), &doc).map_err(|e| e.to_string())?;
     let found = read_back(target.format(), &bytes)?;
@@ -648,4 +628,43 @@ fn sorted_if_notes(words: &[String], c: &Compiled) -> Vec<String> {
         v.sort();
     }
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn w(text: &str) -> Vec<String> {
+        verify::words(text)
+    }
+
+    #[test]
+    fn an_epub_without_notes_is_checked_word_for_word_in_order() {
+        let body = w("One two three.");
+        assert_eq!(epub_check(&body, &[], &[], &w("One two three.")), Check::Same(3));
+        assert!(!epub_check(&body, &[], &[], &w("One three two.")).passed());
+        assert!(!epub_check(&body, &[], &[], &w("One two three")).passed(), "punctuation counts");
+        assert!(!epub_check(&body, &[], &[], &w("One two")).passed());
+    }
+
+    #[test]
+    fn an_epub_with_notes_holds_every_letter_and_the_text_in_order() {
+        let (body, notes, added) = (w("She stepped ashore. Later."), w("At dawn."), w("1 Notes 1"));
+        // As a reader of the file sees it: the number joined to the word before it, the notes
+        // after the chapter's text.
+        let file = w("She stepped ashore1. Later. Notes 1 At dawn.");
+        assert!(epub_check(&body, &notes, &added, &file).passed());
+        // A letter missing, a letter too many, a word changed.
+        for bad in [
+            "She stepped ashore1. Later. Notes 1 At daw.",
+            "She stepped ashore1. Later. Notes 1 At dawn. x",
+            "She stopped ashore1. Later. Notes 1 At dawn.",
+        ] {
+            assert!(!epub_check(&body, &notes, &added, &w(bad)).passed(), "{bad}");
+        }
+        // Every letter is there, but the text is out of order.
+        let moved = epub_check(&body, &notes, &added, &w("Later. She stepped ashore1. Notes 1 At dawn."));
+        let Check::Differs(d) = moved else { panic!("the text's words changed places") };
+        assert_eq!(d.expected.as_deref(), Some("L"), "the first letter of the text that does not come in its place: {d}");
+    }
 }

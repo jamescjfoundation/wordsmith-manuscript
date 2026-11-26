@@ -46,6 +46,10 @@ Beyond the single book. No format change: 1.0 reads and writes schema 3.
   - An export is no longer marked as a tool that only reads: it writes a file.
 - The interface language holds for the whole window. With Español chosen, the File page,
   Preferences, the dialogs and the command palette are in Spanish too; they stayed in English.
+- The EPUB reading copy's notes are easier to use: a note's number in the text is a link to the
+  note, the notes at the end of a chapter are a numbered list that reading systems know as
+  endnotes, and "Notes" above them is a heading (it was a line in bold). They are numbered
+  through the book, as before.
 - Not yet: a web version (the core has no web build).
 
 ## 0.3.0 (prepared 2026-11-24; released when a maintainer approves it)

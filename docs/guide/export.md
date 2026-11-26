@@ -8,7 +8,7 @@ read back and checked word for word before the file is kept.
 | Standard manuscript (DOCX, PDF) | Agents, editors and publishers |
 | Word processor (DOCX), OpenDocument (ODT), rich text (RTF) | Other word processors |
 | Markdown, plain text, web page (HTML) | The web and other tools |
-| Reading copy (EPUB) | Reading the draft on a phone or e-reader: each part and chapter on its own page with a contents entry, notes numbered at the end of their chapter |
+| Reading copy (EPUB) | Reading the draft on a phone or e-reader: each part and chapter on its own page with a contents entry. Notes are numbered once through the book and listed under "Notes" at the end of their chapter; a note's number in the text is a link to the note |
 | Book package (`.wsmz`) | Wordsmith Book |
 
 ## Options

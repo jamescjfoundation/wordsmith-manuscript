@@ -143,17 +143,59 @@ fn an_epub_reading_copy_reads_back_word_for_word() {
         (0..z.len()).map(|i| z.by_index(i).unwrap().name().to_owned()).collect()
     };
     assert!(names.iter().filter(|n| n.ends_with(".xhtml")).count() > 50, "{names:?}");
-    let small = export(&small(), &Options { end_mark: true, ..Options::default() }, Target::Epub).unwrap();
-    assert!(small.check.passed(), "{}", small.check);
-    // Notes are kept, as numbered notes at the end of their chapter.
-    let mut z = zip::ZipArchive::new(std::io::Cursor::new(&small.bytes)).unwrap();
-    let mut all = String::new();
+    assert_eq!(Target::from_extension("EPUB"), Some(Target::Epub));
+}
+
+/// Every file of an EPUB as text, by name.
+fn epub_files(bytes: &[u8]) -> std::collections::BTreeMap<String, String> {
+    let mut z = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    let mut out = std::collections::BTreeMap::new();
     for i in 0..z.len() {
         let mut f = z.by_index(i).unwrap();
-        let _ = std::io::Read::read_to_string(&mut f, &mut all);
+        let mut text = String::new();
+        let _ = std::io::Read::read_to_string(&mut f, &mut text);
+        out.insert(f.name().to_owned(), text);
     }
-    assert!(all.contains("1. At dawn."), "the note is in the reading copy");
-    assert_eq!(Target::from_extension("EPUB"), Some(Target::Epub));
+    out
+}
+
+#[test]
+fn an_epub_reading_copy_keeps_notes_at_the_end_of_their_chapter() {
+    // Two chapters, a note in each, and a chapter with none.
+    let mut p = small();
+    for (n, title, text) in [(10, "The Storm", "The wind rose[^a] at noon.\n\n[^a]: From the *north*.\n"), (11, "The Calm", "Nothing moved.\n")] {
+        let id = ItemId::from_counter(n);
+        p.binder.insert(Place::end_of(Area::Manuscript), Item::with_id(id, Kind::Text, title).role(Role::Chapter)).unwrap();
+        p.texts.insert(id, ItemText::with_body(dialect::parse(text)));
+    }
+    let out = export(&p, &Options { end_mark: true, ..Options::default() }, Target::Epub).unwrap();
+    assert!(out.check.passed(), "{}", out.check);
+    let files = epub_files(&out.bytes);
+    let (one, two, three) = (&files["OEBPS/chapter-001.xhtml"], &files["OEBPS/chapter-002.xhtml"], &files["OEBPS/chapter-003.xhtml"]);
+    // Where a note is called: its number, raised, a link to the note.
+    assert!(
+        one.contains(r##"ashore<a class="noteref" epub:type="noteref" role="doc-noteref" id="noteref-1" href="#note-1"><sup>1</sup></a>."##),
+        "{one}"
+    );
+    // At the end of the chapter: a heading, then the notes as a list marked as endnotes for
+    // reading systems, each with its number.
+    assert!(one.contains("<section class=\"notes\" epub:type=\"endnotes\" role=\"doc-endnotes\">\n<h2>Notes</h2>\n<ol>"), "{one}");
+    assert!(one.contains(r#"<li id="note-1" epub:type="endnote"><span class="mark">1</span><p>At dawn.</p>"#), "{one}");
+    // Notes are numbered once through the book, not from 1 in each chapter: the second
+    // chapter's note is number 2, and its list starts there.
+    assert!(
+        two.contains(r##"rose<a class="noteref" epub:type="noteref" role="doc-noteref" id="noteref-1" href="#note-1"><sup>2</sup></a> at noon."##),
+        "{two}"
+    );
+    assert!(two.contains("<h2>Notes</h2>\n<ol start=\"2\">"), "{two}");
+    assert!(two.contains(r#"<li id="note-1" epub:type="endnote"><span class="mark">2</span><p>From the <em>north</em>.</p>"#), "{two}");
+    // A chapter without notes gets no heading and no list, and no word is added under a note.
+    assert!(!three.contains("Notes") && !three.contains("<ol>"), "{three}");
+    assert!(files.values().all(|f| !f.contains("Back")), "no link back is written");
+    // The notes' words are in the file once each.
+    let all: String = files.iter().filter(|(name, _)| name.contains("chapter-")).map(|(_, text)| text.as_str()).collect();
+    assert_eq!(all.matches("At dawn.").count(), 1);
+    assert_eq!(all.matches("From the <em>north</em>.").count(), 1);
 }
 
 #[test]
