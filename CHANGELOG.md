@@ -44,6 +44,8 @@ Beyond the single book. No format change: 1.0 reads and writes schema 3.
     (`execute`, `list_commands` and the rest), which worked on an empty document, are no longer
     listed.
   - An export is no longer marked as a tool that only reads: it writes a file.
+- The interface language holds for the whole window. With Español chosen, the File page,
+  Preferences, the dialogs and the command palette are in Spanish too; they stayed in English.
 - Not yet: a web version (the core has no web build).
 
 ## 0.3.0 (prepared 2026-11-24; released when a maintainer approves it)

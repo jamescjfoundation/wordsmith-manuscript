@@ -200,7 +200,7 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut TypesView) -> Vec<St
         return errors;
     }
     let mut open = true;
-    egui::Window::new(crate::i18n::tr("Entry Types"))
+    egui::Window::new(jcj_shell::i18n::tr("Entry Types"))
         .id(egui::Id::unique("manuscript-entry-types"))
         .open(&mut open)
         .default_size([560.0, 420.0])
@@ -251,9 +251,9 @@ fn edit(ui: &mut Ui, s: &mut Session, v: &mut TypesView, errors: &mut Vec<String
     let original = bible::template(&s.project, &d.kind);
     let used = s.project.entries.values().filter(|e| e.kind == d.kind).count();
     ui.horizontal(|ui| {
-        let l = ui.label(crate::i18n::tr("Name"));
+        let l = ui.label(jcj_shell::i18n::tr("Name"));
         ui.add(egui::TextEdit::singleline(&mut d.title).desired_width(140.0)).labelled_by(l.id);
-        let l = ui.label(crate::i18n::tr("Folder"));
+        let l = ui.label(jcj_shell::i18n::tr("Folder"));
         ui.add(egui::TextEdit::singleline(&mut d.plural).desired_width(140.0)).labelled_by(l.id);
     });
     ui.label(RichText::new(format!("{used} entr{} of this type", if used == 1 { "y" } else { "ies" })).weak());

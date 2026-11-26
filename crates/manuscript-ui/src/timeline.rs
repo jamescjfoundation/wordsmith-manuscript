@@ -78,7 +78,7 @@ pub fn run(s: &mut Session, id: &str, _v: &Value) -> Option<Outcome> {
 pub fn view(ui: &mut Ui, s: &mut Session) -> (Option<ItemId>, Vec<String>) {
     let mut open = None;
     let mut errors = Vec::new();
-    ui.heading(crate::i18n::tr("Timeline"));
+    ui.heading(jcj_shell::i18n::tr("Timeline"));
     let Some(field) = date_field(&s.project) else {
         ui.label("The timeline places scenes by a date field, and this project has none yet.");
         if ui.button("Add a Scene Date Field").clicked() {

@@ -159,9 +159,11 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut InboxView) -> (Vec<S
         None => Err("Save the project first: offers come from a file beside its folder.".into()),
     };
     let mut open = true;
-    egui::Window::new(crate::i18n::tr("Offered Fixes")).id(egui::Id::unique("manuscript-offers")).open(&mut open).default_size([560.0, 440.0]).show(
-        ctx,
-        |ui| {
+    egui::Window::new(jcj_shell::i18n::tr("Offered Fixes"))
+        .id(egui::Id::unique("manuscript-offers"))
+        .open(&mut open)
+        .default_size([560.0, 440.0])
+        .show(ctx, |ui| {
             let file = match file {
                 Ok(f) => f,
                 Err(e) => {
@@ -175,7 +177,7 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut InboxView) -> (Vec<S
             egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                 let shown: Vec<&Offer> = file.offers.iter().filter(|o| v.all || matches!(state(&s.project, o), "pending" | "stale")).collect();
                 if shown.is_empty() {
-                    ui.label(crate::i18n::tr("No fixes are waiting."));
+                    ui.label(jcj_shell::i18n::tr("No fixes are waiting."));
                 }
                 for o in shown {
                     let st = state(&s.project, o);
@@ -227,8 +229,7 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut InboxView) -> (Vec<S
             {
                 errors.push(e);
             }
-        },
-    );
+        });
     if !open {
         v.open = false;
     }

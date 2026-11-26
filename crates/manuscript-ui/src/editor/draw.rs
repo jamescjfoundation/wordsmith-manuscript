@@ -535,7 +535,7 @@ impl Editor {
                     }
                 }
                 ui.separator();
-                if ui.button(crate::i18n::tr("Add to Project Words")).clicked() {
+                if ui.button(jcj_shell::i18n::tr("Add to Project Words")).clicked() {
                     self.add_word = Some(word.clone());
                     close = true;
                 }

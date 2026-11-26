@@ -5508,7 +5508,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
- "toml",
  "wordsmith-manuscript-format",
  "wordsmith-manuscript-io",
  "wordsmith-manuscript-model",

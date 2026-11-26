@@ -135,7 +135,7 @@ pub fn view(ui: &mut Ui, s: &Session, v: &mut PageView, selected: Option<ItemId>
     let guard = v.laid.lock();
     let Ok(guard) = guard else { return };
     ui.horizontal(|ui| {
-        ui.heading(crate::i18n::tr("Pages"));
+        ui.heading(jcj_shell::i18n::tr("Pages"));
         let title = if v.whole {
             "the whole manuscript".to_owned()
         } else {
@@ -154,7 +154,7 @@ pub fn view(ui: &mut Ui, s: &Session, v: &mut PageView, selected: Option<ItemId>
                 ));
             }
             None => {
-                ui.label(crate::i18n::tr("Laying out the pages…"));
+                ui.label(jcj_shell::i18n::tr("Laying out the pages…"));
             }
         }
         if busy && guard.is_some() {

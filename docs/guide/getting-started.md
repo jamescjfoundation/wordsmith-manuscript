@@ -49,6 +49,7 @@ also in the command palette and can be given a key (File › Keys).
 
 The interface follows your computer's language when it comes in it, and English otherwise. To
 choose, run Interface Language in the command palette (Interface Language: English, Interface
-Language: Español). The commands, the ribbon, the panels and the windows are translated; anything
-not translated yet shows in English. Your text, its language and its spelling are separate: they
+Language: Español). One language holds for the whole window: the commands, the ribbon, the panels
+and the windows, and also the File page, Preferences, the dialogs and the command palette.
+Anything not translated yet shows in English. Your text, its language and its spelling are separate: they
 follow the project's language (File › Book Details).

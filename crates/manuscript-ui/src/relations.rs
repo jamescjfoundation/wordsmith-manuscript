@@ -133,7 +133,7 @@ pub fn section(ui: &mut Ui, p: &Project, id: ItemId, edit: &mut RelationsEdit) -
     let mut todo = Vec::new();
     let mut open = Vec::new();
     let rels = both_ways(p, id);
-    ui.collapsing(RichText::new(format!("{} ({})", crate::i18n::tr("Relationships"), rels.len())), |ui| {
+    ui.collapsing(RichText::new(format!("{} ({})", jcj_shell::i18n::tr("Relationships"), rels.len())), |ui| {
         for (k, other, own) in &rels {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(k).weak());

@@ -37,26 +37,31 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
         })
         .unwrap_or_default();
     let cmds: &dyn Commands = &*app;
-    widgets::group(ui, shell, &crate::i18n::tr("Paragraph"), |ui, shell| {
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Paragraph"), |ui, shell| {
         let on = |b: bool| b;
-        widgets::small(ui, shell, cmds, &Control::new("write.body").label(crate::i18n::tr("Body")).icon("pilcrow").on(on(block == BlockTag::Body)));
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("write.quote").label(crate::i18n::tr("Quote")).icon("indent").on(matches!(block, BlockTag::Quote { .. })),
+            &Control::new("write.body").label(jcj_shell::i18n::tr("Body")).icon("pilcrow").on(on(block == BlockTag::Body)),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("write.verse").label(crate::i18n::tr("Verse")).icon("lineSpacing").on(matches!(block, BlockTag::Verse { .. })),
+            &Control::new("write.quote").label(jcj_shell::i18n::tr("Quote")).icon("indent").on(matches!(block, BlockTag::Quote { .. })),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("write.aside").label(crate::i18n::tr("Aside")).icon("textBox").on(matches!(block, BlockTag::Aside { .. })),
+            &Control::new("write.verse").label(jcj_shell::i18n::tr("Verse")).icon("lineSpacing").on(matches!(block, BlockTag::Verse { .. })),
+        );
+        widgets::small(
+            ui,
+            shell,
+            cmds,
+            &Control::new("write.aside").label(jcj_shell::i18n::tr("Aside")).icon("textBox").on(matches!(block, BlockTag::Aside { .. })),
         );
         for level in 1..=3u8 {
             let c = Control::with("write.heading", json!({ "level": level }))
@@ -66,14 +71,14 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
             widgets::small(ui, shell, cmds, &c);
         }
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Characters"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::new("write.italic").label(crate::i18n::tr("Italic")).icon("italic"));
-        widgets::small(ui, shell, cmds, &Control::new("write.bold").label(crate::i18n::tr("Bold")).icon("bold"));
-        widgets::small(ui, shell, cmds, &Control::new("write.smallCaps").label(crate::i18n::tr("Small Caps")).icon("case"));
-        widgets::small(ui, shell, cmds, &Control::new("write.strike").label(crate::i18n::tr("Strikethrough")).icon("strike"));
-        widgets::small(ui, shell, cmds, &Control::new("write.plain").label(crate::i18n::tr("Plain")).icon("clear"));
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Characters"), |ui, shell| {
+        widgets::small(ui, shell, cmds, &Control::new("write.italic").label(jcj_shell::i18n::tr("Italic")).icon("italic"));
+        widgets::small(ui, shell, cmds, &Control::new("write.bold").label(jcj_shell::i18n::tr("Bold")).icon("bold"));
+        widgets::small(ui, shell, cmds, &Control::new("write.smallCaps").label(jcj_shell::i18n::tr("Small Caps")).icon("case"));
+        widgets::small(ui, shell, cmds, &Control::new("write.strike").label(jcj_shell::i18n::tr("Strikethrough")).icon("strike"));
+        widgets::small(ui, shell, cmds, &Control::new("write.plain").label(jcj_shell::i18n::tr("Plain")).icon("clear"));
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Link"), |ui, shell| {
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Link"), |ui, shell| {
         widgets::drop(ui, shell, "Link to…", "Link the selected words to a bible entry or a document.", |ui, shell| {
             egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
                 for (title, target) in &targets {
@@ -84,18 +89,18 @@ pub fn write_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
                 }
             });
         });
-        widgets::small(ui, shell, cmds, &Control::new("write.unlink").label(crate::i18n::tr("Remove Link")).icon("textBoxUnlink"));
-        widgets::small(ui, shell, cmds, &Control::new("write.comment").label(crate::i18n::tr("Comment")).icon("comment"));
+        widgets::small(ui, shell, cmds, &Control::new("write.unlink").label(jcj_shell::i18n::tr("Remove Link")).icon("textBoxUnlink"));
+        widgets::small(ui, shell, cmds, &Control::new("write.comment").label(jcj_shell::i18n::tr("Comment")).icon("comment"));
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Read"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::new("view.stitch").label(crate::i18n::tr("As One Text")).icon("readMode"));
-        widgets::small(ui, shell, cmds, &Control::new("view.stitchManuscript").label(crate::i18n::tr("Whole Manuscript")).icon("multiplePages"));
-        widgets::small(ui, shell, cmds, &Control::new("view.split").label(crate::i18n::tr("Split")).icon("sideBySide"));
-        widgets::small(ui, shell, cmds, &Control::new("view.unsplit").label(crate::i18n::tr("One Pane")).icon("onePage"));
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Read"), |ui, shell| {
+        widgets::small(ui, shell, cmds, &Control::new("view.stitch").label(jcj_shell::i18n::tr("As One Text")).icon("readMode"));
+        widgets::small(ui, shell, cmds, &Control::new("view.stitchManuscript").label(jcj_shell::i18n::tr("Whole Manuscript")).icon("multiplePages"));
+        widgets::small(ui, shell, cmds, &Control::new("view.split").label(jcj_shell::i18n::tr("Split")).icon("sideBySide"));
+        widgets::small(ui, shell, cmds, &Control::new("view.unsplit").label(jcj_shell::i18n::tr("One Pane")).icon("onePage"));
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Insert"), |ui, shell| {
-        widgets::big(ui, shell, cmds, &Control::new("write.sceneBreak").label(crate::i18n::tr("Scene Break")).icon("breaks"));
-        widgets::small(ui, shell, cmds, &Control::new("write.lineBreak").label(crate::i18n::tr("Line Break")).icon("pageBreak"));
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Insert"), |ui, shell| {
+        widgets::big(ui, shell, cmds, &Control::new("write.sceneBreak").label(jcj_shell::i18n::tr("Scene Break")).icon("breaks"));
+        widgets::small(ui, shell, cmds, &Control::new("write.lineBreak").label(jcj_shell::i18n::tr("Line Break")).icon("pageBreak"));
     });
 }
 
@@ -107,72 +112,72 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let dim = app.view.dim_in_focus;
     let mode = app.mode;
     let cmds: &dyn Commands = &*app;
-    widgets::group(ui, shell, &crate::i18n::tr("Show"), |ui, shell| {
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Show"), |ui, shell| {
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.editor").label(crate::i18n::tr("Editor")).icon("draft").on(mode == crate::ViewMode::Editor),
+            &Control::new("view.editor").label(jcj_shell::i18n::tr("Editor")).icon("draft").on(mode == crate::ViewMode::Editor),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.corkboard").label(crate::i18n::tr("Corkboard")).icon("columns").on(mode == crate::ViewMode::Corkboard),
+            &Control::new("view.corkboard").label(jcj_shell::i18n::tr("Corkboard")).icon("columns").on(mode == crate::ViewMode::Corkboard),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.outline").label(crate::i18n::tr("Outline")).icon("outline").on(mode == crate::ViewMode::Outline),
+            &Control::new("view.outline").label(jcj_shell::i18n::tr("Outline")).icon("outline").on(mode == crate::ViewMode::Outline),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.board").label(crate::i18n::tr("Board")).icon("canvas").on(mode == crate::ViewMode::Board),
+            &Control::new("view.board").label(jcj_shell::i18n::tr("Board")).icon("canvas").on(mode == crate::ViewMode::Board),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.pages").label(crate::i18n::tr("Pages")).icon("printLayout").on(mode == crate::ViewMode::Pages),
+            &Control::new("view.pages").label(jcj_shell::i18n::tr("Pages")).icon("printLayout").on(mode == crate::ViewMode::Pages),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.lanes").label(crate::i18n::tr("Lanes")).icon("distributeRows").on(mode == crate::ViewMode::Lanes),
+            &Control::new("view.lanes").label(jcj_shell::i18n::tr("Lanes")).icon("distributeRows").on(mode == crate::ViewMode::Lanes),
         );
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.timeline").label(crate::i18n::tr("Timeline")).icon("dateTime").on(mode == crate::ViewMode::Timeline),
+            &Control::new("view.timeline").label(jcj_shell::i18n::tr("Timeline")).icon("dateTime").on(mode == crate::ViewMode::Timeline),
         );
-        widgets::small(ui, shell, cmds, &Control::new("view.drafts").label(crate::i18n::tr("Drafts")).icon("documentTemplate"));
+        widgets::small(ui, shell, cmds, &Control::new("view.drafts").label(jcj_shell::i18n::tr("Drafts")).icon("documentTemplate"));
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Focus"), |ui, shell| {
-        widgets::big(ui, shell, cmds, &Control::new("view.focus").label(crate::i18n::tr("Focus Mode")).icon("focus").on(focus));
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Focus"), |ui, shell| {
+        widgets::big(ui, shell, cmds, &Control::new("view.focus").label(jcj_shell::i18n::tr("Focus Mode")).icon("focus").on(focus));
         widgets::small(
             ui,
             shell,
             cmds,
-            &Control::new("view.typewriter").label(crate::i18n::tr("Typewriter Scrolling")).icon("immersive").on(typewriter),
+            &Control::new("view.typewriter").label(jcj_shell::i18n::tr("Typewriter Scrolling")).icon("immersive").on(typewriter),
         );
-        widgets::small(ui, shell, cmds, &Control::new("view.dimAround").label(crate::i18n::tr("Dim Around the Caret")).icon("shading").on(dim));
+        widgets::small(ui, shell, cmds, &Control::new("view.dimAround").label(jcj_shell::i18n::tr("Dim Around the Caret")).icon("shading").on(dim));
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Theme"), |ui, shell| {
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Theme"), |ui, shell| {
         let theme = jcj_shell::commands::shell_ids::THEME;
-        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "light" })).label(crate::i18n::tr("Light")).icon("interfaceTheme"));
-        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "dark" })).label(crate::i18n::tr("Dark")).icon("darkMode"));
-        widgets::small(ui, shell, cmds, &Control::new("view.sepia").label(crate::i18n::tr("Sepia Page")).icon("pageColor").on(sepia));
+        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "light" })).label(jcj_shell::i18n::tr("Light")).icon("interfaceTheme"));
+        widgets::small(ui, shell, cmds, &Control::with(theme, json!({ "mode": "dark" })).label(jcj_shell::i18n::tr("Dark")).icon("darkMode"));
+        widgets::small(ui, shell, cmds, &Control::new("view.sepia").label(jcj_shell::i18n::tr("Sepia Page")).icon("pageColor").on(sepia));
     });
-    widgets::group(ui, shell, &crate::i18n::tr("Text"), |ui, shell| {
-        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": 1 })).label(crate::i18n::tr("Larger")).icon("grow"));
-        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": -1 })).label(crate::i18n::tr("Smaller")).icon("shrink"));
-        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": 60 })).label(crate::i18n::tr("Wider")).icon("pageWidth"));
-        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": -60 })).label(crate::i18n::tr("Narrower")).icon("margins"));
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("Text"), |ui, shell| {
+        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": 1 })).label(jcj_shell::i18n::tr("Larger")).icon("grow"));
+        widgets::small(ui, shell, cmds, &Control::with("view.textSize", json!({ "by": -1 })).label(jcj_shell::i18n::tr("Smaller")).icon("shrink"));
+        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": 60 })).label(jcj_shell::i18n::tr("Wider")).icon("pageWidth"));
+        widgets::small(ui, shell, cmds, &Control::with("view.width", json!({ "by": -60 })).label(jcj_shell::i18n::tr("Narrower")).icon("margins"));
     });
 }
 
@@ -180,7 +185,7 @@ pub fn view_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
 pub fn bible_tab(app: &mut Manuscript, ui: &mut Ui, shell: &mut Shell) {
     let templates = app.session.as_ref().map(|s| wordsmith_manuscript_model::bible::templates(&s.project.settings)).unwrap_or_default();
     let cmds: &dyn Commands = &*app;
-    widgets::group(ui, shell, &crate::i18n::tr("New Entry"), |ui, shell| {
+    widgets::group(ui, shell, &jcj_shell::i18n::tr("New Entry"), |ui, shell| {
         for t in templates {
             let c = Control::with("bible.new", json!({ "kind": t.kind, "name": format!("New {}", t.title) }))
                 .label(t.title.clone())

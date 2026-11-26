@@ -257,7 +257,7 @@ pub fn form(ui: &mut Ui, s: &mut Session, v: &mut EntryView, id: ItemId) -> (Vec
     let Some(e) = s.project.entries.get(&id).cloned() else { return (asks, errors) };
     let mut todo: Vec<(&str, Value)> = Vec::new();
     ui.horizontal(|ui| {
-        let l = ui.label(crate::i18n::tr("Name"));
+        let l = ui.label(jcj_shell::i18n::tr("Name"));
         let r = ui.add(egui::TextEdit::singleline(&mut v.name).font(egui::TextStyle::Heading).desired_width(260.0)).labelled_by(l.id);
         if r.lost_focus() && v.name.trim() != e.name {
             todo.push(("entry.set", json!({ "id": id.as_text(), "name": v.name })));
@@ -274,7 +274,7 @@ pub fn form(ui: &mut Ui, s: &mut Session, v: &mut EntryView, id: ItemId) -> (Vec
         c.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Entry type"));
     });
     ui.horizontal(|ui| {
-        let l = ui.label(crate::i18n::tr("Also called"));
+        let l = ui.label(jcj_shell::i18n::tr("Also called"));
         let r = ui
             .add(egui::TextEdit::singleline(&mut v.aliases).hint_text("other names, separated by commas").desired_width(f32::INFINITY))
             .labelled_by(l.id);

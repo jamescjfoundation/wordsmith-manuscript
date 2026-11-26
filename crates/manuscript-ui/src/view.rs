@@ -25,7 +25,7 @@ pub struct ViewPrefs {
     pub grammar: bool,
     /// The document converter the writer installed, for other formats (EXP-7).
     pub converter: wordsmith_manuscript_io::external::Converter,
-    /// The interface's language (ACC-4): a code from `i18n::LANGUAGES`, or empty to follow the
+    /// The interface's language (ACC-4): a code from `languages::LANGUAGES`, or empty to follow the
     /// computer.
     pub language: String,
 }

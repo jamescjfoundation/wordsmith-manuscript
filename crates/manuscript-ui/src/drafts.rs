@@ -160,7 +160,7 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut DraftsView) -> Vec<S
     }
     let mut open = true;
     let mut todo: Option<(&str, Value)> = None;
-    egui::Window::new(crate::i18n::tr("Drafts")).id(egui::Id::unique("manuscript-drafts")).open(&mut open).default_size([620.0, 480.0]).show(
+    egui::Window::new(jcj_shell::i18n::tr("Drafts")).id(egui::Id::unique("manuscript-drafts")).open(&mut open).default_size([620.0, 480.0]).show(
         ctx,
         |ui| {
             let list = run(s, "draft.list", &json!({})).and_then(Result::ok).unwrap_or_default();
@@ -200,7 +200,10 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut DraftsView) -> Vec<S
             ui.horizontal(|ui| {
                 let r = ui.add(egui::TextEdit::singleline(&mut v.new_name).hint_text("Second Draft").desired_width(180.0));
                 r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, "New draft's name"));
-                if ui.button(crate::i18n::tr("New Draft")).on_hover_text("Keep this draft as it is, and carry on writing as the new one").clicked()
+                if ui
+                    .button(jcj_shell::i18n::tr("New Draft"))
+                    .on_hover_text("Keep this draft as it is, and carry on writing as the new one")
+                    .clicked()
                     && !v.new_name.trim().is_empty()
                 {
                     todo = Some(("draft.new", json!({ "name": v.new_name.trim() })));

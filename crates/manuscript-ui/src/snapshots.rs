@@ -237,8 +237,8 @@ pub fn compare_window(ctx: &egui::Context, s: &Session, view: &mut CompareView) 
 pub fn panel_section(ui: &mut Ui, s: &mut Session, id: ItemId, errors: &mut Vec<String>) {
     ui.add_space(6.0);
     ui.horizontal(|ui| {
-        ui.label(crate::i18n::tr("Snapshots"));
-        if ui.small_button(crate::i18n::tr("Take Snapshot")).clicked()
+        ui.label(jcj_shell::i18n::tr("Snapshots"));
+        if ui.small_button(jcj_shell::i18n::tr("Take Snapshot")).clicked()
             && let Err(e) = s.run("snapshot.take", &json!({ "id": id.as_text() }))
         {
             errors.push(e);

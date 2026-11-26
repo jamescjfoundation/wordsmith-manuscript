@@ -67,7 +67,7 @@ fn main() -> ExitCode {
         let (file, p, problem) = PrefsFile::<PrefsOf>::open(&dir);
         shell.apply_prefs(&p.shell, &app.panels());
         app.view = p.app.bounded();
-        wordsmith_manuscript_ui::i18n::set_language(&app.view.language);
+        wordsmith_manuscript_ui::languages::set_language(&app.view.language);
         if let Some(m) = problem {
             app.status = m;
         }

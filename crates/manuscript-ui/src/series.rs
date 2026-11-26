@@ -71,7 +71,7 @@ pub fn window(ctx: &egui::Context, s: &mut Session, v: &mut SeriesView) -> (Vec<
     }
     let mut open = true;
     let mut todo: Option<(&str, Value)> = None;
-    egui::Window::new(crate::i18n::tr("Series")).id(egui::Id::unique("manuscript-series")).open(&mut open).default_size([520.0, 360.0]).show(
+    egui::Window::new(jcj_shell::i18n::tr("Series")).id(egui::Id::unique("manuscript-series")).open(&mut open).default_size([520.0, 360.0]).show(
         ctx,
         |ui| {
             if let Some(p) = &s.series_problem {

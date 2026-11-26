@@ -181,7 +181,7 @@ pub fn view(ui: &mut Ui, s: &mut Session, v: &mut LanesView) -> (Option<ItemId>,
     let mut open = None;
     let mut errors = Vec::new();
     ui.horizontal(|ui| {
-        ui.heading(crate::i18n::tr("Thread Lanes"));
+        ui.heading(jcj_shell::i18n::tr("Thread Lanes"));
         ui.selectable_value(&mut v.by, By::Thread, "Plot threads");
         ui.selectable_value(&mut v.by, By::Pov, "Points of view");
     });
