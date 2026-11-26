@@ -15,9 +15,9 @@
 # - by hand (Actions, "Book consumer", "Run workflow"), against any branch here and any branch,
 #   tag or commit of Book. A tag Book may pin is cut only on a commit this workflow passed on.
 #
-# The paths matter: Book's gate builds and tests all of Book, which takes most of an hour on a
-# hosted runner. Nothing is cached, because a run is rare and the caches of the build that runs
-# on every push are worth more.
+# The paths matter: Book's gate builds and tests all of Book, which takes about half an hour on
+# a hosted runner (27 minutes on its first run). Nothing is cached, because a run is rare and
+# the caches of the build that runs on every push are worth more.
 #
 # How the link works: Book names this repository as a provider in its xtask/src/main.rs, so
 # `cargo xtask dev-link manuscript=<folder>` in Book writes a Cargo patch into a folder Git
@@ -71,7 +71,7 @@ jobs:
   book:
     name: Wordsmith Book's gate against this checkout
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     steps:
       - name: Check out Wordsmith Manuscript
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -361,8 +361,8 @@ Two checks in this repository, so a break shows before it lands and not when Boo
   a push to `main` that touches `crates/manuscript-model`, `crates/manuscript-format` or the
   root `Cargo.toml`, and when run by hand, it checks out Wordsmith Book, links it to this
   checkout's two crates (`cargo xtask dev-link manuscript=<folder>` in Book) and runs Book's
-  whole gate (`cargo xtask ci --linked`). It takes most of an hour, which is why it runs only
-  for those paths.
+  whole gate (`cargo xtask ci --linked`). It takes about half an hour, which is why it runs
+  only for those paths.
 
 To try the same on a computer, with the two repositories side by side: in the Book checkout,
 `cargo xtask dev-link manuscript=../wordsmith-manuscript`, then `cargo xtask ci --linked`, and
