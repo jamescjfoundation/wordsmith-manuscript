@@ -106,6 +106,7 @@ When Manuscript moves to a newer core, the next tag is cut on that commit and Bo
 | `book-view-1.1` | 1 | v0.1.16 | Manuscript moved to a newer core |
 | `book-view-1.2` | 1 | v0.1.17 | Manuscript moved to a newer core |
 | `book-view-1.3` | 1 | v0.1.18 | Manuscript moved to a newer core |
+| `book-view-1.4` | 1 | v0.1.20 | Manuscript moved to a newer core |
 
 **Today:** the scheme is only what this table shows, and nothing in this repository's gate builds
 Book, so a break is found when Book moves to a new tag.

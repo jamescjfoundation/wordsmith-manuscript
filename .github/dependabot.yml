@@ -1,0 +1,21 @@
+# Weekly update proposals for GitHub Actions, so the commit each action is pinned to does not go
+# stale. Owned by open-source-core (template/.github/dependabot.yml) and kept identical in every
+# app by `cargo xtask sync`.
+#
+# Only the app's own workflow files hold pinned actions. `ci.yml` and `core-pin.yml` call the
+# core's shared workflows, whose pins are updated in the core and reach the app with the tag
+# those two files name; the tag itself is the core's to move, so it is left alone here.
+#
+# Cargo is not listed. The `jcj-` crates move with the core pin (`cargo xtask core-pin`), the
+# crates the core pins move with the core, and a crate only the app uses moves when the app
+# refreshes its lock file. `cargo deny` checks advisories on every push.
+#
+# Who merges one of these pull requests: CONTRIBUTING.md, "Commits, pushes and pull requests".
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "jamescjfoundation/open-source-core*"

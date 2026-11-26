@@ -203,10 +203,9 @@ Each layer calls only the layers under it; `cargo xtask layers` gets this app's 
 `manuscript-format` must stay free of interface and engine code: Wordsmith Book depends on it.
 
 > Note, 2026-11-26: this is the table as planned. The table in force is in `AGENTS.md` ("Where
-> each crate's code goes") and in `APP_LAYERS` in `xtask/src/main.rs`, which
-> `cargo xtask app-layers` reads. It differs: the model also uses `jcj-entries`, each row lists
-> every `jcj-` crate it may use, and Wordsmith Book builds on the model as well as the format
-> crate.
+> each crate's code goes"), which `cargo xtask app-layers` reads. It differs: the model also
+> uses `jcj-entries`, each row names the `jcj-` crates it adds to the rows before it, and
+> Wordsmith Book builds on the model as well as the format crate.
 
 ### 5.3 What the core gives Manuscript
 
