@@ -213,7 +213,7 @@ pub fn document(c: &Compiled, o: &Options) -> (Document, BTreeMap<String, usize>
 /// references as superscript numbers. Returns the words this adds (the numbers and the "Notes"
 /// headings), which the word check leaves out.
 ///
-/// core-candidate: the core's EPUB writer (`jcj-interchange` epub) leaves notes out; once it
+/// core-candidate: open-source-core#21. The core's EPUB writer (`jcj-interchange` epub) leaves notes out; once it
 /// writes them (as EPUB footnotes), this goes.
 fn notes_as_endnotes(doc: &mut Document) -> Vec<String> {
     let mut added: Vec<String> = Vec::new();

@@ -6,7 +6,7 @@
 //! the rest are whole paragraphs added or removed. Words, the spaces between them and each
 //! punctuation mark are the units, so a changed comma shows as a changed comma.
 //!
-//! core-candidate: the core's comparison (`jcj-features` compare) marks whole paragraphs; this
+//! core-candidate: open-source-core#17. The core's comparison (`jcj-features` compare) marks whole paragraphs; this
 //! word-level refinement would serve any foundation app's compare.
 
 use crate::Text;

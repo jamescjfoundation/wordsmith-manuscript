@@ -6,7 +6,7 @@
 //! English, so a partial translation never hides anything. The language is a preference; by
 //! default it follows the computer's.
 //!
-//! core-candidate: the core has no translation catalog yet; the plan meant ACC-4 to go through
+//! core-candidate: open-source-core#18. The core has no translation catalog yet; the plan meant ACC-4 to go through
 //! one. This is the app's own until a second app needs it.
 
 use std::collections::HashMap;

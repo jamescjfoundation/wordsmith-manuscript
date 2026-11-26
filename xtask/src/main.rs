@@ -9,6 +9,7 @@
 
 mod changed;
 mod corepin;
+mod docs;
 mod json;
 mod licenses;
 mod link;
@@ -38,6 +39,7 @@ const TASKS: &[(&str, &str)] = &[
     ("unlinked", "no local core dev-link is left in .cargo/config.toml"),
     ("core-pin", "every jcj- dependency names one core release tag, and Cargo.lock holds one core"),
     ("sync", "shared settings and the patch block match the pinned core release"),
+    ("docs", "links in Markdown lead somewhere, decision references name a record, core-candidate markers name an issue"),
     ("layers", "only jcj- interfaces of the core are used, never upstream crates or jcj-upstream"),
     ("app-layers", "each Manuscript crate uses only the layers under it (the table in AGENTS.md)"),
     ("assets", "every file under assets/ is named in ATTRIBUTION.md"),
@@ -116,6 +118,7 @@ fn ci(root: &Path, args: &[String]) -> TaskResult {
         }
     }
     let skip = util::skipped(&skip_args, &names)?;
+    util::warn_if_hooks_off(root, "hooks");
     let scope = if args.iter().any(|a| a == "--changed") {
         let base = args.iter().position(|a| a == "--base").and_then(|i| args.get(i + 1)).cloned().unwrap_or_else(|| "origin/main".to_owned());
         changed::affected(root, &base)?
@@ -140,6 +143,7 @@ fn run_task(name: &str, root: &Path, scope: &Affected) -> TaskResult {
         "unlinked" => link::check_unlinked(root),
         "core-pin" => corepin::task(root, &[]),
         "sync" => sync::app_task(root, true),
+        "docs" => docs::app_task(root),
         "layers" => check_layers(root),
         "app-layers" => check_app_layers(root),
         "assets" => check_assets(root),

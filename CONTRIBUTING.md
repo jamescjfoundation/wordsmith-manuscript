@@ -42,7 +42,7 @@ Manuscript's own.
 | `tests/fixtures`, `tests/golden` | Public-domain and written-for-test inputs (`docs/fixtures.md`); reviewed reference outputs (`docs/golden.md`) |
 
 <!-- BEGIN open-source-core: contributing -->
-<!-- Owned by open-source-core (template/CONTRIBUTING.md). Change it there, never in a copy: `cargo xtask sync` rewrites the copies. -->
+<!-- Owned by open-source-core (template/CONTRIBUTING.md). Change it there, never in a copy: its tooling rewrites the copies. -->
 ## Rules for a public repository
 
 ### Personal information
