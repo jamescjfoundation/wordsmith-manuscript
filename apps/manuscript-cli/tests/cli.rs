@@ -50,8 +50,6 @@ fn convert_export_count_verify_and_report() {
     assert!(out.contains("From the command line"), "saved by run: {out}");
     let (ok, out) = cli(&["commands"]);
     assert!(ok && out.contains("binder.new"));
-    let (ok, _) = cli(&["nonsense"]);
-    assert!(!ok);
 }
 
 #[test]

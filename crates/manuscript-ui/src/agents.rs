@@ -1,25 +1,31 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Every Manuscript command as an agent tool (AUT-2), through the core's `jcj-agents`.
 //!
-//! The core's agent server works on an engine session; Manuscript's commands work on a project
-//! session. Each Manuscript command is registered with the engine as `manuscript.<id>` (the tool
-//! `manuscript_<id>`), whose run passes its parameters to the project session held here. A
-//! command that changes a project with a folder saves it. Paths in parameters are checked against
-//! the folders the agent may read and write (`--read-root`, `--write-root`).
+//! Manuscript's commands work on a project session, not on a document, so they are given to the
+//! core's server as an app's own commands ([`AppCommands`]): the server names a tool
+//! `manuscript_<command>` after each, lists it, checks the files its parameters name against the
+//! folders the agent may read and write, and calls it. There are no general document tools
+//! beside them: no document stands behind them here.
+//!
+//! - Which parameters of a command name files it reads and files it writes is said in one place,
+//!   [`files_of`]. A parameter that names a file and is not listed there is not checked.
+//! - The project is the person's, not the agent's: it was opened before any folder was put in
+//!   force, it is read where it lives, and a command that changes it saves it there.
+//! - `export.convert` runs a program the caller names. A program cannot be kept to a folder, so
+//!   the command is refused while folders are in force.
 
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
 
-use jcj_agents::{AgentConfig, AgentInfo, AgentServer};
-use jcj_engine::{CmdError, CmdResult, CommandSpec};
+use jcj_agents::{AgentConfig, AgentInfo, AgentServer, AppCommand, AppCommands};
+use jcj_engine::file_access::{self, AutomationRoots};
 use serde_json::{Value, json};
 
 use crate::session::Session;
 
-/// The project the tools work on.
-static PROJECT: Mutex<Option<Session>> = Mutex::new(None);
-
-/// The prefix of Manuscript's commands in the engine's registry.
-pub const PREFIX: &str = "manuscript.";
+/// The app's short name: every tool's name starts with it and an underscore.
+pub const PREFIX: &str = "manuscript";
 
 /// What the agent is told about the app.
 pub const INSTRUCTIONS: &str = "Wordsmith Manuscript holds a novel or other long work as a project: a binder of items in five areas \
@@ -28,202 +34,97 @@ dialect, metadata (synopsis, label, status, keywords, target) and snapshots. Sta
 read a text with manuscript_text_get and change it with manuscript_text_set. Every change is one undo step (manuscript_edit_undo). Imports and \
 exports are checked word for word.";
 
-fn run_tool(id: &str, v: &Value) -> CmdResult {
-    for key in ["path", "folder"] {
-        if let Some(p) = v.get(key).and_then(Value::as_str) {
-            let writes = id == "export.file";
-            let r = if writes { jcj_engine::file_access::check_write(p) } else { jcj_engine::file_access::check_read(p) };
-            r.map_err(CmdError::Disabled)?;
+/// A project session the tools and their caller both hold.
+pub type Shared = Rc<RefCell<Session>>;
+
+/// The parameters of command `id` that name files or folders: those it reads, then those it
+/// writes. Every other command names none.
+pub fn files_of(id: &str) -> (&'static [&'static str], &'static [&'static str]) {
+    match id {
+        "import.preview" | "import.document" | "import.notes" | "media.import" => (&["path"], &[]),
+        "import.set" => (&["paths", "folder"], &[]),
+        "offers.list" | "offers.accept" | "offers.reject" => (&["path"], &[]),
+        "export.file" | "export.convert" | "series.create" => (&[], &["path"]),
+        // Joining reads the series bible and adds this book to its list.
+        "series.join" => (&["path"], &["path"]),
+        _ => (&[], &[]),
+    }
+}
+
+/// Every Manuscript command as the agent sees it.
+pub fn commands() -> Vec<AppCommand> {
+    crate::commands::specs()
+        .iter()
+        .map(|spec| {
+            let (reads, writes) = files_of(spec.id);
+            let mut command = AppCommand::new(spec.id, spec.label).params(spec.params).reads(reads).writes(writes);
+            // An export changes nothing in the project, but it writes a file.
+            command.read_only = !spec.mutates && writes.is_empty();
+            command
+        })
+        .collect()
+}
+
+/// The names of the tools, in the order the server lists them.
+pub fn tool_names() -> Vec<String> {
+    commands().iter().map(|c| jcj_agents::app_tool_name(PREFIX, &c.id)).collect()
+}
+
+/// Manuscript's commands on one project, for the core's server.
+pub struct ProjectTools {
+    session: Shared,
+}
+
+impl ProjectTools {
+    /// The tools over `session`.
+    pub fn new(session: Shared) -> Self {
+        ProjectTools { session }
+    }
+}
+
+impl AppCommands for ProjectTools {
+    fn commands(&self) -> Vec<AppCommand> {
+        commands()
+    }
+
+    fn run(&mut self, id: &str, params: &Value) -> Result<Value, String> {
+        if id == "export.convert" && file_access::current().is_some() {
+            return Err("export.convert runs a program, which cannot be kept to the folders this agent was given".into());
         }
-    }
-    if let Some(list) = v.get("paths").and_then(Value::as_array) {
-        for p in list.iter().filter_map(Value::as_str) {
-            jcj_engine::file_access::check_read(p).map_err(CmdError::Disabled)?;
-        }
-    }
-    let mut guard = PROJECT.lock().map_err(|_| CmdError::Failed("the project is not available".into()))?;
-    let s = guard.as_mut().ok_or_else(|| CmdError::Failed("no project is open".into()))?;
-    let before = s.revision();
-    let out = s.run(id, v).map_err(CmdError::Failed)?;
-    if s.revision() != before && s.root().is_some() {
-        s.save().map_err(CmdError::Failed)?;
-    }
-    Ok(out)
-}
-
-macro_rules! tools {
-    ($($id:literal),* $(,)?) => {
-        /// The engine commands standing for Manuscript's commands.
-        pub fn engine_specs() -> Vec<CommandSpec> {
-            let mine = crate::commands::specs();
-            let mut out = Vec::new();
-            $(
-                let mut spec = CommandSpec::new(concat!("manuscript.", $id), $id, "Manuscript", |_s, v| run_tool($id, v));
-                if let Some(m) = mine.iter().find(|m| m.id == $id) {
-                    spec.label = m.label;
-                    spec.params = m.params;
-                    spec.mutates = m.mutates;
-                }
-                out.push(spec);
-            )*
-            out
-        }
-
-        /// The ids of the commands that are tools.
-        pub const TOOLS: &[&str] = &[$($id),*];
-    };
-}
-
-tools!(
-    "binder.new",
-    "binder.newFolder",
-    "binder.rename",
-    "binder.move",
-    "binder.moveUp",
-    "binder.moveDown",
-    "binder.indent",
-    "binder.outdent",
-    "binder.setRole",
-    "binder.setInclude",
-    "binder.trash",
-    "binder.restore",
-    "binder.emptyTrash",
-    "settings.typing",
-    "binder.list",
-    "edit.undo",
-    "edit.redo",
-    "item.setSynopsis",
-    "item.setNotes",
-    "item.setLabel",
-    "item.setStatus",
-    "item.addKeyword",
-    "item.removeKeyword",
-    "item.linkEntry",
-    "item.unlinkEntry",
-    "item.setTarget",
-    "item.setField",
-    "item.get",
-    "project.setLabels",
-    "project.setStatuses",
-    "project.setKeywords",
-    "project.setBook",
-    "text.get",
-    "text.set",
-    "find.project",
-    "find.replaceProject",
-    "spelling.addWord",
-    "spelling.check",
-    "snapshot.take",
-    "snapshot.list",
-    "snapshot.restore",
-    "snapshot.rename",
-    "snapshot.compare",
-    "comment.add",
-    "comment.set",
-    "comment.remove",
-    "comment.list",
-    "project.setFields",
-    "project.renameField",
-    "collection.new",
-    "collection.saveSearch",
-    "collection.add",
-    "collection.remove",
-    "collection.rename",
-    "collection.delete",
-    "collection.list",
-    "collection.items",
-    "bookmark.toggle",
-    "bookmark.list",
-    "media.import",
-    "link.new",
-    "link.set",
-    "media.info",
-    "board.get",
-    "board.addCard",
-    "board.updateCard",
-    "board.deleteCards",
-    "board.link",
-    "board.unlink",
-    "board.arrange",
-    "pages.count",
-    "revision.start",
-    "revision.mode",
-    "revision.list",
-    "revision.clear",
-    "grammar.check",
-    "bible.setTemplate",
-    "bible.renameTemplateField",
-    "bible.resetTemplate",
-    "offers.list",
-    "offers.accept",
-    "offers.reject",
-    "draft.new",
-    "draft.list",
-    "draft.switch",
-    "draft.rename",
-    "draft.delete",
-    "draft.setExport",
-    "draft.compare",
-    "series.create",
-    "series.join",
-    "series.leave",
-    "series.info",
-    "entry.relate",
-    "entry.unrelate",
-    "entry.relations",
-    "lanes.get",
-    "lanes.move",
-    "timeline.get",
-    "item.suggestEntries",
-    "export.convert",
-    "snapshot.delete",
-    "snapshot.get",
-    "outline.list",
-    "outline.applySort",
-    "bible.new",
-    "bible.list",
-    "bible.templates",
-    "entry.get",
-    "entry.set",
-    "entry.setField",
-    "entry.setBody",
-    "bible.backlinks",
-    "import.preview",
-    "import.set",
-    "import.document",
-    "import.notes",
-    "export.file",
-    "export.presets",
-    "export.savePreset",
-    "targets.set",
-    "counts.get",
-    "search.project",
-);
-
-/// Put a project in the tools' hands (replacing any other).
-pub fn hold(s: Session) {
-    if let Ok(mut g) = PROJECT.lock() {
-        *g = Some(s);
+        let mut s = self.session.try_borrow_mut().map_err(|_| "the project is in use".to_owned())?;
+        // The server has checked the files the parameters name. What is left is the project's
+        // own folder, which is the person's choice and is read and saved where it lives.
+        file_access::unconfined(|| {
+            let before = s.revision();
+            let out = s.run(id, params)?;
+            if s.revision() != before && s.root().is_some() {
+                s.save()?;
+            }
+            Ok(out)
+        })
     }
 }
 
-/// Take the project back from the tools.
-pub fn release() -> Option<Session> {
-    PROJECT.lock().ok().and_then(|mut g| g.take())
-}
-
-/// An agent server over a project: the engine's general tools and every Manuscript command.
-pub fn server(s: Session, roots: Option<Arc<jcj_engine::file_access::AutomationRoots>>) -> AgentServer {
-    hold(s);
-    let registry = Arc::new(jcj_engine::registry_with(engine_specs()));
-    let session = jcj_engine::session_with(jcj_doc::new_document(), registry);
+fn config(roots: Option<Arc<AutomationRoots>>) -> AgentConfig {
     let info = AgentInfo::new("wordsmith-manuscript", crate::NAME, env!("CARGO_PKG_VERSION"), INSTRUCTIONS);
-    AgentServer::headless(session, AgentConfig::new(info).export(PREFIX).confined(roots))
+    AgentConfig::new(info).confined(roots)
+}
+
+/// An agent server over a project the caller keeps a hold of: every Manuscript command, and
+/// nothing else. `roots` are the folders the agent's commands may read and write (`None`:
+/// nothing is confined).
+pub fn server_over(session: Shared, roots: Option<Arc<AutomationRoots>>) -> AgentServer {
+    AgentServer::for_app(Box::new(ProjectTools::new(session)), PREFIX, config(roots))
+}
+
+/// [`server_over`] for a project nothing else needs.
+pub fn server(s: Session, roots: Option<Arc<AutomationRoots>>) -> AgentServer {
+    server_over(Rc::new(RefCell::new(s)), roots)
 }
 
 /// Serve the tools over standard input and output until the client goes away.
-pub fn serve(s: Session) -> Result<(), String> {
-    server(s, None).serve_stdio().map_err(|e| e.to_string())
+pub fn serve(s: Session, roots: Option<Arc<AutomationRoots>>) -> Result<(), String> {
+    server(s, roots).serve_stdio().map_err(|e| e.to_string())
 }
 
 /// A JSON-RPC request (tests, and clients driving the server in process).

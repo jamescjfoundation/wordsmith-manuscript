@@ -2,16 +2,21 @@
 //! The command line's commands, writing their results to a writer (so tests can read them).
 
 use std::io::Write;
+use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
 
+use jcj_agents::cli::{Exit, McpArgs, Standard, standard, version_line};
 use serde_json::{Value, json};
 use wordsmith_manuscript_format::book;
 use wordsmith_manuscript_io::verify::{self, Check};
 use wordsmith_manuscript_model::{Area, Project, Role};
 use wordsmith_manuscript_ui::session::Session;
 
-const USAGE: &str = "usage:
+/// The program's name, as the usage, the version line and every message give it.
+pub const PROGRAM: &str = "manuscript-cli";
+
+/// The usage: on standard output for `--help`, on standard error after a wrong command line.
+pub const USAGE: &str = "usage:
   manuscript-cli convert <input> <output>
   manuscript-cli export <project> <file> [--format F] [--preset NAME]
   manuscript-cli counts <project> [--item ID]
@@ -19,27 +24,75 @@ const USAGE: &str = "usage:
   manuscript-cli report <project>
   manuscript-cli run <project> <command> [JSON]
   manuscript-cli commands
-  manuscript-cli mcp <project>";
+  manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]
+  manuscript-cli --help | --version";
 
-fn flag(args: &[String], name: &str) -> Option<String> {
-    args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).cloned()
+/// Why the command line stopped without doing what was asked: the exit code, and the reason
+/// for standard error.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Stop {
+    /// [`Exit::Usage`] for a wrong command line, [`Exit::Failed`] for work that could not be done.
+    pub exit: Exit,
+    /// The reason, without the program's name.
+    pub why: String,
 }
 
-fn positional(args: &[String]) -> Vec<&String> {
-    let mut out = Vec::new();
-    let mut skip = false;
-    for a in args.iter().skip(1) {
-        if skip {
-            skip = false;
-            continue;
-        }
-        if a.starts_with("--") {
-            skip = true;
-            continue;
-        }
-        out.push(a);
+/// A wrong command line: nothing was done.
+fn usage(why: impl Into<String>) -> Stop {
+    Stop { exit: Exit::Usage, why: why.into() }
+}
+
+/// An error from the work itself is a failure.
+impl From<String> for Stop {
+    fn from(why: String) -> Stop {
+        Stop { exit: Exit::Failed, why }
     }
-    out
+}
+
+/// The arguments after a command's name: the plain ones in order, and its options.
+struct Arguments<'a> {
+    plain: Vec<&'a str>,
+    options: Vec<(&'a str, &'a str)>,
+}
+
+impl<'a> Arguments<'a> {
+    /// Read `rest`, the arguments after `command`. `takes` is how many plain arguments the
+    /// command needs and allows, `shape` names them for the message, and `allowed` are its
+    /// options, each of which takes a value. Anything else is a usage error: an argument
+    /// starting with `-` that is no option of the command, an option without its value or
+    /// given twice, a missing or an extra argument.
+    fn read(command: &str, rest: &'a [String], takes: RangeInclusive<usize>, shape: &str, allowed: &[&str]) -> Result<Self, Stop> {
+        let mut out = Arguments { plain: Vec::new(), options: Vec::new() };
+        let mut rest = rest.iter().map(String::as_str);
+        while let Some(arg) = rest.next() {
+            if !arg.starts_with('-') || arg.len() == 1 {
+                out.plain.push(arg);
+                continue;
+            }
+            if !allowed.contains(&arg) {
+                return Err(usage(format!("{command} has no option {arg}")));
+            }
+            if out.option(arg).is_some() {
+                return Err(usage(format!("{arg} was given twice")));
+            }
+            let value = rest.next().filter(|v| !v.starts_with("--")).ok_or_else(|| usage(format!("{arg} needs a value")))?;
+            out.options.push((arg, value));
+        }
+        if !takes.contains(&out.plain.len()) {
+            let shape = if shape.is_empty() { "no arguments".to_owned() } else { shape.to_owned() };
+            return Err(usage(format!("{command} takes {shape}")));
+        }
+        Ok(out)
+    }
+
+    fn option(&self, name: &str) -> Option<&'a str> {
+        self.options.iter().find(|(n, _)| *n == name).map(|(_, v)| *v)
+    }
+
+    /// The plain argument at `n`, as a path. [`Arguments::read`] has checked that it is there.
+    fn path(&self, n: usize) -> PathBuf {
+        PathBuf::from(self.plain.get(n).copied().unwrap_or_default())
+    }
 }
 
 fn is_project(p: &Path) -> bool {
@@ -87,21 +140,38 @@ pub fn manuscript_words(p: &Project) -> Vec<String> {
     out
 }
 
-/// Run the command line.
-pub fn run(args: &[String], out: &mut dyn Write) -> Result<ExitCode, String> {
-    let pos = positional(args);
-    let arg = |n: usize| pos.get(n).map(|s| PathBuf::from(s.as_str())).ok_or_else(|| USAGE.to_owned());
-    match args.first().map(String::as_str) {
-        Some("convert") => {
-            let (input, output) = (arg(0)?, arg(1)?);
+/// Run the command line: `args` are the arguments after the program's name, and results are
+/// written to `out`. `Ok` is how it ended when it did what was asked ([`Exit::Done`], or
+/// [`Exit::Differs`] for a word check that found a difference); `Err` says why it did not.
+pub fn run(args: &[String], out: &mut dyn Write) -> Result<Exit, Stop> {
+    match standard(args) {
+        Some(Standard::Help) => {
+            writeln!(out, "{USAGE}").map_err(|e| e.to_string())?;
+            return Ok(Exit::Done);
+        }
+        Some(Standard::Version) => {
+            writeln!(out, "{}", version_line(PROGRAM, env!("CARGO_PKG_VERSION"))).map_err(|e| e.to_string())?;
+            return Ok(Exit::Done);
+        }
+        // Nothing was asked, so nothing was done: a caller that lost its arguments must not
+        // read success.
+        Some(Standard::NoCommand) => return Err(usage("no command was given")),
+        None => {}
+    }
+    let Some((command, rest)) = args.split_first() else { return Err(usage("no command was given")) };
+    let command = command.as_str();
+    match command {
+        "convert" => {
+            let a = Arguments::read(command, rest, 2..=2, "<input> <output>", &[])?;
+            let (input, output) = (a.path(0), a.path(1));
             if is_project(&input) {
                 let mut s = open(&input)?;
                 let r = s.run("export.file", &json!({ "path": output.to_string_lossy() }))?;
                 print(out, &r)?;
-                return Ok(ExitCode::SUCCESS);
+                return Ok(Exit::Done);
             }
             if output.exists() {
-                return Err(format!("{} already exists", output.display()));
+                return Err(format!("{} already exists", output.display()).into());
             }
             let title = input.file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
             let mut p = Project::new();
@@ -119,40 +189,43 @@ pub fn run(args: &[String], out: &mut dyn Write) -> Result<ExitCode, String> {
                 s.save_as(&output)?;
             }
             print(out, &r)?;
-            Ok(ExitCode::SUCCESS)
+            Ok(Exit::Done)
         }
-        Some("export") => {
-            let (project, file) = (arg(0)?, arg(1)?);
-            let mut s = open(&project)?;
-            let mut params = json!({ "path": file.to_string_lossy() });
-            if let Some(f) = flag(args, "--format") {
+        "export" => {
+            let a = Arguments::read(command, rest, 2..=2, "<project> <file>", &["--format", "--preset"])?;
+            let mut s = open(&a.path(0))?;
+            let mut params = json!({ "path": a.path(1).to_string_lossy() });
+            if let Some(f) = a.option("--format") {
                 params["format"] = json!(f);
             }
-            if let Some(p) = flag(args, "--preset") {
+            if let Some(p) = a.option("--preset") {
                 params["preset"] = json!(p);
             }
             let r = s.run("export.file", &params)?;
             print(out, &r)?;
-            Ok(ExitCode::SUCCESS)
+            Ok(Exit::Done)
         }
-        Some("counts") => {
-            let mut s = open(&arg(0)?)?;
+        "counts" => {
+            let a = Arguments::read(command, rest, 1..=1, "<project>", &["--item"])?;
+            let mut s = open(&a.path(0))?;
             let mut params = json!({});
-            if let Some(i) = flag(args, "--item") {
+            if let Some(i) = a.option("--item") {
                 params["id"] = json!(i);
             }
             let r = s.run("counts.get", &params)?;
             print(out, &r)?;
-            Ok(ExitCode::SUCCESS)
+            Ok(Exit::Done)
         }
-        Some("verify") => {
-            let (a, b) = (arg(0)?, arg(1)?);
-            let check = Check::of(&words_of(&a)?, &words_of(&b)?);
+        "verify" => {
+            let a = Arguments::read(command, rest, 2..=2, "<source> <result>", &[])?;
+            let check = Check::of(&words_of(&a.path(0))?, &words_of(&a.path(1))?);
+            // The check ran: its answer is a result, on standard output, whichever it is.
             print(out, &json!({ "same": check.passed(), "check": check.to_string() }))?;
-            Ok(if check.passed() { ExitCode::SUCCESS } else { ExitCode::from(2) })
+            Ok(if check.passed() { Exit::Done } else { Exit::Differs })
         }
-        Some("report") => {
-            let s = open(&arg(0)?)?;
+        "report" => {
+            let a = Arguments::read(command, rest, 1..=1, "<project>", &[])?;
+            let s = open(&a.path(0))?;
             let p = &s.project;
             let b = book::from_project(p);
             let mut labels = std::collections::BTreeMap::<String, usize>::new();
@@ -182,44 +255,62 @@ pub fn run(args: &[String], out: &mut dyn Write) -> Result<ExitCode, String> {
                     "missing_book_metadata": book::missing_metadata(&b),
                 }),
             )?;
-            Ok(ExitCode::SUCCESS)
+            Ok(Exit::Done)
         }
-        Some("run") => {
-            let project = arg(0)?;
-            let cmd = pos.get(1).ok_or_else(|| USAGE.to_owned())?.to_string();
-            let params: Value = match pos.get(2) {
-                Some(j) => serde_json::from_str(j).map_err(|e| format!("parameters: {e}"))?,
+        "run" => {
+            // The parameters are JSON, which may hold anything: only the first two arguments
+            // are read as arguments, and `run` has no options.
+            let (project, id, json_text) = match rest {
+                [project, id, text] => (project.as_str(), id.as_str(), Some(text.as_str())),
+                [project, id] => (project.as_str(), id.as_str(), None),
+                _ => return Err(usage("run takes <project> <command> [JSON]")),
+            };
+            if let Some(option) = [project, id].into_iter().find(|a| a.starts_with('-') && a.len() > 1) {
+                return Err(usage(format!("run has no option {option}")));
+            }
+            let params: Value = match json_text {
+                Some(text) => serde_json::from_str(text).map_err(|e| usage(format!("the parameters are not JSON: {e}")))?,
                 None => json!({}),
             };
-            let mut s = open(&project)?;
-            let r = s.run(&cmd, &params)?;
+            if !params.is_object() {
+                return Err(usage("the parameters must be a JSON object, such as {\"id\": \"…\"}"));
+            }
+            let mut s = open(Path::new(project))?;
+            let r = s.run(id, &params)?;
             if s.is_dirty() && s.root().is_some() {
                 s.save()?;
             }
             print(out, &r)?;
-            Ok(ExitCode::SUCCESS)
+            Ok(Exit::Done)
         }
-        Some("commands") => {
+        "commands" => {
+            Arguments::read(command, rest, 0..=0, "", &[])?;
             let list: Vec<Value> = wordsmith_manuscript_ui::commands::specs()
                 .iter()
                 .map(|c| json!({ "id": c.id, "label": c.label, "params": c.params, "about": c.about }))
                 .collect();
             print(out, &Value::Array(list))?;
-            Ok(ExitCode::SUCCESS)
+            Ok(Exit::Done)
         }
-        Some("mcp") => {
-            let s = open(&arg(0)?)?;
-            wordsmith_manuscript_ui::agents::serve(s)?;
-            Ok(ExitCode::SUCCESS)
+        "mcp" => {
+            let mcp = McpArgs::parse(rest).map_err(usage)?;
+            // Every tool works on a project, so one must be named.
+            let Some(project) = mcp.file.as_deref() else { return Err(usage("mcp needs a project")) };
+            // A folder that does not exist is a wrong command line: said before anything is opened.
+            mcp.roots().map_err(usage)?;
+            // The project is the person's choice, not the agent's: it is opened first, and the
+            // folders hold for what the agent names from here on.
+            let s = open(Path::new(project))?;
+            let roots = mcp.confine(PROGRAM).map_err(usage)?;
+            wordsmith_manuscript_ui::agents::serve(s, roots)?;
+            Ok(Exit::Done)
         }
-        Some("help" | "--help" | "-h") | None => {
-            writeln!(out, "{USAGE}").map_err(|e| e.to_string())?;
-            Ok(ExitCode::SUCCESS)
+        // The version by its older name.
+        "version" => {
+            writeln!(out, "{}", version_line(PROGRAM, env!("CARGO_PKG_VERSION"))).map_err(|e| e.to_string())?;
+            Ok(Exit::Done)
         }
-        Some("--version" | "version") => {
-            writeln!(out, "manuscript-cli {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
-            Ok(ExitCode::SUCCESS)
-        }
-        Some(other) => Err(format!("unknown command `{other}`\n{USAGE}")),
+        option if option.starts_with('-') => Err(usage(format!("unknown option {option}"))),
+        other => Err(usage(format!("unknown command `{other}`"))),
     }
 }

@@ -20,6 +20,30 @@ Beyond the single book. No format change: 1.0 reads and writes schema 3.
 - Suggested bible links from the names a scene mentions.
 - EPUB books come back as editable manuscripts.
 - Export to other formats through a document converter you installed yourself.
+- The command line follows one convention with the other Wordsmith apps (`docs/guide/command-line.md`).
+  What a script will notice:
+  - `verify` ends with exit code 3 when the two texts differ (it was 2). Its answer is on
+    standard output either way. 1 and 2 now mean the check did not run.
+  - A wrong command line ends with 2 (it was 1) and the reason and the list of commands on
+    standard error: an unknown command, a missing or extra argument, parameters that are not a
+    JSON object.
+  - An option the command does not have is refused. It was passed over without a word, with
+    the argument after it, so a misspelled `--format` exported in the wrong format.
+  - With no argument the program does nothing and ends with 2 (it printed the list and ended
+    with 0). `--help` prints the list and ends with 0.
+  - `-V` prints the version, as `--version` does.
+- Agents (`manuscript-cli mcp`):
+  - `--read-root <folder>` and `--write-root <folder>` keep the files an agent's commands name
+    to folders you choose. The project you name is yours and is saved where it lives.
+  - Each command says which of its parameters it reads and which it writes. A new series bible
+    and an export through a converter are checked as files written (they were checked as files
+    read).
+  - With either option, the tool that runs a converter program is refused: a program cannot be
+    kept to a folder.
+  - The tools are Manuscript's own commands and nothing else. The general document tools
+    (`execute`, `list_commands` and the rest), which worked on an empty document, are no longer
+    listed.
+  - An export is no longer marked as a tool that only reads: it writes a file.
 - Not yet: a web version (the core has no web build).
 
 ## 0.3.0 (prepared 2026-11-24; released when a maintainer approves it)
