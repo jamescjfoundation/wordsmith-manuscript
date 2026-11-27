@@ -8,12 +8,14 @@ difference, and add a line below saying what changed and why.
 | --- | --- | --- |
 | `tests/golden/standard-manuscript.pdf.txt` | The standard manuscript PDF of a written-for-test project (three chapters of two scenes): every page's text, line by line, with its page breaks | `manuscript-io/tests/golden.rs`, `standard_manuscript_pdf_text_and_page_breaks` |
 | `tests/golden/standard-manuscript.docx.txt` | The same manuscript as DOCX, read back: page size and margins, then each paragraph's style, alignment, first-line indent, space before, line spacing, page break, section break and first words | `manuscript-io/tests/golden.rs`, `standard_manuscript_docx_structure` |
+| `tests/golden/project-files.txt` | What each way of writing a project puts on disk, as the SHA-256 of every file: a new project folder (texts, a bible entry, a picture, a snapshot, a stored draft), the folder after a save, after a save of a file written by hand, the folder packed, the project packed from memory and with its folder's pictures, the recovery copy, a backup at a fixed time, a packed project unpacked, a schema 1 project saved | `manuscript-format/tests/on_disk.rs`, `the_files_on_disk_are_the_reference_bytes` |
 
 ## Changes
 
 | Date | File | What changed | Reviewed |
 | --- | --- | --- | --- |
 | 2026-11-24 | both | First version: title page (contact block, word count "about 2,000 words" at the top right, title a third down, "by", byline), then from page 1 the header "Writer / LIGHTHOUSE / n", chapters on a new page a third down, double spacing, half-inch indents, scene breaks centered, END | Checked by the author of the change against SPEC 16.2; awaits a maintainer's review |
+| 2026-11-27 | `project-files.txt` | First version, written by Wordsmith Manuscript 0.9.0's own folder code, before the folder layer became the core's (core issue #45): the move must leave every byte the same | Checked by the author of the change; awaits a maintainer's review |
 
 ## Exports with no golden file
 
