@@ -1,5 +1,7 @@
 # The story bible
 
+![A character's sheet in the story bible](../images/bible.png)
+
 The Story Bible area holds entries: characters, places, objects, groups, lore and plot threads.
 Each type has a template of fields (a character has a role in the story, age, appearance,
 personality, wants, needs, flaw and history), and every entry also has aliases and a free body.

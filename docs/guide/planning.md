@@ -2,11 +2,15 @@
 
 ## The corkboard
 
+![The corkboard: one card per chapter with its synopsis, label color and status](../images/corkboard.png)
+
 View › Corkboard (Mod+2) shows the selected folder's items as index cards: the title, the
 synopsis, the label's color and the status. Drag a card to move the item; New Card adds an item at
 the end; double-click a card to edit its title and synopsis.
 
 ## The outline
+
+![The outline: chapters and scenes with label, status, words, target, point of view and scene date](../images/outline.png)
 
 View › Outline (Mod+3) shows everything under the selected folder as a table: title and synopsis,
 label, status, words, target with progress, one column for each custom field, and keywords. Click a heading to sort

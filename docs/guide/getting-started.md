@@ -9,7 +9,7 @@ When no project is open, the start window shows the templates, Open, and recent 
   synopsis.
 - **Short story collection**: a title page and a contents page, Story One with a scene, the same
   bible and notes.
-- **Your templates**: Save as Template (command palette) keeps the open project's shape as a
+- **Your templates**: Save as Template ([the command palette](#the-command-palette)) keeps the open project's shape as a
   template of your own: its binder, labels, statuses, keywords, fields, entry types, targets and
   export settings, every item's synopsis and notes, and the text of front matter, back matter,
   notes and research. The book's own chapters and scenes stay empty, and its bible entries,
@@ -22,6 +22,8 @@ project (`.wsmz`), which is unpacked into a folder beside it.
 
 ## The window
 
+![The editor with the binder of chapters and scenes on the left and the scene's synopsis, label, status, fields and bible entries in the Inspector](../images/editor.png)
+
 - **The binder** on the left: the project's items in five areas (Manuscript, Story Bible,
   Research, Notes, Trash).
 - **The editor** in the middle: the selected document's text. The View tab switches it to the
@@ -30,6 +32,17 @@ project (`.wsmz`), which is unpacked into a folder beside it.
   bible entries, target, notes and snapshots.
 - **The status bar**: the document's words, the selection's, the manuscript's progress toward its
   target, and this session's words.
+
+## The command palette
+
+Every command of the app is in the command palette, and some are only there: Save as Template,
+Series, Entry Types, Interface Language, Start Revision Pass, Grammar Hints, Offered Fixes.
+
+- Press Mod+Shift+P (Ctrl+Shift+P, or Shift+Command+P on a Mac), or click the Search commands
+  box at the top of the window.
+- Type a few letters of the command's name and choose it from the list.
+- File › Keys gives any command a key of your own, the palette's included; [Keys](keys.md)
+  lists the defaults.
 
 ## Your first words
 

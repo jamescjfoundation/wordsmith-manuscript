@@ -43,6 +43,23 @@ When you close a project, and every 30 minutes while you write, a packed copy (`
 `Backups` folder beside the project; the newest ten are kept. Open a backup like any packed
 project.
 
+## Other versions of the app
+
+The project's files say which version of the format they are in (`schema` in `project.toml`).
+This version of the app writes format 3.
+
+- **A project from an older version always opens.** Formats 1 and 2 are read as they are, and
+  nothing is written when a project is only opened. The first save writes the project in
+  format 3, with every word, id and setting kept.
+- **A project saved by a newer version than yours is not opened.** The app says that the
+  project was saved by a newer version, with both format numbers, and changes nothing in the
+  folder. Update the app ([Installing and updating](installing.md)) and open it again.
+- The same holds for a packed project (`.wsmz`) and for a backup: its format is that of the
+  project inside it.
+
+Wordsmith Book reads the same formats; a Book older than the Manuscript that saved a project
+says so in its own words.
+
 ## One file
 
 File › Save As › Save as One File writes the project as a single `.wsmz`, for sending or archiving.

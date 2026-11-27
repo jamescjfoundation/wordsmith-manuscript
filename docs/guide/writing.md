@@ -23,6 +23,8 @@ rule off, or set the project's language, with the `settings.typing` command (or 
 
 ## Reading several documents as one
 
+![The whole manuscript as one text, in the dark theme](../images/stitched-dark.png)
+
 Read as One Text (Mod+Alt+R) opens the selected chapter or part, with everything under it, as one
 continuous text; Read the Whole Manuscript does the same for the whole book. A line with each
 document's title separates them. Edit freely: each document gets its own words back when the
@@ -39,6 +41,8 @@ other pane's changes when you come back to it. One Pane, or a tab's close button
 
 ## Pages
 
+![The page view: the text as standard manuscript pages](../images/pages.png)
+
 View › Pages (Mod+5) shows the selected chapter or scene, or with Whole manuscript ticked the whole
 book with its title page, as standard manuscript pages: laid out exactly as the PDF export lays
 them out, with the page count above. The pages follow your writing (they are laid out again in the
@@ -51,7 +55,7 @@ pass gets the next color, and from then on what you type or paste shows in that 
 Mode (Mod+Shift+E) turns marking off and on; text you type next to marked text while it is off is
 not marked. `revision.list` shows the passes and how many documents carry each; Clear Revision
 Marks takes one pass's marks (or all) off the text and leaves every word. The marks are saved with
-the text and never exported. Projects with passes need Wordsmith Manuscript 0.2 or later.
+the text and never exported.
 
 ## Comments
 
