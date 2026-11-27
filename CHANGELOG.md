@@ -9,7 +9,7 @@ The first public release is 0.9.0, a preview; 1.0.0 follows it (decision 0009). 
 published before it: the versions under "Before the first release", at the end, were the stages
 of the build plan, each prepared as a release and none released.
 
-## Unreleased
+## 0.9.0 (2026-11-27)
 
 The first public release of Wordsmith Manuscript, 0.9.0: a preview of 1.0.0, for trying the app,
 its downloads and its update check. Everything the app does is in it. The user guide is at
