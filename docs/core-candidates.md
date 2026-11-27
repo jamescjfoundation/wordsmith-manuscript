@@ -17,7 +17,7 @@ States:
 The rows, the markers in the code and the core's issues are kept in step. Each app-first and
 copy-kept row's issue is open, labelled `core-candidate`, and names the file here that holds the
 code. A marker is written `core-candidate: open-source-core#N`, and `cargo xtask docs` fails on
-one that names no issue. Last checked against the issues and core v0.1.20 on 2026-11-26.
+one that names no issue. Last checked against the issues and core v0.1.22 on 2026-11-27.
 
 ## Markers in the code
 
@@ -32,9 +32,9 @@ one that names no issue. Last checked against the issues and core v0.1.20 on 202
 
 | Id | What | Core issue | State |
 | --- | --- | --- | --- |
-| C1 | Template chooser and start window | [#2](https://github.com/jamescjfoundation/open-source-core/issues/2) | released in core v0.1.2, used (`ShellOptions::start_window`, `TemplateSpec`). The issue is still open |
-| C2 | Writing statistics, session targets and the sprint timer | [#3](https://github.com/jamescjfoundation/open-source-core/issues/3) | released in core v0.1.2, used (`jcj_shell::writing`). The issue is still open |
-| C3 | Document tabs and split view | [#4](https://github.com/jamescjfoundation/open-source-core/issues/4) | released in core v0.1.3, used (`jcj_shell::split`). The issue is still open |
+| C1 | Template chooser and start window | [#2](https://github.com/jamescjfoundation/open-source-core/issues/2) | released in core v0.1.2, used (`ShellOptions::start_window`, `TemplateSpec`) |
+| C2 | Writing statistics, session targets and the sprint timer | [#3](https://github.com/jamescjfoundation/open-source-core/issues/3) | released in core v0.1.2, used (`jcj_shell::writing`) |
+| C3 | Document tabs and split view | [#4](https://github.com/jamescjfoundation/open-source-core/issues/4) | released in core v0.1.3, used (`jcj_shell::split`) |
 | C4 | The PDF names the app that made it | [#5](https://github.com/jamescjfoundation/open-source-core/issues/5) | open. The standard manuscript PDF carries the upstream engine's name as its producer (`docs/golden.md`, "Known gap") |
 | C5 | A tree widget with drag and drop (the binder) | [#6](https://github.com/jamescjfoundation/open-source-core/issues/6) | released in core v0.1.8, used since 2026-11-26: the binder draws with `jcj_shell::tree` and this repository's copy (`manuscript-ui/src/tree.rs`) is gone |
 | C9 | Word-for-word verification of an import or export | [#10](https://github.com/jamescjfoundation/open-source-core/issues/10) | released in core v0.1.9, used since 2026-11-26: `wordsmith_manuscript_io::verify` is the core's `jcj_features::verify` under the old name and this repository's copy (`manuscript-io/src/verify.rs`) is gone |

@@ -362,8 +362,8 @@ Two other Wordsmith apps meet this one
     a change Book asked for landed. A person or an agent cuts it, annotated, on a commit of
     `main` where the full gate and the Book consumer workflow both passed, and adds its row to
     the table in `docs/book-handoff.md`. A tag is never moved or deleted: the repository's
-    ruleset refuses it for `book-view-*` and `v*`. The `book-view` tags are not releases; once
-    Manuscript has releases, a release tag listed in that table is one Book may pin too.
+    ruleset refuses it for `book-view-*` and `v*`. The `book-view` tags are not releases; a
+    release tag (`v0.9.0` is the first) that is listed in that table is one Book may pin too.
   - A change that breaks a listed item or the book view raises the view's version
     (`book::VERSION` in `crates/manuscript-format/src/book.rs`), is recorded in
     `docs/book-handoff.md` and `CHANGELOG.md` with what Book must do, and needs a follow-up in
