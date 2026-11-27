@@ -159,9 +159,10 @@ cargo xtask ci
 
 It runs rustfmt, the crate-root lint check, a check that no local core link is left, a check that
 every core dependency names one release (`cargo xtask core-pin`), a check that the files and rules
-shared with the core match the pinned core release (`cargo xtask sync --check`), the layers checks (no upstream crate is named here, and each Manuscript crate uses only the layers
-under it), the asset attribution check, the privacy check, the license allowlist, clippy and all
-tests. CI also runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) for licenses,
+shared with the core match the pinned core release (`cargo xtask sync --check`), the layers checks
+(no upstream crate is named here, and each Manuscript crate uses only the layers under it), the
+links in the documents, the asset attribution check, the release data, the brand files against
+the brand kit's record, the privacy check, the license allowlist, clippy and all tests. CI also runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) for licenses,
 security advisories and crate sources.
 
 - `ROADMAP.md`: where the plan is (the `v1` milestone of the issues). `docs/SPEC.md`: how the

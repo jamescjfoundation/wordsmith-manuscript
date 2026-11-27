@@ -28,7 +28,7 @@ Manuscript's own.
 | `crates/manuscript-ui` | The views, ribbon tabs and panels |
 | `apps/manuscript`, `apps/manuscript-cli` | The desktop app and the command line |
 | `apps/manuscript-web` | A placeholder for the web build, which waits for the core |
-| `assets/brand` | Copies from the Wordsmith brand kit, and the app's own theme and derived icons (`AGENTS.md`, own rule 5) |
+| `assets/brand` | The Wordsmith brand kit's files, written by the kit's tool with their record `kit.json`, and the app's own theme (`AGENTS.md`, own rule 5) |
 | `assets/i18n` | The interface's translations |
 | `tools` | Scripts that make the fixtures |
 | `xtask` | The gate and the packaging; the shared modules in it are the core's. `main.rs` holds what a release carries; `brand.rs` is the check of the brand files |

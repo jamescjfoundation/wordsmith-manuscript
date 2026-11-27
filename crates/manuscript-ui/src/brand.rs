@@ -278,10 +278,10 @@ mod tests {
         assert_eq!(&ICON_256[..8], b"\x89PNG\r\n\x1a\n");
     }
 
-    /// The Windows program's icon (embedded by `apps/manuscript/build.rs`, made by
-    /// `tools/brand-icons.py --ico`) holds every size Windows asks for, each a 32-bit image.
+    /// The Windows program's icon (embedded by `apps/manuscript/build.rs`; the brand kit's file,
+    /// unchanged) holds the sizes Windows asks for, each a 32-bit image.
     #[test]
-    fn the_windows_icon_has_every_size() {
+    fn the_windows_icon_has_the_sizes_windows_needs() {
         let ico: &[u8] = include_bytes!("../../../assets/brand/icon.ico");
         let word = |at: usize| ico.get(at..at + 2).map_or(0, |b| u16::from_le_bytes([b[0], b[1]]));
         let long = |at: usize| ico.get(at..at + 4).map_or(0, |b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])) as usize;
@@ -294,6 +294,10 @@ mod tests {
             assert!(long(e + 12) + long(e + 8) <= ico.len(), "{side} px lies inside the file");
             sizes.push(side);
         }
-        assert_eq!(sizes, [16, 24, 32, 48, 64, 128, 256]);
+        // Which sizes the file holds is the kit's choice; these four are the ones Windows
+        // cannot do without (small and large lists, the taskbar, the largest view).
+        for needed in [16, 32, 48, 256] {
+            assert!(sizes.contains(&needed), "no {needed} px image among {sizes:?}");
+        }
     }
 }

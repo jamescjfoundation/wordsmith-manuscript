@@ -1,0 +1,135 @@
+{
+  "note": "The kit files in this folder, and the commit of jamescjfoundation/wordsmith they were taken at. Written by the kit's tool (`npm run brand -- --app manuscript` in website/wiki there); never edit it.",
+  "kit": {
+    "repository": "jamescjfoundation/wordsmith",
+    "commit": "49e631855731ebbfd16b6c7f7db30b050c8ec311"
+  },
+  "app": {
+    "repository": "jamescjfoundation/wordsmith-manuscript",
+    "folder": "assets/brand",
+    "record": "kit.json",
+    "carried": [
+      {
+        "file": "favicon.svg",
+        "from": "brand/wordsmith-manuscript/production/favicon.svg",
+        "sha256": "3061a85a7645051c5bdeeab6cea63058e5f36edaee9c676fcaa2bfad9eb7d9cb"
+      },
+      {
+        "file": "icon-1024.png",
+        "from": "brand/wordsmith-manuscript/production/icon-1024.png",
+        "sha256": "99769060e0b464f27840129c36321d3334482f3f7d12f7d4b6f748d3301bc643"
+      },
+      {
+        "file": "icon-256.png",
+        "from": "brand/wordsmith-manuscript/app-icon/icon-256.png",
+        "sha256": "179bbf696bdfb4449bf08dfa487e513ce2b8e3e9897f90c8766b0f595766eee0"
+      },
+      {
+        "file": "icon-32.png",
+        "from": "brand/wordsmith-manuscript/app-icon/icon-32.png",
+        "sha256": "de5e143c11b5e5867a5de72d35b750f618c4dd82236290f3f23ca0dd1a2f017f"
+      },
+      {
+        "file": "icon-512.png",
+        "from": "brand/wordsmith-manuscript/app-icon/icon-512.png",
+        "sha256": "58d0e55ba6f61f1aed2e31e5a0b2c1f8680f3ca035da3c31e9413ee825da537a"
+      },
+      {
+        "file": "icon.ico",
+        "from": "brand/wordsmith-manuscript/app-icon/wordsmith-manuscript.ico",
+        "sha256": "1d45b81198c4a2d637f2251584f2d624de2cb7ac9a758a5b6f82b64b6e6a2eb4"
+      },
+      {
+        "file": "wordsmith-and-ink-family-ink.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-family-ink.svg",
+        "sha256": "138b1dc320cf5f848785defb65f108f92879c1cfbafc44dcf984a43b489f95c9"
+      },
+      {
+        "file": "wordsmith-and-ink-family-paper.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-family-paper.svg",
+        "sha256": "11bfeba527afa5a324eafa4de57aa96bb17d0356b7d113fb0430afb1562b2e95"
+      },
+      {
+        "file": "wordsmith-and-ink-icon.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-icon.svg",
+        "sha256": "3d9adc706f17b3a3b6fb33e8db4330e831d5e5607a2d7105d4844a00c882f36c"
+      },
+      {
+        "file": "wordsmith-and-ink-imprint-ink.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-imprint-ink.svg",
+        "sha256": "8dc44aaf56e866c29c4833e140d9afcef88b0ab13e4c07c0937c5c0a3550f2e8"
+      },
+      {
+        "file": "wordsmith-and-ink-imprint-paper.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-imprint-paper.svg",
+        "sha256": "82f6d911b2e51021514ca5dc422f92e806c9066b3216c50e708c8e957e56135d"
+      },
+      {
+        "file": "wordsmith-and-ink-mark-ink.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-mark-ink.svg",
+        "sha256": "9dde5ac0d81234a8d2d17e95611fcf727751421b1cd913c88a7b6da263bd71d1"
+      },
+      {
+        "file": "wordsmith-and-ink-mark-paper.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-and-ink-mark-paper.svg",
+        "sha256": "785f7fa67b1f16a0a10b7a0a4c99edd827689fd3c7a7cef5b82e9f90c25f140f"
+      },
+      {
+        "file": "wordsmith-manuscript-mark-ink.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-mark-ink.svg",
+        "sha256": "e286ea85d592e6c6ef55e1ac22c1f022d2f91659a6b1053bf58b335b27c4c348"
+      },
+      {
+        "file": "wordsmith-manuscript-mark-paper.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-mark-paper.svg",
+        "sha256": "23d6e1a5f4c30b8843c35d8e429ace451f3921eec798c30e2f7020c1ff337b04"
+      },
+      {
+        "file": "wordsmith-manuscript-palette.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-palette.svg",
+        "sha256": "8f8d36fdd7bde3318a3c5724a68f532031e6190575874b7825713d221184d78c"
+      },
+      {
+        "file": "wordsmith-manuscript-stacked-ink.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-stacked-ink.svg",
+        "sha256": "656f518e228db3758a9ff8f2f94d6a31f753bcf17f6cc36b8adfc132b7627687"
+      },
+      {
+        "file": "wordsmith-manuscript-stacked-paper.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-stacked-paper.svg",
+        "sha256": "1595ed099c0ee1a963f653b608060522b73bc701532775e8077f0954988ee42f"
+      },
+      {
+        "file": "wordsmith-manuscript-wordmark-ink.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-wordmark-ink.svg",
+        "sha256": "07af534f4b97e1c56a7aba4bb8272a79bb9ee442ebfe83257b3d51faf644c21e"
+      },
+      {
+        "file": "wordsmith-manuscript-wordmark-paper.svg",
+        "from": "brand/wordsmith-manuscript/production/wordsmith-manuscript-wordmark-paper.svg",
+        "sha256": "2bf550cf6e27d877a2efe1feb963ea03f843c0acf3f59fc0592cb2cffac5604b"
+      }
+    ],
+    "own": [
+      {
+        "file": "README.md",
+        "what": "What the app's brand files are for, and the rules for using them"
+      },
+      {
+        "file": "tokens.json",
+        "what": "The app's interface theme, in the token format of open-source-core"
+      }
+    ],
+    "derived": [],
+    "theme": "tokens.json",
+    "palette": {
+      "ink": "#1C2340",
+      "paper": "#FAFAF7",
+      "app-color": "#D24B3E",
+      "app-color-text": "#A8322A",
+      "margin-blue": "#3B4FA8",
+      "slate": "#5A6080",
+      "night": "#12162B"
+    }
+  }
+}

@@ -309,16 +309,29 @@ has certificates (issue 20).
    `docs/fixtures.md`. One written for another Wordsmith repository's tests (Script's `.wss`
    files, one per format version) may be copied unchanged, with where it came from recorded.
    Private manuscripts stay in `.private/`.
-5. **The brand is the kit's.** The logos, icons and palette card in `assets/brand/`, and the
-   `README.md` beside them, are copies from the Wordsmith brand kit
-   (`brand/wordsmith-manuscript/production/` in the wordsmith repository). They are never
-   edited, recolored or redrawn here: a change starts in the kit and is copied over
-   ([Route F](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-f)). Manuscript's own files in that folder are `tokens.json`,
-   the interface theme in the core's token format (decision 0008; the brand colors in it must
-   match the kit's), and the files `tools/brand-icons.py` makes from the kit's icon: `icon-512.png`,
-   `icon-256.png`, `icon-32.png` and `icon.ico`. Every file under `assets/` is listed in
-   `ATTRIBUTION.md` (`cargo xtask assets`). **Today:** nothing here compares the copies with the
-   kit.
+5. **The brand is the kit's.** The logos, the icons at every size and the palette card in
+   `assets/brand/` are files of the Wordsmith brand kit (the `brand/` folder of the wordsmith
+   repository), byte for byte. They are never edited, recolored, redrawn or resized here: a
+   change starts in the kit, and the kit's tool writes its files into this folder
+   ([Route F](https://github.com/jamescjfoundation/wordsmith/blob/main/project/README.md#route-f);
+   [project decision 0007](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0007-brand-files-reach-the-apps-by-one-route.md)).
+   - **To take the kit's files:** with the wordsmith repository checked out beside this one,
+     `npm run brand -- --app manuscript` in its `website/wiki`. It writes the files and
+     `assets/brand/kit.json`, the record of the kit commit they were taken at and of what the
+     folder holds; commit the result here, naming the wordsmith commit. The record is never
+     edited by hand.
+   - **Manuscript's own files** in the folder are `tokens.json`, the interface theme in the
+     core's token format (decision 0008), whose `palette` must hold the kit's seven colors, and
+     `README.md`. A new file of the app's own is named in the kit's list first
+     (`brand/apps.json` there, by an issue in the wordsmith repository).
+   - **`cargo xtask brand`**, in the gate, fails when a carried file is not the one the record
+     names, when the folder holds a file the record does not list, and when the theme's palette
+     is not the kit's. **`cargo xtask brand --kit`** asks the wordsmith repository whether the
+     kit has moved since; the workflow `brand-kit.yml` runs it every week and is red until the
+     files are taken again.
+   - Every file under `assets/` is listed in `ATTRIBUTION.md` (`cargo xtask assets`).
+   - **Today:** a red `brand-kit.yml` run opens no issue; someone has to look at the Actions
+     page, or at the wordsmith repository's own issue for the change.
 
 ### Manuscript and the other apps
 

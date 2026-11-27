@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! `cargo xtask <task>` for Wordsmith Manuscript, built on open-source-core.
 //!
-//! This file is the app's own, and it holds only what is Manuscript's: its data (`APP`), which
-//! includes what a release carries (`package`: the core's `docs/app-releases.md` says what each
-//! field is). The gate, the packaging, every shared task and the list of them are in the modules
-//! under `shared`, which the core owns and `cargo xtask sync` keeps identical in every app;
-//! `cargo xtask help` lists them. Manuscript's layers are the table in `AGENTS.md`, which
-//! `cargo xtask app-layers` reads.
+//! This file and `brand.rs` are the app's own. They hold only what is Manuscript's: its data
+//! (`APP`), which includes what a release carries (`package`: the core's `docs/app-releases.md`
+//! says what each field is), and its one task of its own, `brand`, which holds the files in
+//! `assets/brand/` to the brand kit's. The gate, the packaging, every shared task and the list of
+//! them are in the modules under `shared`, which the core owns and `cargo xtask sync` keeps
+//! identical in every app; `cargo xtask help` lists them. Manuscript's layers are the table in
+//! `AGENTS.md`, which `cargo xtask app-layers` reads.
 
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+mod brand;
 mod shared;
 
 use std::process::ExitCode;
 
-use shared::gate::{self, App};
+use shared::gate::{self, App, Task};
 use shared::package::{FileType, Package};
 
 /// What the shared tasks need to know about Manuscript.
@@ -62,8 +64,17 @@ const APP: App = App {
     // `cargo xtask screenshots` redraws docs/images from a public-domain sample
     // (`crates/manuscript-ui/examples/screenshots.rs`).
     screenshots: Some("wordsmith-manuscript-ui"),
+    tasks: TASKS,
     ..App::DEFAULT
 };
+
+/// Manuscript's own tasks. `brand` is in the gate and reads only files; `brand --kit` asks the
+/// wordsmith repository whether the kit has moved, and a workflow runs it every week.
+const TASKS: &[Task] = &[Task::check(
+    "brand",
+    "the files in assets/brand/ are the brand kit's, unchanged, and the theme holds its palette (--kit: the kit has not moved)",
+    brand::task,
+)];
 
 fn main() -> ExitCode {
     gate::main(&APP)
@@ -77,7 +88,7 @@ mod tests {
     fn the_task_table_is_sound() {
         assert_eq!(gate::table_problems(&APP), Vec::<String>::new());
         let in_gate = gate::gate_names(&APP);
-        for check in ["app-layers", "assets", "release-data"] {
+        for check in ["app-layers", "assets", "release-data", "brand"] {
             assert!(in_gate.contains(&check), "{check} is not in ci");
         }
     }
