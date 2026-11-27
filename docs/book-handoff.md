@@ -357,6 +357,7 @@ moves more often than Manuscript is released.
 | `book-view-1.5` | 1 | v0.1.20 | The contract is written as a list with a test, and the Book consumer workflow exists. The model's word list and comparison are the core's (`jcj_doc`), with the same names and results. Nothing Book uses changed, so Book has nothing to do but move its two lines |
 | `book-view-1.6` | 1 | v0.1.21 | Manuscript moved to a newer core |
 | `book-view-1.7` | 1 | v0.1.22 | Manuscript moved to a newer core. The workspace's version is 0.9.0 from this tag on, so the two crates are `0.9.0` in Book's lock file; nothing Book uses changed |
+| `book-view-1.8` | 1 | v0.1.23 | Manuscript moved to a newer core |
 | `v0.9.0` | 1 | v0.1.22 | The first public release of Wordsmith Manuscript, a preview of 1.0.0. The two crates are as at `book-view-1.7` |
 
 ## How this contract is kept
