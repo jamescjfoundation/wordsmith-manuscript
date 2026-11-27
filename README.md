@@ -11,6 +11,16 @@ as you go. When it's done, hand an editor a standard manuscript, or pass the boo
 to typeset. A project is a folder of plain-text files that read well in `git diff`, and nothing you
 type is ever dropped or rewritten by saving, importing or exporting.
 
+> **A note from the founder**
+>
+> A lot of work has already gone into laying a solid foundation. The apps aren't ready for everyday use yet, but the idea is sound and the pieces are in place. From here, the plan is slow, steady development and testing.
+>
+> I've been a wannabe developer for years. AI has finally given me the tools to bring an idea like this together, but my time and resources are limited. Ideas, feedback, bug reports, fixes and feature improvements are all welcome. If you care about this as much as we do, we're also open to deeper partnerships.
+>
+> I'll keep improving the ecosystem where I can while building out the rest of the foundation.
+>
+> — Dylan J.
+
 ![The editor with the binder of chapters and scenes on the left and the scene's synopsis, label, status, fields and bible entries in the Inspector](docs/images/editor.png)
 
 ## What it does
