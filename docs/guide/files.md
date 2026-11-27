@@ -14,7 +14,8 @@ A project is a folder of plain text files you can read in any text editor:
 | `media/` | Pictures and other files |
 
 A change to one scene changes one file, so projects work well with version control and synced
-folders. `docs/format.md` in the source specifies every file.
+folders. A file in the project that is a symbolic link is not followed: the app does not read it,
+pack it or write over it. `docs/format.md` in the source specifies every file.
 
 ## Saving
 
@@ -41,7 +42,9 @@ Keep the Saved Version.
 
 When you close a project, and every 30 minutes while you write, a packed copy (`.wsmz`) goes into a
 `Backups` folder beside the project; the newest ten are kept. Open a backup like any packed
-project.
+project. Each backup is named after the project and the time it was made; a second one in the
+same second gets a number after the time, and a file you put in the folder under another name is
+never counted or removed.
 
 ## Other versions of the app
 

@@ -19,7 +19,7 @@ fn bookmarks_toggle_list_and_keep() {
         p.binder.insert(Place::end_of(Area::Manuscript), Item::with_id(id(n), Kind::Text, format!("Scene {n}"))).unwrap();
     }
     let mut app = Manuscript::with_session(Session::new(p));
-    let mut sh = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    let mut sh = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens());
     app.binder.selected = Some(id(3));
     app.run(&Cmd::new("bookmark.toggle"), &mut sh).unwrap();
     let s = app.session.as_mut().unwrap();

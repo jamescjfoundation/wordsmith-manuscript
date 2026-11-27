@@ -61,7 +61,7 @@ fn every_text_has_a_translation_and_every_translation_is_used() {
 #[test]
 fn switching_language_switches_the_whole_window() {
     let mut app = Manuscript::new();
-    let mut sh = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    let mut sh = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens());
     app.run(&Cmd::new("view.language.es"), &mut sh).unwrap();
     assert_eq!(i18n::language(), "es");
     assert_eq!(app.view.language, "es");

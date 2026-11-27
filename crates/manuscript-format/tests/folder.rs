@@ -287,3 +287,25 @@ fn snapshots_are_kept_beside_the_text_and_round_trip() {
     std::fs::write(dir.join(format!("snapshots/{}/notes.md", id(2))), "x").unwrap();
     assert_eq!(Folder::open(&dir).unwrap().1, p);
 }
+
+/// A text file that is a symbolic link is never followed (core decision 0018): it reads as
+/// missing, a save leaves it alone, and a packed copy leaves it out, so a project cannot name a
+/// file outside itself.
+#[cfg(unix)]
+#[test]
+fn a_text_file_that_is_a_link_is_not_followed() {
+    let dir = scratch("linked");
+    Folder::create(&dir, &sample()).unwrap();
+    let outside = scratch("linked-outside");
+    std::fs::create_dir_all(&outside).unwrap();
+    std::fs::write(outside.join("elsewhere.md"), "Words kept elsewhere.\n").unwrap();
+    let rel = format!("text/{}.md", id(2));
+    std::fs::remove_file(dir.join(&rel)).unwrap();
+    std::os::unix::fs::symlink(outside.join("elsewhere.md"), dir.join(&rel)).unwrap();
+    let (mut f, p) = Folder::open(&dir).unwrap();
+    assert!(!p.texts.contains_key(&id(2)), "the link is not read");
+    f.save(&p).unwrap();
+    assert!(std::fs::symlink_metadata(dir.join(&rel)).unwrap().file_type().is_symlink(), "a save leaves the link alone");
+    assert_eq!(std::fs::read_to_string(outside.join("elsewhere.md")).unwrap(), "Words kept elsewhere.\n");
+    assert!(!wordsmith_manuscript_format::pack::folder_files(&dir).unwrap().contains_key(&rel), "a packed copy leaves it out");
+}

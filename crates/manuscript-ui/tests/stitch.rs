@@ -193,7 +193,7 @@ fn a_200000_word_view_types_within_the_frame_budget() {
     let mut h = egui_kittest::Harness::builder().with_size(jcj_shell::egui::vec2(1000.0, 800.0)).build_ui_state(
         |ui, st: &mut (Editor, bool)| {
             if !st.1 {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.1 = true;
             }
             st.0.ui(ui, &look);

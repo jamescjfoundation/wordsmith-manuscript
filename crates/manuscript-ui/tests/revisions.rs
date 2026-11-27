@@ -17,7 +17,7 @@ fn app() -> (Manuscript, Shell) {
     let mut p = Project::new();
     p.binder.insert(Place::end_of(Area::Manuscript), Item::with_id(id(1), Kind::Text, "Scene").role(Role::Scene)).unwrap();
     p.texts.insert(id(1), ItemText::with_body(Text::from_paragraphs(&["The keeper slept."])));
-    (Manuscript::with_session(Session::new(p)), Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens()))
+    (Manuscript::with_session(Session::new(p)), Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens()))
 }
 
 fn body(app: &Manuscript) -> String {

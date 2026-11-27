@@ -15,6 +15,7 @@ pub mod collections;
 pub mod commands;
 pub mod comments;
 pub mod cork;
+pub mod desktop;
 pub mod drafts;
 pub mod editor;
 pub mod entry_types;
@@ -63,6 +64,11 @@ use crate::session::Session;
 
 /// The product name shown in the window and the About page.
 pub const NAME: &str = "Wordsmith Manuscript";
+
+/// The release id: the stem of every release file, the desktop program's name, the settings
+/// folder on Linux, and the name the program's messages on standard error start with.
+/// `apps/manuscript` and `xtask/src/main.rs` each hold it to this value in a test.
+pub const ID: &str = "wordsmith-manuscript";
 
 /// The binder panel's id.
 pub const BINDER_PANEL: &str = "manuscript.binder";

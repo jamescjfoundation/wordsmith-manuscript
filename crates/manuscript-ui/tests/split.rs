@@ -21,7 +21,7 @@ fn app() -> (Manuscript, Shell) {
     p.binder.insert(Place::end_of(Area::Manuscript), ch).unwrap();
     p.binder.insert(Place::end_of(Area::Research), Item::with_id(id(50), Kind::Text, "Notes")).unwrap();
     p.texts.insert(id(50), ItemText::with_body(Text::from_paragraphs(&["Research."])));
-    (Manuscript::with_session(Session::new(p)), Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens()))
+    (Manuscript::with_session(Session::new(p)), Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens()))
 }
 
 fn body(app: &Manuscript, n: u64) -> Text {

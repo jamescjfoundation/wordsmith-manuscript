@@ -30,11 +30,11 @@ fn window() -> Harness<'static, St> {
     let mut app = Manuscript::with_session(Session::new(p));
     app.binder.selected = Some(id(1));
     app.open_item(id(1));
-    let shell = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    let shell = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens());
     Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_ui_state(
         |ui, st: &mut St| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             st.shell.ui(ui, &mut st.app);

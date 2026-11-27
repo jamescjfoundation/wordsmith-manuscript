@@ -52,6 +52,9 @@ pub enum Error {
     },
     /// Something could not be written (an internal limit of the writer).
     Write(String),
+    /// The core's folder layer refused something it checks for every app (a limit of a packed
+    /// project, a path that is not the project's, a folder that is not empty), in a sentence.
+    Project(String),
 }
 
 impl Error {
@@ -76,9 +79,25 @@ impl std::fmt::Display for Error {
             Error::Damaged { file, why } => write!(f, "{file} is damaged: {why}"),
             Error::Io { file, why } => write!(f, "{file}: {why}"),
             Error::Write(why) => write!(f, "could not write the project: {why}"),
+            Error::Project(why) => write!(f, "{why}"),
         }
     }
 }
 
 impl std::error::Error for Error {}
+
+/// The core's folder layer's errors, in this crate's: a project saved by a newer Manuscript and a
+/// folder or file that is no project keep their own variants, so a reader of this crate (Wordsmith
+/// Book) can still tell them apart.
+impl From<jcj_project::Error> for Error {
+    fn from(e: jcj_project::Error) -> Error {
+        match e {
+            jcj_project::Error::NotAProject => Error::NotAProject,
+            jcj_project::Error::NewerApp { found, supported } => Error::Newer { found, supported },
+            jcj_project::Error::Damaged(why) => Error::Damaged { file: "the project".into(), why },
+            jcj_project::Error::Io { path, source } => Error::Io { file: path.display().to_string(), why: source.to_string() },
+            other => Error::Project(other.to_string()),
+        }
+    }
+}
 pub mod book;

@@ -156,7 +156,7 @@ fn the_view_shows_text_and_takes_typing() {
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 600.0)).build_ui_state(
         |ui, st: &mut State| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             let r = st.ed.ui(ui, &EditorLook::default());

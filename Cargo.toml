@@ -53,11 +53,10 @@ sha2 = "0.11"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 egui_kittest = { version = "0.37", default-features = false }
 proptest = { version = "1", default-features = false, features = ["std"] }
-# The Windows program's icon and version resource (apps/manuscript/build.rs). MIT. Without its
-# `toml` feature it reads nothing from Cargo.toml and pulls in only `version_check`.
-winresource = { version = "0.1.34", default-features = false }
-# The window, at the egui version the core pins (the patch block points it at the same fork).
-eframe = { version = "0.37", default-features = false, features = ["accesskit", "glow", "wayland", "x11"] }
+# The Windows program's icon and version resource (apps/manuscript/build.rs). MIT. Its `toml`
+# feature reads the program's names from `[package.metadata.winresource]` in
+# apps/manuscript/Cargo.toml; without it Windows would show the package's name.
+winresource = { version = "0.1.34", default-features = false, features = ["toml"] }
 
 # BEGIN open-source-core: lints-and-profiles
 # Owned by open-source-core (template/Cargo.toml). Change it there, never in a copy: its tooling rewrites the copies.

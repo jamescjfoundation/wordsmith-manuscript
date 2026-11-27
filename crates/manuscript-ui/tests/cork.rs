@@ -82,7 +82,7 @@ fn the_corkboard_draws_and_adds_cards() {
     let mut h = Harness::builder().with_size(egui::vec2(1000.0, 700.0)).build_ui_state(
         |ui, st: &mut St| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             let _ = cork::view(ui, &mut st.s, &mut st.v, Some(id(1)), &HashSet::new(), None);
@@ -100,7 +100,7 @@ fn the_corkboard_draws_and_adds_cards() {
 #[test]
 fn a_filter_applies_to_binder_corkboard_and_outline_together() {
     let mut app = wordsmith_manuscript_ui::Manuscript::with_session(Session::new(project()));
-    let mut sh = jcj_shell::Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    let mut sh = jcj_shell::Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens());
     jcj_shell::App::run(&mut app, &jcj_shell::Cmd::with("filter.set", json!({ "labels": ["Action"] })), &mut sh).unwrap();
     let s = app.session.as_ref().unwrap();
     let hidden = &app.binder.hidden;

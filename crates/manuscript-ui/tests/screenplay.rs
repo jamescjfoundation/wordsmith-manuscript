@@ -52,7 +52,7 @@ fn a_screenplay_is_kept_shown_and_left_out_of_exports() {
     let mut h = Harness::builder().with_size(egui::vec2(800.0, 600.0)).build_ui_state(
         |ui, st: &mut St| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             let _ = media::view(ui, &mut st.s, &mut st.v, st.id);
