@@ -12,6 +12,7 @@ cargo xtask ci --changed         # only the packages your change affects, and th
 cargo run -p wordsmith-manuscript                # the desktop app
 cargo run -p wordsmith-manuscript-cli -- help    # the command line
 cargo xtask screenshots                          # draw the README's pictures again (docs/images/)
+cargo xtask package                              # this computer's release package, into dist/
 ```
 
 `cargo xtask help` lists every task. `AGENTS.md` has the rules: the project's, the core's and
@@ -29,10 +30,10 @@ Manuscript's own.
 | `apps/manuscript-web` | A placeholder for the web build, which waits for the core |
 | `assets/brand` | Copies from the Wordsmith brand kit, and the app's own theme and derived icons (`AGENTS.md`, own rule 5) |
 | `assets/i18n` | The interface's translations |
-| `packaging` | What the release needs on Linux, macOS and Windows |
-| `tools` | Scripts that make the fixtures and the derived icons |
-| `xtask` | The gate; the shared modules in it are the core's |
-| `docs/PLAN.md` | The build plan |
+| `tools` | Scripts that make the fixtures |
+| `xtask` | The gate and the packaging; the shared modules in it are the core's. `main.rs` holds what a release carries; `brand.rs` is the check of the brand files |
+| `ROADMAP.md` | Where the plan is: the `v1` milestone of this repository's issues |
+| `docs/PLAN.md` | The finished build plan, kept as history |
 | `docs/SPEC.md` | How the app behaves |
 | `docs/format.md` | The project folder and the text dialect |
 | `docs/book-handoff.md` | The contract with Wordsmith Book, which builds on the model and format crates |
@@ -102,7 +103,14 @@ These add to the block above; `AGENTS.md` has them in full.
   a fact, such as what the app opens, is fine
   ([project decision 0003](https://github.com/jamescjfoundation/wordsmith/blob/main/project/decisions/0003-naming-other-companies-programs-and-formats.md)).
 - Every finished step adds a line to `docs/progress.md`. That is beside the block's
-  `CHANGELOG.md` line, not instead of it: the changelog is for what a writer will notice.
+  `CHANGELOG.md` line, not instead of it: the changelog is for what a writer will notice, under
+  `## Unreleased` until the release that carries it.
+- Work found and not done now is an issue, in the `v1` milestone when 1.0.0 needs it. No file
+  holds a list of what is planned (`ROADMAP.md`).
+- A release is cut as the block in `AGENTS.md` says ("Releasing an app"). This repository has
+  no release workflow and no packaging of its own.
+- A reviewed file that a change alters on purpose is written again with `UPDATE_GOLDEN=1`: the
+  golden files (`docs/golden.md`) and the guide's page of keys.
 - Wordsmith Book builds on `manuscript-model` and `manuscript-format`. Check a change to them,
   to the project schema or to the book view against `docs/book-handoff.md` before it lands. The
   contract test in the gate and the "Book consumer" workflow, which runs Book's own gate against

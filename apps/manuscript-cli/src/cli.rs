@@ -13,19 +13,19 @@ use wordsmith_manuscript_model::{Area, Project, Role};
 use wordsmith_manuscript_ui::session::Session;
 
 /// The program's name, as the usage, the version line and every message give it.
-pub const PROGRAM: &str = "manuscript-cli";
+pub const PROGRAM: &str = "wordsmith-manuscript-cli";
 
 /// The usage: on standard output for `--help`, on standard error after a wrong command line.
 pub const USAGE: &str = "usage:
-  manuscript-cli convert <input> <output>
-  manuscript-cli export <project> <file> [--format F] [--preset NAME]
-  manuscript-cli counts <project> [--item ID]
-  manuscript-cli verify <source> <result>
-  manuscript-cli report <project>
-  manuscript-cli run <project> <command> [JSON]
-  manuscript-cli commands
-  manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]
-  manuscript-cli --help | --version";
+  wordsmith-manuscript-cli convert <input> <output>
+  wordsmith-manuscript-cli export <project> <file> [--format F] [--preset NAME]
+  wordsmith-manuscript-cli counts <project> [--item ID]
+  wordsmith-manuscript-cli verify <source> <result>
+  wordsmith-manuscript-cli report <project>
+  wordsmith-manuscript-cli run <project> <command> [JSON]
+  wordsmith-manuscript-cli commands
+  wordsmith-manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]
+  wordsmith-manuscript-cli --help | --version";
 
 /// Why the command line stopped without doing what was asked: the exit code, and the reason
 /// for standard error.

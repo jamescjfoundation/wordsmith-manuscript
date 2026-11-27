@@ -209,6 +209,29 @@ interface back out is not.
   `jcj-` line names one tag. `cargo xtask core-pin` says how far behind an app is, and a
   scheduled check opens an issue when it is more than three releases behind.
 
+### Releasing an app
+
+One contract and one workflow for every app
+([core decision 0019](https://github.com/jamescjfoundation/open-source-core/blob/main/docs/decisions/0019-app-releases.md);
+the contract, with what each release file is named and holds, is the core's
+[`docs/app-releases.md`](https://github.com/jamescjfoundation/open-source-core/blob/main/docs/app-releases.md)).
+The gate runs first and the workflow makes the tag, as for the core.
+
+1. Move the app to the newest core. Write what the release changes under `## Unreleased` of
+   `CHANGELOG.md`.
+2. `cargo xtask release X.Y.Z` makes the changes of the release commit: the version in
+   `Cargo.toml` and `Cargo.lock`, and the changelog heading with the date. Run `cargo xtask ci`,
+   commit, push to `main`.
+3. `gh workflow run release.yml --ref main`. It checks the release commit, runs the whole gate
+   on Linux, macOS and Windows, builds and checks the package of each system and
+   `SHA256SUMS.txt`, and only then makes the tag `vX.Y.Z` and publishes. A red job leaves no
+   tag: fix the cause on `main` and start it again.
+4. To try it without releasing: `gh workflow run release.yml -f dry-run=true`. The same dry run
+   starts by itself every week. `cargo xtask package` makes this computer's package in `dist/`.
+
+What a release carries is data in `xtask/src/main.rs` (`package`). The packaging and the
+workflow are the core's: an app has no release workflow and no packaging script of its own.
+
 ### Things agents must not do
 
 - Name WordCraft or craft-libs types in an app repository. Use the `jcj-` interfaces; if one is
@@ -222,6 +245,8 @@ interface back out is not.
   [0004](https://github.com/jamescjfoundation/open-source-core/blob/main/docs/decisions/0004-follow-hold-own.md)
   and
   [0011](https://github.com/jamescjfoundation/open-source-core/blob/main/docs/decisions/0011-releases-and-versioning.md)).
+- Push a `v*` tag, or create or edit a release, by hand: in the core and in an app the release
+  workflow makes both, after the gate. A tag cannot be taken back.
 - Edit WordCraft or craft-libs code anywhere but our forks' topic branches.
 - Edit a file or a marked block the core owns anywhere but in the core.
 - Commit personal details, private files or secrets.
@@ -241,10 +266,26 @@ interface back out is not.
 
 ## Wordsmith Manuscript's own rules
 
-The build plan is `docs/PLAN.md`; behavior comes from `docs/SPEC.md`; the files are specified in
-`docs/format.md`. Decisions about this app go in `docs/decisions/`. Every finished step adds a
-line to `docs/progress.md`, which is this repository's record of work. `CHANGELOG.md` is for
-writers: a step whose result a writer will notice also gets its line there.
+Behavior comes from `docs/SPEC.md`; the files are specified in `docs/format.md`. Decisions about
+this app go in `docs/decisions/`. Every finished step adds a line to `docs/progress.md`, which
+is this repository's record of work. `CHANGELOG.md` is for writers: a step whose result a
+writer will notice also gets its line there, under `## Unreleased` until the release that
+carries it.
+
+**What is planned** is the
+[`v1` milestone](https://github.com/jamescjfoundation/wordsmith-manuscript/milestone/1) of this
+repository's issues; `ROADMAP.md` links to it and holds no list. Work you find and will not do
+now is an issue there (no milestone when it is for after 1.0.0), never a line in a file.
+`docs/PLAN.md` is the plan the app was built from: finished, kept as history, and not the place
+to look for what is open. The first public release is 0.9.0, a preview, and 1.0.0 follows it;
+the plan's stages 0.1 to 1.0 were never released (decision 0009).
+
+**The programs** are `wordsmith-manuscript` (the desktop app) and `wordsmith-manuscript-cli`
+(the command line), each named like its package. What a release carries is the `package` data
+in `xtask/src/main.rs`; `apps/manuscript/src/main.rs` gives the update check the same release
+id and the window the same app id, and a test on each side holds them. A release is cut as the
+core's block above says ("Releasing an app"). The builds are unsigned until the organisation
+has certificates (issue 20).
 
 1. **Our own names and design.** Every interface name, menu label, feature name, template and
    icon is our own: never another product's name or its distinctive feature name, even where the
@@ -261,7 +302,9 @@ writers: a step whose result a writer will notice also gets its line there.
    word-for-word test. Text is never "cleaned up" without the writer asking.
 3. **Golden files are the judge.** Standard manuscript PDF and DOCX output and the format's round
    trips are compared with reviewed reference files. A change that alters them is deliberate,
-   reviewed and recorded in `docs/golden.md`.
+   reviewed and recorded in `docs/golden.md`. One switch writes a reviewed file again,
+   `UPDATE_GOLDEN=1`: the golden files in `tests/golden/` and the guide's page of keys
+   (`docs/guide/keys.md`, made from the commands).
 4. **Fixtures** are public-domain texts or written for the test, each recorded in
    `docs/fixtures.md`. One written for another Wordsmith repository's tests (Script's `.wss`
    files, one per format version) may be copied unchanged, with where it came from recorded.
@@ -314,7 +357,7 @@ Two other Wordsmith apps meet this one
   - **Today:** the contract's list is kept in step with Book's code by hand. Right after a core
     move the workflow can pass only against a branch of Book that has moved too (its `book-ref`
     input). Nothing makes a release of Manuscript that writes a new schema wait for a Book that
-    reads it. No release tag exists yet.
+    reads it. A release tag joins the contract's table only when someone adds its row.
 - **Manuscript reads Wordsmith Script's `.wss` files** (`crates/manuscript-io/src/screenplay.rs`)
   for screenplays kept in a project. Script owns the format (`docs/format.md` in the Script
   repository) and numbers its versions; the reader here is Manuscript's own.
@@ -359,8 +402,8 @@ Book builds on them.
 ### Code that waits for the core
 
 `docs/core-candidates.md` lists every core change Manuscript has asked for and every
-`// core-candidate:` marker here, with its core issue and state. Plan section 5.4 is the list as
-the plan was written; the ledger is what is true now.
+`// core-candidate:` marker here, with its core issue and state. Section 5.4 of the finished
+plan (`docs/PLAN.md`) is the list as the plan was written; the ledger is what is true now.
 
 - A marker is written `core-candidate: open-source-core#N` and names an open core issue that
   says what the core would need to offer. `cargo xtask docs` fails on a marker with no issue.
@@ -368,4 +411,5 @@ the plan was written; the ledger is what is true now.
   marker waits for, move onto the core's code and delete the copy here in the same change that
   moves the pin, or say in the ledger exactly why the copy stays and which open issue would
   free it.
-- **Today:** nothing checks the ledger against the markers or the issues; it is kept by hand.
+- **Today:** nothing checks the ledger against the markers or the issues; it is kept by hand
+  (issue 29).

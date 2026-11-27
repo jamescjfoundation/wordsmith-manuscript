@@ -40,8 +40,9 @@ the Heading 1 style and the texts' `_underscored_` words in italic.
 | `web/pride-and-prejudice-part-1.html` | `novels/pride-and-prejudice.txt`, chapters 1 to 5 as a serial's web page: the chapters in an `<article>`, with a header, navigation, footer, style and script written for the test around it |
 | `outlines/pride-and-prejudice.opml` | `novels/pride-and-prejudice.txt`: three "Volume" outlines of the chapters, each chapter's first paragraph as its note |
 
-**Still to add:** DOCX, ODT and RTF versions saved by at least two different word processors (plan
-step M0.5). The build machine has no word processor, so these come from a person who has them: open
+**Still to add**
+([issue 23](https://github.com/jamescjfoundation/wordsmith-manuscript/issues/23)): DOCX, ODT and
+RTF versions saved by at least two different word processors (plan step M0.5). The build machine has no word processor, so these come from a person who has them: open
 `novels/pride-and-prejudice.txt` in each, apply Heading 1 to the chapter titles, save as DOCX, ODT
 and RTF, and add the files here with the program's name and version (naming a program to state
 where a file came from is allowed, `AGENTS.md`, own rule 1). Remove any person's name, user name
@@ -74,11 +75,11 @@ so must the first version it refuses.
 
 | File | Format | Where it came from |
 | --- | --- | --- |
-| `v1-short.wss` | 1 | Copied unchanged from the Wordsmith Script repository, `crates/wordsmith-format/tests/fixtures/v1-short.wss` (written for Script's tests; MIT OR Apache-2.0), on 2026-11-26 |
+| `v1-short.wss` | 1 | Copied unchanged from the Wordsmith Script repository, `tests/fixtures/v1-short.wss` (written for Script's tests; MIT OR Apache-2.0), on 2026-11-26 |
 | `v2-notes.wss` | 2 | The same folder's `v2-notes.wss`, copied unchanged the same day |
 | `v3-revisions.wss` | 3 | The same folder's `v3-revisions.wss`, copied unchanged the same day |
 | `v4-styles.wss` | 4 | The same folder's `v4-styles.wss`, copied unchanged the same day |
-| `v5-ext.wss` | 5 | The same bytes as Script's fixture of that name (`crates/wordsmith-format/tests/fixtures/v5-ext.wss` in wordsmith-script): the settings' `ext` and `trackChanges`, a note's anchor, escapes, an empty line inside a paragraph |
+| `v5-ext.wss` | 5 | The same bytes as Script's fixture of that name (`tests/fixtures/v5-ext.wss` in wordsmith-script): the settings' `ext` and `trackChanges`, a note's anchor, escapes, an empty line inside a paragraph |
 | `v6-newer.wss` | 6 | Written for the test: `v5-ext.wss` with the first line naming format 6. No format 6 exists; the file stands for one the reader was not written for, and must be refused |
 
 The copies are test data, not code, and are never edited here: when Script changes one of its

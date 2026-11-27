@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn cli(args: &[&str]) -> (bool, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_manuscript-cli")).args(args).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_wordsmith-manuscript-cli")).args(args).output().unwrap();
     (out.status.success(), String::from_utf8_lossy(&out.stdout).into_owned() + &String::from_utf8_lossy(&out.stderr))
 }
 

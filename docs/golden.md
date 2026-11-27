@@ -28,7 +28,8 @@ core holds to a hash of its own. What Manuscript chooses is held by tests
 ## Known gap
 
 The PDF's creator and producer fields name the upstream engine rather than this app: the core
-writes them from a fixed value (core issue #5, C4). Changing it needs a patch in the core's
+writes them from a fixed value (core issue #5, C4;
+[issue 27](https://github.com/jamescjfoundation/wordsmith-manuscript/issues/27) here). Changing it needs a patch in the core's
 upstream fork and a move of its pin, which waits on a maintainer's approval; until then the
 standard manuscript PDF carries the title and author the writer set and the upstream name as
 producer.

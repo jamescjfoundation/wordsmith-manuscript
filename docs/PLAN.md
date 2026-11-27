@@ -1,6 +1,15 @@
 # Wordsmith Manuscript: build plan
 
-As of 2026-11-24. Status: accepted as the build plan; changed only by pull request.
+**This is history: the plan the app was built from, finished on 2026-11-24.** It is kept as it
+was written and is not maintained. Every milestone and stage in it is done, but for the web
+build, which waits for the core. Its stages 0.1, 0.2, 0.3 and 1.0 were never released under
+those numbers: the first public release is 0.9.0 (decision 0009). Where it says a release
+"awaits approval", or names a release workflow, packaging or a program called `manuscript-cli`,
+that is how things stood then. What is planned now is the
+[`v1` milestone](https://github.com/jamescjfoundation/wordsmith-manuscript/milestone/1)
+(`ROADMAP.md`); what the app does is `docs/SPEC.md`, the guide and `CHANGELOG.md`.
+
+As of 2026-11-24. Status then: accepted as the build plan; changed only by pull request.
 
 Wordsmith Manuscript is The James C. J. Foundation's open-source app for writing novels and other
 long work: a binder of parts, chapters and scenes; index cards on a corkboard; an outline table; a story

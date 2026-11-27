@@ -21,5 +21,5 @@ jcj-agents = { workspace = true }
 serde_json = { workspace = true }
 
 [[bin]]
-name = "manuscript-cli"
+name = "wordsmith-manuscript-cli"
 path = "src/main.rs"

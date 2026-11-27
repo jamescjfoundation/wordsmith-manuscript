@@ -11,7 +11,7 @@ use jcj_agents::cli::Exit;
 use serde_json::{Value, json};
 
 fn run(args: &[&str], input: &str) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_manuscript-cli"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_wordsmith-manuscript-cli"))
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -79,7 +79,7 @@ fn help_and_version_are_answered_on_standard_output() {
     for version in ["--version", "-V", "version"] {
         let o = run(&[version], "");
         assert_eq!(code(&o), exit(Exit::Done), "{version}");
-        assert_eq!(text(&o.stdout).lines().next(), Some(concat!("manuscript-cli ", env!("CARGO_PKG_VERSION"))));
+        assert_eq!(text(&o.stdout).lines().next(), Some(concat!("wordsmith-manuscript-cli ", env!("CARGO_PKG_VERSION"))));
         assert!(o.stderr.is_empty());
     }
 }
@@ -139,7 +139,7 @@ fn a_wrong_command_line_is_a_usage_error_on_standard_error() {
         assert_eq!(code(&o), exit(Exit::Usage), "{args:?}: {}", text(&o.stderr));
         assert!(o.stdout.is_empty(), "{args:?}: nothing on standard output");
         let said = text(&o.stderr);
-        assert!(said.starts_with("manuscript-cli: ") && said.contains("usage:"), "{args:?}: {said}");
+        assert!(said.starts_with("wordsmith-manuscript-cli: ") && said.contains("usage:"), "{args:?}: {said}");
     }
     // Nothing was done: the misspelled option wrote no file.
     assert!(!dir.join("out.md").exists());
@@ -163,7 +163,7 @@ fn a_failure_is_not_a_usage_error() {
         assert_eq!(code(&o), exit(Exit::Failed), "{args:?}: {}", text(&o.stderr));
         assert!(o.stdout.is_empty(), "{args:?}: nothing on standard output");
         let said = text(&o.stderr);
-        assert!(said.starts_with("manuscript-cli: ") && !said.contains("usage:"), "{args:?}: {said}");
+        assert!(said.starts_with("wordsmith-manuscript-cli: ") && !said.contains("usage:"), "{args:?}: {said}");
     }
 }
 
@@ -191,7 +191,7 @@ fn a_difference_is_not_a_failure() {
     // The check could not run: 1, with the reason on standard error.
     let o = run(&["verify", &project, &path(&dir.join("missing.txt"))], "");
     assert_eq!(code(&o), exit(Exit::Failed));
-    assert!(o.stdout.is_empty() && text(&o.stderr).starts_with("manuscript-cli: "), "{}", text(&o.stderr));
+    assert!(o.stdout.is_empty() && text(&o.stderr).starts_with("wordsmith-manuscript-cli: "), "{}", text(&o.stderr));
 }
 
 #[test]

@@ -21,3 +21,4 @@ table shows each record's status; change both together.
 | [0006](0006-drafts.md) | Drafts in one project | accepted 2026-11-24 |
 | [0007](0007-series-and-a-shared-bible.md) | Series and a shared story bible | accepted 2026-11-24, amended 2026-11-26 |
 | [0008](0008-the-interface-colors.md) | The interface colors | accepted 2026-11-24 |
+| [0009](0009-the-first-release-and-one-shape-with-the-other-apps.md) | The first public release is 0.9.0, in one shape with the other Wordsmith apps | accepted 2026-11-27 |

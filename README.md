@@ -38,7 +38,7 @@ type is ever dropped or rewritten by saving, importing or exporting.
   PDF), DOCX, ODT, RTF, Markdown, text, HTML, an EPUB reading copy, or a book package for
   Wordsmith Book. Every import and export is checked word for word. Auto-save, recovery after a
   crash, rotating backups, and conflict copies instead of silent overwrites in synced folders.
-- **Automation.** `manuscript-cli` converts, exports, counts and verifies, and serves every
+- **Automation.** `wordsmith-manuscript-cli` converts, exports, counts and verifies, and serves every
   command to agents over MCP.
 
 The window has a ribbon of tabs (Write, Bible, View), a Binder on the left, an Inspector on the
@@ -76,25 +76,47 @@ cargo run --release -p wordsmith-manuscript-cli -- convert draft.docx novel.wsm
 cargo run --release -p wordsmith-manuscript-cli -- counts novel.wsm
 ```
 
-`packaging/` holds the desktop entry and file types for Linux, the app bundle's `Info.plist` for
-macOS and the file-type registration for Windows. `cargo xtask third-party-licenses` writes the
-license text of every shipped dependency.
+**Status:** the first public release is 0.9.0, a preview of 1.0.0 ([CHANGELOG.md](CHANGELOG.md)).
+What is planned before 1.0.0 is the
+[`v1` milestone](https://github.com/jamescjfoundation/wordsmith-manuscript/milestone/1)
+([ROADMAP.md](ROADMAP.md)). The web version waits for the core to support a web build.
 
-**Status:** 1.0 is prepared (see [CHANGELOG.md](CHANGELOG.md)) and waits for a maintainer to
-approve the first release; no release has been published yet. The web version waits for the core
-to support a web build.
+### Downloads
+
+Releases are published on this repository's
+[releases page](https://github.com/jamescjfoundation/wordsmith-manuscript/releases), and nowhere
+else. A release has one file for each system and a list of their checksums:
+
+| System | File |
+| --- | --- |
+| Linux, x86_64 | `wordsmith-manuscript-<version>-linux-x86_64.tar.gz`: unpack it and run `./install.sh` |
+| macOS, Apple silicon | `wordsmith-manuscript-<version>-macos-aarch64.dmg`: open it and drag the app to Applications |
+| Windows, x64 | `wordsmith-manuscript-<version>-windows-x64-portable.zip`: unpack it anywhere and open `wordsmith-manuscript.exe` |
+| | `SHA256SUMS.txt`: the checksums of the three |
+
+Each holds the app, `wordsmith-manuscript-cli` and the license texts of everything they are built
+from. **The builds are not signed with a publisher's certificate yet**, so macOS and Windows ask
+before they open the app the first time; the guide's
+[Installing and updating](docs/guide/installing.md) page has the steps for each system.
 
 ### Checking a download
 
-Release files come only from this repository's GitHub releases. Each one has a build provenance
-attestation, which shows it was built from this repository by its release workflow. With the
+Compare a file with its line in `SHA256SUMS.txt` of the same release
+(`sha256sum --check --ignore-missing SHA256SUMS.txt`). Each file also has a build provenance
+attestation, which shows it was built from this repository by the release workflow. With the
 GitHub CLI:
 
 ```sh
-gh attestation verify wordsmith-manuscript-<version>-<target>.tar.gz --repo jamescjfoundation/wordsmith-manuscript
+gh attestation verify wordsmith-manuscript-<version>-linux-x86_64.tar.gz \
+  --repo jamescjfoundation/wordsmith-manuscript --signer-repo jamescjfoundation/open-source-core
 ```
 
-`SHA256SUMS.txt` on the same release lists every file's checksum.
+`--signer-repo` names open-source-core because the jobs that build the files are its shared
+release workflow, which every app built on it calls.
+
+`cargo xtask package` builds this computer's package into `dist/`, laid out as a release's is
+(the core's [`docs/app-releases.md`](https://github.com/jamescjfoundation/open-source-core/blob/main/docs/app-releases.md)
+says what each file holds); nothing is published by it.
 
 ## Privacy
 
@@ -107,7 +129,7 @@ gh attestation verify wordsmith-manuscript-<version>-<target>.tar.gz --repo jame
   and its version, nothing else. An update is downloaded only when you choose to install it,
   from the release on github.com.
 - **Turning it off:** clear "Check for updates when the app starts" in File › Preferences.
-  Nothing is sent unless you then check by hand. `manuscript-cli` never checks.
+  Nothing is sent unless you then check by hand. `wordsmith-manuscript-cli` never checks.
 - **External converters** run only when you name one yourself in the export settings, and only on
   your computer.
 
@@ -142,7 +164,8 @@ under it), the asset attribution check, the privacy check, the license allowlist
 tests. CI also runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) for licenses,
 security advisories and crate sources.
 
-- `docs/PLAN.md`: the build plan. `docs/SPEC.md`: the behavior it was built from.
+- `ROADMAP.md`: where the plan is (the `v1` milestone of the issues). `docs/SPEC.md`: how the
+  app behaves. `docs/PLAN.md`: the finished build plan, kept as history.
 - `docs/format.md`: the project format. `docs/book-handoff.md`: what Wordsmith Book reads.
 - `docs/decisions/`: the choices the spec left open.
 - `docs/golden.md`: the reviewed reference outputs. `docs/fixtures.md`: where every test file
@@ -179,8 +202,8 @@ It is also built on these open-source projects:
 - Project Gutenberg, for the public-domain novels the tests and pictures use.
 
 `ATTRIBUTION.md` lists every asset with its license, and `NOTICE` carries the notices the
-licenses ask for. `cargo xtask third-party-licenses` writes the license text of every library a
-release ships.
+licenses ask for. Every release package carries `THIRD-PARTY-LICENSES.txt`, the license text of
+every library the programs are built from (`cargo xtask third-party-licenses` writes it).
 
 ## License
 

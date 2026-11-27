@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! `manuscript-cli`: Wordsmith Manuscript on the command line (AUT-1).
+//! `wordsmith-manuscript-cli`: Wordsmith Manuscript on the command line (AUT-1).
 //!
 //! ```text
-//! manuscript-cli convert <input> <output>        a document or set into a project, or a project to a file
-//! manuscript-cli export <project> <file> [--format F] [--preset NAME]
-//! manuscript-cli counts <project> [--item ID]
-//! manuscript-cli verify <source> <result>        word-for-word check of two files or projects
-//! manuscript-cli report <project>
-//! manuscript-cli run <project> <command> [JSON]  any Manuscript command (saved when it changes the project)
-//! manuscript-cli commands                        every command, with its parameters
-//! manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]
+//! wordsmith-manuscript-cli convert <input> <output>        a document or set into a project, or a project to a file
+//! wordsmith-manuscript-cli export <project> <file> [--format F] [--preset NAME]
+//! wordsmith-manuscript-cli counts <project> [--item ID]
+//! wordsmith-manuscript-cli verify <source> <result>        word-for-word check of two files or projects
+//! wordsmith-manuscript-cli report <project>
+//! wordsmith-manuscript-cli run <project> <command> [JSON]  any Manuscript command (saved when it changes the project)
+//! wordsmith-manuscript-cli commands                        every command, with its parameters
+//! wordsmith-manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]
 //!                                                the commands as agent tools over standard input and output
-//! manuscript-cli --help | --version
+//! wordsmith-manuscript-cli --help | --version
 //! ```
 //!
 //! It follows the core's convention for command lines

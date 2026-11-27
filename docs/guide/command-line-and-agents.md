@@ -1,19 +1,19 @@
 # The command line and agents
 
-`manuscript-cli` does the app's work without its window.
+`wordsmith-manuscript-cli` does the app's work without its window.
 
 | Command | What it does |
 | --- | --- |
-| `manuscript-cli convert <input> <output>` | A document, or a folder as a document set, into a project folder or `.wsmz`; or a project into any export (by the output's extension) |
-| `manuscript-cli export <project> <file> [--format F] [--preset NAME]` | Export; formats: `docx`, `odt`, `rtf`, `markdown`, `text`, `html`, `epub`, `manuscript-docx`, `manuscript-pdf`, `book` |
-| `manuscript-cli counts <project> [--item ID]` | Words and characters, target and progress |
-| `manuscript-cli verify <source> <result>` | Word-for-word check of two documents or projects; shows the first difference when they differ |
-| `manuscript-cli report <project>` | Sections, words, targets, labels and statuses, and missing book details |
-| `manuscript-cli run <project> <command> [JSON]` | Any command (saved when it changes the project); the parameters are one JSON object |
-| `manuscript-cli commands` | Every command with its parameters |
-| `manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]` | Serve the commands to an agent over standard input and output |
-| `manuscript-cli --help`, `-h`, `help` | The list above |
-| `manuscript-cli --version`, `-V` | `manuscript-cli` and its version, on one line |
+| `wordsmith-manuscript-cli convert <input> <output>` | A document, or a folder as a document set, into a project folder or `.wsmz`; or a project into any export (by the output's extension) |
+| `wordsmith-manuscript-cli export <project> <file> [--format F] [--preset NAME]` | Export; formats: `docx`, `odt`, `rtf`, `markdown`, `text`, `html`, `epub`, `manuscript-docx`, `manuscript-pdf`, `book` |
+| `wordsmith-manuscript-cli counts <project> [--item ID]` | Words and characters, target and progress |
+| `wordsmith-manuscript-cli verify <source> <result>` | Word-for-word check of two documents or projects; shows the first difference when they differ |
+| `wordsmith-manuscript-cli report <project>` | Sections, words, targets, labels and statuses, and missing book details |
+| `wordsmith-manuscript-cli run <project> <command> [JSON]` | Any command (saved when it changes the project); the parameters are one JSON object |
+| `wordsmith-manuscript-cli commands` | Every command with its parameters |
+| `wordsmith-manuscript-cli mcp <project> [--read-root <folder>] [--write-root <folder>]` | Serve the commands to an agent over standard input and output |
+| `wordsmith-manuscript-cli --help`, `-h`, `help` | The list above |
+| `wordsmith-manuscript-cli --version`, `-V` | `wordsmith-manuscript-cli` and its version, on one line |
 
 A project is a project folder (`.wsm`), its `project.toml`, or a packed project (`.wsmz`). A
 packed project is opened in memory: a command that changes it does not write the change back.
@@ -21,7 +21,7 @@ packed project is opened in memory: a command that changes it does not write the
 ## Results, errors and exit codes
 
 A command's result is written to standard output, as JSON. What went wrong is written to
-standard error, as `manuscript-cli: <reason>`. The exit code says which it was:
+standard error, as `wordsmith-manuscript-cli: <reason>`. The exit code says which it was:
 
 | Code | Means |
 | --- | --- |
@@ -38,7 +38,7 @@ The same rules hold for the command lines of the other Wordsmith apps.
 
 ## Agents
 
-`manuscript-cli mcp <project>` serves every Manuscript command to an agent as a tool, named
+`wordsmith-manuscript-cli mcp <project>` serves every Manuscript command to an agent as a tool, named
 `manuscript_` and the command's id (`manuscript_binder_new`, `manuscript_text_set`,
 `manuscript_export_file` and so on). Those are all the tools there are: nothing works on a
 document outside the project. Start with `manuscript_binder_list`. Every change is one undo step

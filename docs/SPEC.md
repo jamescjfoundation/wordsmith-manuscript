@@ -203,7 +203,7 @@ turn it into behavior.
 
 ## 14. Command line and agents (AUT-1, AUT-2)
 
-1. `manuscript-cli convert`, `export`, `counts`, `verify` (the word-for-word check) and `report`.
+1. `wordsmith-manuscript-cli convert`, `export`, `counts`, `verify` (the word-for-word check) and `report`.
    [D]
 2. Every Manuscript command is an agent tool through the core. [D]
 

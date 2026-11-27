@@ -242,7 +242,8 @@ that this contract covers, and what a build of Book on a tag of this contract do
 
 **Today:** nothing makes a release of Manuscript that writes a new schema wait for a release
 of Book that reads it. Until Book has moved, a Book already installed refuses projects saved by
-the newer Manuscript.
+the newer Manuscript
+([issue 26](https://github.com/jamescjfoundation/wordsmith-manuscript/issues/26)).
 
 ## Offering fixes back
 
@@ -331,13 +332,14 @@ Book's builds name it. The repository's ruleset for tags refuses a move or a del
 ### Release tags
 
 A `book-view` tag is not a release: it marks a commit Book may build on, and no program is
-published from it. No release of Manuscript has been published yet.
+published from it. Manuscript's releases start with 0.9.0, a preview (decision 0009); the
+release workflow makes their tags.
 
-Once Manuscript has releases, a release tag `vX.Y.Z` is also a tag Book may pin, when it is
-listed in the table below. It is listed when the release commit passed both checks above, and
-the table says which view version and core release it carries. Book prefers a listed release
-tag to a `book-view` tag on the same core release. Between releases, `book-view` tags go on
-being cut as above, because the core moves more often than Manuscript is released.
+A release tag `vX.Y.Z` is also a tag Book may pin, when it is listed in the table below. It is
+listed when the release commit passed both checks above, and the table says which view version
+and core release it carries. Book prefers a listed release tag to a `book-view` tag on the same
+core release. Between releases, `book-view` tags go on being cut as above, because the core
+moves more often than Manuscript is released.
 
 ### The tags
 
@@ -350,6 +352,7 @@ being cut as above, because the core moves more often than Manuscript is release
 | `book-view-1.4` | 1 | v0.1.20 | Manuscript moved to a newer core |
 | `book-view-1.5` | 1 | v0.1.20 | The contract is written as a list with a test, and the Book consumer workflow exists. The model's word list and comparison are the core's (`jcj_doc`), with the same names and results. Nothing Book uses changed, so Book has nothing to do but move its two lines |
 | `book-view-1.6` | 1 | v0.1.21 | Manuscript moved to a newer core |
+| `book-view-1.7` | 1 | v0.1.22 | Manuscript moved to a newer core. The workspace's version is 0.9.0 from this tag on, so the two crates are `0.9.0` in Book's lock file; nothing Book uses changed |
 
 ## How this contract is kept
 
@@ -406,4 +409,5 @@ Manuscript owns this contract
 ## Review
 
 The Book side's review of this contract is `docs/handoff-review.md` in the Book repository. It
-awaits a person's sign-off there (plan step M6.3).
+awaits a person's sign-off there
+([issue 25](https://github.com/jamescjfoundation/wordsmith-manuscript/issues/25)).
