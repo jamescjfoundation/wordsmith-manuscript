@@ -26,8 +26,15 @@
 # checkout.
 #
 # A build holds one core release. Right after Manuscript moves to a newer core, Book's main
-# still names the older one: the first step says so and stops, and the run is repeated by hand
-# against a branch of Book that has moved (docs/book-handoff.md, "Tags").
+# still names the older one, and Book cannot move before the tag this workflow must pass for
+# exists. So when Book's core release is older than this checkout's, the job moves its copy of
+# Book to this checkout's core the way Book itself will: the tag on every jcj- line, then
+# `cargo xtask sync`. Nothing else is changed and nothing is pushed. A green run then says that
+# Book's main passes its gate on the new core after the pin move and the sync alone; the run's
+# summary says that the copy was moved. When Book needs more than that to build on the new core,
+# the run is red, Book prepares a branch, and the workflow is run by hand against it
+# (docs/book-handoff.md, "Tags"). A Book on a newer core than this checkout stops the run:
+# Manuscript moves first.
 #
 # Only GitHub's own actions, pinned to full commit SHAs, as in the core's workflows. The token
 # can read and nothing else.
@@ -86,25 +93,67 @@ jobs:
           path: wordsmith-book
           persist-credentials: false
           fetch-depth: 0 # Book's privacy check reads every commit identity
-      - name: One core release in both
+      - name: Which core release each builds on
+        id: core
         run: |
+          # Every ref the manifest names for the core, each once, with a space between them.
           core() {
-            grep -o 'open-source-core", *\(tag\|rev\) *= *"[^"]*"' "$1/Cargo.toml" | sed 's/.*"\([^"]*\)"$/\1/' | sort -u | tr '\n' ' '
+            grep -o 'open-source-core", *\(tag\|rev\) *= *"[^"]*"' "$1/Cargo.toml" | sed 's/.*"\([^"]*\)"$/\1/' | sort -u | tr '\n' ' ' | sed 's/ $//'
           }
           manuscript=$(core wordsmith-manuscript)
           book=$(core wordsmith-book)
           echo "Wordsmith Manuscript builds on core: $manuscript"
           echo "Wordsmith Book builds on core: $book"
-          if [ "$manuscript" != "$book" ]; then
-            echo "::error::Wordsmith Manuscript builds on core $manuscript and this commit of Wordsmith Book on core $book. A build holds one core release, so Book cannot build on this commit yet. Run this workflow by hand with a branch of Book that is on core $manuscript as its book-ref input (docs/book-handoff.md, Tags)."
+          if [ "$manuscript" = "$book" ]; then
+            echo "move=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          release='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          if ! [[ "$manuscript" =~ $release && "$book" =~ $release ]]; then
+            echo "::error::Wordsmith Manuscript builds on core '$manuscript' and this commit of Wordsmith Book on core '$book'. One of them names no single core release, so Book's copy cannot be moved here. Run this workflow by hand with a branch of Book that builds on the same core as its book-ref input (docs/book-handoff.md, Tags)."
             exit 1
           fi
+          newest=$(printf '%s\n%s\n' "$manuscript" "$book" | sort -V | tail -n 1)
+          if [ "$newest" != "$manuscript" ]; then
+            echo "::error::Wordsmith Book builds on core $book, which is newer than this checkout's $manuscript. A build holds one core release, and Book is never moved back: Manuscript moves to core $book first (docs/book-handoff.md, Tags)."
+            exit 1
+          fi
+          {
+            echo "move=true"
+            echo "from=$book"
+            echo "to=$manuscript"
+          } >> "$GITHUB_OUTPUT"
       - name: Toolchain
         working-directory: wordsmith-book
         run: rustup show active-toolchain || rustup toolchain install
       - name: Link Book to this checkout's crates
         working-directory: wordsmith-book
         run: cargo xtask dev-link manuscript=../wordsmith-manuscript
+      - name: Move Book's copy to this checkout's core release
+        if: steps.core.outputs.move == 'true'
+        working-directory: wordsmith-book
+        env:
+          FROM: ${{ steps.core.outputs.from }}
+          TO: ${{ steps.core.outputs.to }}
+        # What Book does when it moves: the tag on every jcj- line, then `cargo xtask sync`. The
+        # link is in place first, so the build that follows holds this checkout's two crates and
+        # one core release. Book's own Cargo.lock is not rewritten: the link keeps its own.
+        run: |
+          sed -i "s|\(open-source-core\", *tag *= *\"\)${FROM//./\\.}\"|\1${TO}\"|" Cargo.toml
+          if grep -q "open-source-core\", *tag *= *\"$FROM\"" Cargo.toml; then
+            echo "::error::a line of Book's Cargo.toml still names core $FROM"
+            exit 1
+          fi
+          cargo xtask sync
+          git status --short
+          echo "::notice title=Book's copy was moved to core $TO::Wordsmith Book's commit builds on core $FROM. For this run its copy was moved to core $TO by the tag on every jcj- line and cargo xtask sync, and nothing else. A green run says Book passes its gate on core $TO after that move alone."
+          {
+            echo "### Book's copy was moved to core $TO for this run"
+            echo
+            echo "Wordsmith Book's commit builds on core $FROM and this checkout on core $TO. A build holds one core release, so the job moved its copy of Book: the tag on every \`jcj-\` line, then \`cargo xtask sync\`. Nothing else was changed and nothing was pushed."
+            echo
+            echo "A green run says that this commit of Book passes its whole gate against this checkout's two crates on core $TO after that move alone. It does not say that Book has moved: Book moves its own pins once the tag for this commit exists (docs/book-handoff.md, Tags)."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Book's gate, linked
         working-directory: wordsmith-book
         run: cargo xtask ci --linked

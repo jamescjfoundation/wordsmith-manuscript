@@ -319,10 +319,14 @@ A person or an agent, on a commit of `main` where both of these have passed:
 
 Then the row is added to the table below in the same change, or the next one.
 
-**After a core move** Book's `main` still names the older core, and a build may hold only one.
-The workflow says so and stops. Book prepares a branch on the new core, the workflow is run by
-hand against that branch (its `book-ref` input), the tag is cut when it passes, and Book's
-branch then moves its two `wordsmith-manuscript-` lines to the tag.
+**After a core move** Book's `main` still names the older core, a build may hold only one, and
+Book cannot move before the tag exists. So the workflow moves its own copy of Book to this
+commit's core the way Book will, by the tag on every `jcj-` line and `cargo xtask sync`, and
+runs Book's gate on that; its summary says the copy was moved. When that passes, the tag is cut,
+and Book then moves its core pins and its two `wordsmith-manuscript-` lines together. When Book
+needs more than the pin move to build on the new core, the run is red: Book prepares a branch
+on the new core, the workflow is run by hand against that branch (its `book-ref` input), the
+tag is cut when it passes, and Book's branch then moves its two lines to the tag.
 
 ### A tag is never moved or deleted
 
@@ -365,8 +369,10 @@ Two checks in this repository, so a break shows before it lands and not when Boo
   a push to `main` that touches `crates/manuscript-model`, `crates/manuscript-format` or the
   root `Cargo.toml`, and when run by hand, it checks out Wordsmith Book, links it to this
   checkout's two crates (`cargo xtask dev-link manuscript=<folder>` in Book) and runs Book's
-  whole gate (`cargo xtask ci --linked`). It takes about half an hour, which is why it runs
-  only for those paths.
+  whole gate (`cargo xtask ci --linked`). When Book's commit builds on an older core release
+  than this checkout, the job first moves its copy of Book to this checkout's release
+  ([Who cuts it, and on which commit](#who-cuts-it-and-on-which-commit)). It takes about half
+  an hour, which is why it runs only for those paths.
 
 To try the same on a computer, with the two repositories side by side: in the Book checkout,
 `cargo xtask dev-link manuscript=../wordsmith-manuscript`, then `cargo xtask ci --linked`, and

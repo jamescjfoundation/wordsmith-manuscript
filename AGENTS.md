@@ -368,8 +368,9 @@ Two other Wordsmith apps meet this one
     `docs/book-handoff.md` and `CHANGELOG.md` with what Book must do, and needs a follow-up in
     Book. A new project schema is a change Book must follow as well: the document says how.
   - **Today:** the contract's list is kept in step with Book's code by hand. Right after a core
-    move the workflow can pass only against a branch of Book that has moved too (its `book-ref`
-    input). Nothing makes a release of Manuscript that writes a new schema wait for a Book that
+    move the workflow moves its own copy of Book to the new core (the pin move and
+    `cargo xtask sync`, nothing else) and says so in its summary; when Book needs more than
+    that, it can pass only against a branch of Book that has moved (its `book-ref` input). Nothing makes a release of Manuscript that writes a new schema wait for a Book that
     reads it. A release tag joins the contract's table only when someone adds its row.
 - **Manuscript reads Wordsmith Script's `.wss` files** (`crates/manuscript-io/src/screenplay.rs`)
   for screenplays kept in a project. Script owns the format (`docs/format.md` in the Script
