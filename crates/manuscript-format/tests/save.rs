@@ -6,9 +6,10 @@ use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use jcj_project::folder::{Format, Limits};
 use wordsmith_manuscript_format::Error;
-use wordsmith_manuscript_format::folder::{Disk, Folder, Sink};
-use wordsmith_manuscript_format::pack::{self, PackLimits};
+use wordsmith_manuscript_format::folder::{Disk, FORMAT, Folder, Sink};
+use wordsmith_manuscript_format::pack;
 use wordsmith_manuscript_model::{Area, Item, ItemId, ItemText, Kind, Place, Project, Role, Text};
 
 fn scratch(name: &str) -> PathBuf {
@@ -55,17 +56,17 @@ struct Crash {
 }
 
 impl Sink for Crash {
-    fn write(&mut self, rel: &str, bytes: &[u8]) -> Result<(), Error> {
+    fn write(&mut self, rel: &str, bytes: &[u8]) -> jcj_project::Result<()> {
         if self.left == 0 {
-            return Err(Error::Io { file: rel.into(), why: "stopped".into() });
+            return Err(jcj_project::Error::Invalid(format!("{rel}: stopped")));
         }
         self.left -= 1;
         self.disk.write(rel, bytes)
     }
 
-    fn remove(&mut self, rel: &str) -> Result<(), Error> {
+    fn remove(&mut self, rel: &str) -> jcj_project::Result<()> {
         if self.left == 0 {
-            return Err(Error::Io { file: rel.into(), why: "stopped".into() });
+            return Err(jcj_project::Error::Invalid(format!("{rel}: stopped")));
         }
         self.left -= 1;
         self.disk.remove(rel)
@@ -176,17 +177,26 @@ fn damaged_and_hostile_packed_projects_are_refused_cleanly() {
 
 #[test]
 fn every_packing_limit_is_enforced() {
+    // Manuscript's bounds are the format's, and the core's reader holds a packed project to them.
+    let lim = FORMAT.limits;
+    assert_eq!((lim.packed, lim.entry, lim.entries, lim.unpacked), (pack::MAX_PACKED, pack::MAX_ENTRY, pack::MAX_ENTRIES, pack::MAX_UNPACKED));
     let good = pack::pack_project(&new_project()).unwrap();
-    let base = PackLimits::default();
-    let over = |l: PackLimits| matches!(pack::unpack_with(&good, &l), Err(Error::TooLarge { .. }));
-    assert!(over(PackLimits { packed: 100, ..base }));
-    assert!(over(PackLimits { entries: 2, ..base }));
-    assert!(over(PackLimits { entry: 10, ..base }));
-    assert!(over(PackLimits { unpacked: 50, ..base }));
+    let over = |l: Limits| {
+        let format = Format { limits: l, ..FORMAT };
+        matches!(jcj_project::folder::unpack(&format, &good), Err(jcj_project::Error::TooLarge(_)))
+    };
+    assert!(over(Limits { packed: 100, ..lim }));
+    assert!(over(Limits { entries: 2, ..lim }));
+    assert!(over(Limits { entry: 10, ..lim }));
+    assert!(over(Limits { unpacked: 50, ..lim }));
     // A highly compressible entry is cut off at the limit, whatever its header says.
     let big = vec![b'a'; 4096];
     let z = zip_of(&[("mimetype", pack::MIMETYPE.as_bytes()), ("text/x.md", &big)]);
-    assert!(matches!(pack::unpack_with(&z, &PackLimits { entry: 1000, ..base }), Err(Error::TooLarge { .. })));
+    let format = Format { limits: Limits { entry: 1000, ..lim }, ..FORMAT };
+    assert!(matches!(jcj_project::folder::unpack(&format, &z), Err(jcj_project::Error::TooLarge(_))));
+    // Over a limit, the error says so in a sentence.
+    let said = pack::read_packed(&zip_of(&[("mimetype", pack::MIMETYPE.as_bytes()), ("../x", b"x")])).unwrap_err().to_string();
+    assert!(said.contains("not the project's"), "{said}");
 }
 
 #[test]
@@ -204,4 +214,19 @@ fn backups_rotate_keeping_the_newest() {
     assert_eq!(kept[0], made[4]);
     assert_eq!(pack::read_packed(&std::fs::read(&kept[0]).unwrap()).unwrap(), old_project());
     let _: BTreeMap<String, Vec<u8>> = pack::unpack(&std::fs::read(&kept[2]).unwrap()).unwrap();
+}
+
+#[test]
+fn a_second_backup_in_one_second_is_kept_beside_the_first() {
+    let dir = scratch("backed-twice");
+    Folder::create(&dir, &old_project()).unwrap();
+    let store = scratch("backups-twice");
+    let at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
+    let first = pack::backup(&dir, &store, "Tide", 3, at).unwrap();
+    let second = pack::backup(&dir, &store, "Tide", 3, at).unwrap();
+    assert_ne!(first, second, "an existing backup is never replaced");
+    assert_eq!(second.file_name().unwrap().to_string_lossy(), "Tide 2027-01-15 08.00.00 UTC 2.wsmz");
+    // Newest first, and a file named by hand is not one of the project's backups.
+    std::fs::write(store.join("Tide copy.wsmz"), b"mine").unwrap();
+    assert_eq!(pack::backups(&store, "Tide"), [second, first]);
 }

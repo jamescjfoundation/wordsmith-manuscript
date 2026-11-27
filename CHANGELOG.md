@@ -12,6 +12,20 @@ of the build plan, each prepared as a release and none released.
 
 ## Unreleased
 
+### Files
+
+Projects are read and written by the shared project-folder code of open-source-core, which
+Wordsmith Book uses too. Every file a project, a packed `.wsmz`, a recovery copy or a backup holds
+is the same, byte for byte, as 0.9.0 writes. What you may notice:
+
+- A second backup made within the same second is kept beside the first, with a number after the
+  time (`My Novel 2026-11-27 10.00.00 UTC 2.wsmz`); before, it replaced the first.
+- Only files named as the project's backups count as its backups: a file you put in the
+  `Backups` folder under another name is never counted among the ten kept or removed.
+- A file in the project folder that is a symbolic link is no longer followed: a text file that
+  is a link opens as an empty document, and the file it points to is left alone. Packed copies
+  and backups already left such files out.
+
 ## 0.9.0 (2026-11-27)
 
 The first public release of Wordsmith Manuscript, 0.9.0: a preview of 1.0.0, for trying the app,

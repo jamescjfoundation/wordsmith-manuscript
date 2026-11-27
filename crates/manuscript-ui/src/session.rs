@@ -366,13 +366,13 @@ impl Session {
                     let mut disk = wordsmith_manuscript_format::folder::Disk::new(&sroot);
                     let now = SystemTime::now();
                     for c in changes {
-                        let stamp = self.series.as_ref().and_then(|(f, _)| f.index().get(&c.rel).copied());
-                        if let Some((text, h)) = c.now {
-                            let copy = wordsmith_manuscript_format::folder::conflict_name(&c.rel, now);
-                            wordsmith_manuscript_format::folder::Sink::write(&mut disk, &copy, text.as_bytes()).map_err(|e| e.to_string())?;
+                        let stamp = self.series.as_ref().and_then(|(f, _)| f.stamp(&c.path));
+                        if let Some(theirs) = c.now {
+                            let copy = wordsmith_manuscript_format::folder::conflict_name(&c.path, now);
+                            wordsmith_manuscript_format::folder::Sink::write(&mut disk, &copy, &theirs).map_err(|e| e.to_string())?;
                             out.copies.push(copy);
                             if let (Some((f, _)), Some(st)) = (self.series.as_mut(), stamp) {
-                                f.accept(&c.rel, Some(Stamp { disk: h, model: st.model }));
+                                f.accept(&c.path, Some(Stamp { disk: hash(&theirs), model: st.model }));
                             }
                         }
                     }
@@ -398,7 +398,7 @@ impl Session {
         if changes.is_empty() {
             return Ok(out);
         }
-        let structural = changes.iter().any(|c| c.rel == "binder.toml" || c.rel == "project.toml");
+        let structural = changes.iter().any(|c| c.path == "binder.toml" || c.path == "project.toml");
         if structural && !self.is_dirty() && self.media.is_empty() {
             let (f, p) = Folder::open(&root).map_err(|e| e.to_string())?;
             self.project = p;
@@ -414,27 +414,29 @@ impl Session {
         let now = SystemTime::now();
         let mut disk = wordsmith_manuscript_format::folder::Disk::new(&root);
         for c in changes {
-            let stamp = self.folder.as_ref().and_then(|f| f.index().get(&c.rel).copied());
-            let id: Option<ItemId> = c.rel.split_once('/').and_then(|(_, n)| n.strip_suffix(".md")).and_then(|n| n.parse().ok());
-            let Some((text, h)) = c.now else {
+            let stamp = self.folder.as_ref().and_then(|f| f.stamp(&c.path));
+            let id: Option<ItemId> = c.path.split_once('/').and_then(|(_, n)| n.strip_suffix(".md")).and_then(|n| n.parse().ok());
+            let Some(bytes) = c.now else {
                 // Removed there: this version is written again at the next save.
                 if let Some(f) = self.folder.as_mut() {
-                    f.accept(&c.rel, None);
+                    f.accept(&c.path, None);
                 }
-                out.restored.push(c.rel);
+                out.restored.push(c.path);
                 continue;
             };
+            let h = hash(&bytes);
+            let text = String::from_utf8(bytes).map_err(|_| format!("{} is damaged: not UTF-8 text", c.path))?;
             let keep_copy = |disk: &mut wordsmith_manuscript_format::folder::Disk, out: &mut Outside| -> Result<(), String> {
-                let copy = wordsmith_manuscript_format::folder::conflict_name(&c.rel, now);
+                let copy = wordsmith_manuscript_format::folder::conflict_name(&c.path, now);
                 wordsmith_manuscript_format::folder::Sink::write(disk, &copy, text.as_bytes()).map_err(|e| e.to_string())?;
                 out.copies.push(copy);
                 Ok(())
             };
-            match (c.rel.as_str(), id) {
+            match (c.path.as_str(), id) {
                 ("binder.toml" | "project.toml", _) => {
                     keep_copy(&mut disk, &mut out)?;
                     if let (Some(f), Some(st)) = (self.folder.as_mut(), stamp) {
-                        f.accept(&c.rel, Some(Stamp { disk: h, model: st.model }));
+                        f.accept(&c.path, Some(Stamp { disk: h, model: st.model }));
                     }
                 }
                 (rel, Some(id)) if rel.starts_with("text/") && self.project.binder.contains(id) => {
@@ -491,7 +493,7 @@ impl Session {
                 _ => {
                     keep_copy(&mut disk, &mut out)?;
                     if let Some(f) = self.folder.as_mut() {
-                        f.accept(&c.rel, Some(Stamp { disk: h, model: hash(text.as_bytes()) }));
+                        f.accept(&c.path, Some(Stamp { disk: h, model: hash(text.as_bytes()) }));
                     }
                 }
             }

@@ -43,6 +43,15 @@ My Novel.wsm/
 - **Saving** writes only changed files, each atomically: text and entry files, then
   `project.toml`, then `binder.toml` last. Files of items that left the binder (after the Trash is
   emptied) are removed after the binder is written. An item whose text is empty has no file.
+- **Symbolic links** are never followed: a file of the project that is a link is not read, packed
+  or written over, so a project cannot name a file outside itself. A text file that is a link
+  reads as missing.
+- **Backups** are packed copies named `<project> <YYYY-MM-DD HH.MM.SS> UTC.wsmz`, with ` 2`,
+  ` 3`, ... after the time for a second backup in the same second; an existing file is never
+  replaced. Only a file named exactly so is one of the project's backups.
+- The folder, its packed form, recovery and backups are the core's project folder
+  (`jcj_project::folder`, specified in its `FOLDER.md`); this file says what Manuscript's files
+  hold and which of them a project has.
 - The same project always gives the same bytes.
 
 ## `project.toml`

@@ -1,107 +1,62 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Reading and saving a project folder.
+//! Reading and saving a project folder, on the core's folder layer (`jcj_project::folder`, core
+//! decision 0018).
 //!
-//! Saving writes only the files that changed since they were read or last saved, each atomically
-//! through `jcj-project`; text and entry files first, `project.toml`, and `binder.toml` last, so an
-//! interrupted save leaves the previous binder pointing at whole files. Files of items that left
-//! the binder are removed after the binder is written.
+//! What every app's folder does is the core's: a save writes only the files that changed since
+//! they were read or last saved, each atomically, `project.toml` and `binder.toml` after every
+//! other file, so an interrupted save leaves the previous binder pointing at whole files; files
+//! of items that left the binder are removed after the binder is written; a file changed
+//! elsewhere is copied into `conflicts/` before a save writes over it. What is Manuscript's is
+//! here: [`FORMAT`], the layout of a `.wsm` folder, and [`load`], which reads a project from its
+//! files and says what each renders to.
 //!
 //! A file whose model did not change is never rewritten, so text written by hand (or by an older
 //! version) stays byte for byte as it was.
 
-use std::collections::BTreeMap;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use sha2::{Digest, Sha256};
+use jcj_project::folder::{self as core, Files, Format, Limits};
 use wordsmith_manuscript_model::{Area, Kind, Project};
 
-use crate::{Error, files, limits};
+use crate::{Error, SCHEMA, files, limits, pack};
 
-/// A content hash.
-pub type Hash = [u8; 32];
+pub use jcj_project::folder::{Disk, Hash, Memory, OutsideChange, Saved, Sink, Source, Stamp, hash};
 
-/// The hash of some bytes.
-pub fn hash(bytes: &[u8]) -> Hash {
-    Sha256::digest(bytes).into()
+/// The folders of a project, besides its two root files.
+const FOLDERS: [&str; 7] = ["text/", "bible/", "media/", "scripts/", "snapshots/", "conflicts/", "drafts/"];
+
+/// Whether a path is one of a project's files: `binder.toml`, or a file under one of its folders
+/// (`project.toml`, the manifest, always is).
+fn belongs(path: &str) -> bool {
+    path == "binder.toml" || FOLDERS.iter().any(|f| path.starts_with(f))
 }
 
-/// Where a save's files go: the folder on disk, or (in tests) somewhere that can fail on cue.
-pub trait Sink {
-    /// Write a whole file, atomically.
-    fn write(&mut self, rel: &str, bytes: &[u8]) -> Result<(), Error>;
-    /// Remove a file (it is not an error if it is already gone).
-    fn remove(&mut self, rel: &str) -> Result<(), Error>;
-}
-
-/// The project folder on disk.
-pub struct Disk {
-    root: PathBuf,
-}
-
-impl Disk {
-    /// The folder at `root`.
-    pub fn new(root: &Path) -> Disk {
-        Disk { root: root.to_path_buf() }
-    }
-}
-
-impl Sink for Disk {
-    fn write(&mut self, rel: &str, bytes: &[u8]) -> Result<(), Error> {
-        let path = self.root.join(rel);
-        if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir).map_err(|e| Error::Io { file: rel.into(), why: e.to_string() })?;
-        }
-        jcj_project::files::write_atomic(&path, bytes).map_err(|e| Error::Io { file: rel.into(), why: e.to_string() })
-    }
-
-    fn remove(&mut self, rel: &str) -> Result<(), Error> {
-        match std::fs::remove_file(self.root.join(rel)) {
-            Ok(()) => Ok(()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(Error::Io { file: rel.into(), why: e.to_string() }),
-        }
-    }
-}
-
-/// What is known about one file since it was read or saved.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Stamp {
-    /// The bytes on disk.
-    pub disk: Hash,
-    /// What the model rendered to when it was read or saved.
-    pub model: Hash,
-}
-
-/// What a save did.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Saved {
-    /// Files written, in order.
-    pub written: Vec<String>,
-    /// Files removed.
-    pub removed: Vec<String>,
-    /// Files that had changed on disk since they were read (another device, a sync service):
-    /// each was copied into `conflicts/` before this save wrote over it (FIL-4).
-    pub conflicts: Vec<String>,
-}
-
-/// A file changed outside the app since it was read or last saved (FIL-4).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OutsideChange {
-    /// The file, relative to the project folder.
-    pub rel: String,
-    /// What it holds now, with its hash; `None` when it was removed.
-    pub now: Option<(String, Hash)>,
-}
+/// The layout of a project folder (`docs/format.md`), as the core's folder layer reads and
+/// writes it.
+pub const FORMAT: Format = Format {
+    last: &["project.toml", "binder.toml"],
+    belongs,
+    conflicts: Some("conflicts"),
+    conflict_stamp: wordsmith_manuscript_model::snapshot::stamp,
+    limits: Limits {
+        manifest: limits::MAX_PROJECT_FILE,
+        name: 512,
+        packed: pack::MAX_PACKED,
+        entry: pack::MAX_ENTRY,
+        entries: pack::MAX_ENTRIES,
+        unpacked: pack::MAX_UNPACKED,
+    },
+    ..Format::new("project.toml", SCHEMA, pack::MIMETYPE, pack::EXTENSION)
+};
 
 /// Where a copy of `rel` is kept when a save would write over a change made elsewhere:
 /// `conflicts/<stamp> <rel with slashes as dashes>`.
 pub fn conflict_name(rel: &str, at: std::time::SystemTime) -> String {
-    format!("conflicts/{} {}", wordsmith_manuscript_model::snapshot::stamp(at), rel.replace('/', "-"))
+    FORMAT.conflict_name(rel, at).unwrap_or_default()
 }
 
 /// Whether `rel` names a file the project's model holds (`project.toml`, `binder.toml`,
-/// `text/<id>.md`, `bible/<id>.md`).
+/// `text/<id>.md`, `bible/<id>.md`): the files whose changes made elsewhere the app takes in.
 fn watched(rel: &str) -> bool {
     if rel == "project.toml" || rel == "binder.toml" {
         return true;
@@ -110,88 +65,34 @@ fn watched(rel: &str) -> bool {
     (dir == "text" || dir == "bible") && name.strip_suffix(".md").is_some_and(|id| id.parse::<wordsmith_manuscript_model::ItemId>().is_ok())
 }
 
-/// An open project folder: where it is and what its files held when read or last saved.
-#[derive(Clone, Debug)]
-pub struct Folder {
-    root: PathBuf,
-    index: BTreeMap<String, Stamp>,
-}
-
-/// Read a file of at most `limit` bytes as UTF-8.
-pub fn read_text(root: &Path, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error> {
-    let path = root.join(rel);
-    let io = |e: std::io::Error| Error::Io { file: rel.into(), why: e.to_string() };
-    let file = match std::fs::File::open(&path) {
-        Ok(f) => f,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(io(e)),
-    };
-    let mut bytes = Vec::new();
-    file.take(limit + 1).read_to_end(&mut bytes).map_err(io)?;
-    if bytes.len() as u64 > limit {
-        return Err(Error::TooLarge { what: rel.into(), limit });
-    }
-    let h = hash(&bytes);
-    String::from_utf8(bytes).map(|s| Some((s, h))).map_err(|_| Error::Damaged { file: rel.into(), why: "not UTF-8 text".into() })
-}
-
-/// Where a project is read from: a folder on disk or the files of a packed project in memory.
-pub trait Source {
-    /// The text of a file inside the project, with the hash of its bytes; `None` when missing.
-    fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error>;
-    /// The names of the files directly in a folder inside the project (empty when missing).
-    fn list(&self, dir: &str) -> Vec<String>;
-}
-
-/// A folder on disk as a source.
-pub struct DiskSource<'a>(pub &'a Path);
-
-impl Source for DiskSource<'_> {
-    fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error> {
-        read_text(self.0, rel, limit)
-    }
-
-    fn list(&self, dir: &str) -> Vec<String> {
-        let mut out: Vec<String> = std::fs::read_dir(self.0.join(dir))
-            .map(|d| {
-                d.flatten().filter(|e| e.file_type().is_ok_and(|t| t.is_file())).filter_map(|e| e.file_name().to_str().map(str::to_owned)).collect()
-            })
-            .unwrap_or_default();
-        out.sort();
-        out
+/// A file of the project as text, read within `limit` bytes; `None` when it is missing.
+fn read(src: &mut dyn Source, rel: &str, limit: u64) -> Result<Option<String>, Error> {
+    match src.read(rel, limit) {
+        Ok(None) => Ok(None),
+        Ok(Some(bytes)) => String::from_utf8(bytes).map(Some).map_err(|_| Error::Damaged { file: rel.into(), why: "not UTF-8 text".into() }),
+        Err(jcj_project::Error::TooLarge(_)) => Err(Error::TooLarge { what: rel.into(), limit }),
+        Err(e) => Err(e.into()),
     }
 }
 
-/// Files in memory (an unpacked `.wsmz`) as a source.
-pub struct MemorySource<'a>(pub &'a BTreeMap<String, Vec<u8>>);
-
-impl Source for MemorySource<'_> {
-    fn read(&self, rel: &str, limit: u64) -> Result<Option<(String, Hash)>, Error> {
-        let Some(bytes) = self.0.get(rel) else { return Ok(None) };
-        if bytes.len() as u64 > limit {
-            return Err(Error::TooLarge { what: rel.into(), limit });
-        }
-        let h = hash(bytes);
-        std::str::from_utf8(bytes).map(|s| Some((s.to_owned(), h))).map_err(|_| Error::Damaged { file: rel.into(), why: "not UTF-8 text".into() })
-    }
-
-    fn list(&self, dir: &str) -> Vec<String> {
-        let prefix = format!("{dir}/");
-        self.0.keys().filter_map(|k| k.strip_prefix(&prefix)).filter(|rest| !rest.contains('/')).map(str::to_owned).collect()
-    }
-}
-
-/// Read a project from a source, with what each file held.
-pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Error> {
-    let mut index = BTreeMap::new();
-    let (text, h) = src.read("project.toml", limits::MAX_PROJECT_FILE)?.ok_or(Error::NotAProject)?;
+/// Read a project from a source (a folder, or the files of a packed project in memory), telling
+/// the source what each file renders to, so a save leaves alone a file the writer did not change.
+pub fn load(src: &mut dyn Source) -> Result<Project, Error> {
+    let text = read(src, "project.toml", limits::MAX_PROJECT_FILE)?.ok_or(Error::NotAProject)?;
     let settings = files::read_project(&text)?;
-    index.insert("project.toml".to_owned(), Stamp { disk: h, model: hash(files::write_project(&settings)?.as_bytes()) });
-    let (text, h) = src.read("binder.toml", limits::MAX_BINDER_FILE)?.ok_or(Error::Damaged { file: "binder.toml".into(), why: "missing".into() })?;
+    src.rendered("project.toml", files::write_project(&settings)?.as_bytes());
+    let text = read(src, "binder.toml", limits::MAX_BINDER_FILE)?.ok_or(Error::Damaged { file: "binder.toml".into(), why: "missing".into() })?;
     let binder = files::read_binder(&text)?;
-    index.insert("binder.toml".to_owned(), Stamp { disk: h, model: hash(files::write_binder(&binder)?.as_bytes()) });
+    src.rendered("binder.toml", files::write_binder(&binder)?.as_bytes());
     let mut project = Project { settings, binder, ..Project::default() };
     let mut total = 0u64;
+    let mut count = |text: &str| {
+        total += text.len() as u64;
+        if total > limits::MAX_PROJECT_TEXT {
+            return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
+        }
+        Ok(())
+    };
     let rows: Vec<_> = project.binder.rows().into_iter().map(|r| (r.item.id, r.item.kind)).collect();
     for (id, kind) in rows {
         let rel = match kind {
@@ -199,23 +100,18 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
             Kind::Entry => format!("bible/{id}.md"),
             _ => continue,
         };
-        let Some((text, h)) = src.read(&rel, limits::MAX_TEXT_FILE)? else { continue };
-        total += text.len() as u64;
-        if total > limits::MAX_PROJECT_TEXT {
-            return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
-        }
-        let model = if kind == Kind::Entry {
+        let Some(text) = read(src, &rel, limits::MAX_TEXT_FILE)? else { continue };
+        count(&text)?;
+        if kind == Kind::Entry {
             let e = files::read_entry(&text, &rel)?;
-            let m = hash(files::write_entry(&e)?.as_bytes());
+            src.rendered(&rel, files::write_entry(&e)?.as_bytes());
             project.entries.insert(id, e);
-            m
         } else {
             let t = files::read_item(&text, &rel)?;
-            let m = if t.is_empty() { hash(b"") } else { hash(files::write_item(&t)?.as_bytes()) };
+            // An empty text is not written: what it renders to is nothing.
+            src.rendered(&rel, if t.is_empty() { Vec::new() } else { files::write_item(&t)?.into_bytes() }.as_slice());
             project.texts.insert(id, t);
-            m
-        };
-        index.insert(rel, Stamp { disk: h, model });
+        }
     }
     // Stored drafts (schema 3): each draft's manuscript tree and texts.
     for info in project.settings.drafts.clone() {
@@ -223,7 +119,7 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
             return Err(Error::Damaged { file: "project.toml".into(), why: format!("`{}` is not a draft id", info.id) });
         }
         let rel = format!("drafts/{}/binder.toml", info.id);
-        let Some((text, h)) = src.read(&rel, limits::MAX_BINDER_FILE)? else { continue };
+        let Some(text) = read(src, &rel, limits::MAX_BINDER_FILE)? else { continue };
         let binder = files::read_binder(&text).map_err(|e| match e {
             Error::Damaged { why, .. } => Error::Damaged { file: rel.clone(), why },
             other => other,
@@ -231,20 +127,16 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
         if Area::ALL.iter().any(|a| *a != Area::Manuscript && !binder.area(*a).is_empty()) {
             return Err(Error::Damaged { file: rel, why: "a draft holds only a manuscript".into() });
         }
-        index.insert(rel, Stamp { disk: h, model: hash(files::write_binder(&binder)?.as_bytes()) });
+        src.rendered(&rel, files::write_binder(&binder)?.as_bytes());
         let mut body = wordsmith_manuscript_model::drafts::DraftBody { binder, ..Default::default() };
         let rows: Vec<_> = body.binder.rows().into_iter().filter(|r| r.item.kind.has_text()).map(|r| r.item.id).collect();
         for id in rows {
             let rel = format!("drafts/{}/text/{id}.md", info.id);
-            let Some((text, h)) = src.read(&rel, limits::MAX_TEXT_FILE)? else { continue };
-            total += text.len() as u64;
-            if total > limits::MAX_PROJECT_TEXT {
-                return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
-            }
+            let Some(text) = read(src, &rel, limits::MAX_TEXT_FILE)? else { continue };
+            count(&text)?;
             let t = files::read_item(&text, &rel)?;
-            let m = if t.is_empty() { hash(b"") } else { hash(files::write_item(&t)?.as_bytes()) };
+            src.rendered(&rel, if t.is_empty() { Vec::new() } else { files::write_item(&t)?.into_bytes() }.as_slice());
             body.texts.insert(id, t);
-            index.insert(rel, Stamp { disk: h, model: m });
         }
         project.drafts.insert(info.id.clone(), body);
     }
@@ -252,152 +144,101 @@ pub fn load(src: &dyn Source) -> Result<(BTreeMap<String, Stamp>, Project), Erro
     for id in ids {
         let dir = format!("snapshots/{id}");
         let names: Vec<String> =
-            src.list(&dir).into_iter().filter(|n| n.strip_suffix(".md").is_some_and(wordsmith_manuscript_model::snapshot::is_stamp)).collect();
+            src.list(&dir)?.into_iter().filter(|n| n.strip_suffix(".md").is_some_and(wordsmith_manuscript_model::snapshot::is_stamp)).collect();
         if names.len() > wordsmith_manuscript_model::snapshot::MAX_PER_ITEM {
             return Err(Error::TooLarge { what: dir, limit: wordsmith_manuscript_model::snapshot::MAX_PER_ITEM as u64 });
         }
         for name in names {
             let rel = format!("{dir}/{name}");
-            let Some((text, h)) = src.read(&rel, limits::MAX_TEXT_FILE)? else { continue };
-            total += text.len() as u64;
-            if total > limits::MAX_PROJECT_TEXT {
-                return Err(Error::TooLarge { what: "the project's text".into(), limit: limits::MAX_PROJECT_TEXT });
-            }
+            let Some(text) = read(src, &rel, limits::MAX_TEXT_FILE)? else { continue };
+            count(&text)?;
             let taken = name.trim_end_matches(".md");
             let snap = files::read_snapshot(&text, taken, &rel)?;
-            index.insert(rel, Stamp { disk: h, model: hash(files::write_snapshot(&snap)?.as_bytes()) });
+            src.rendered(&rel, files::write_snapshot(&snap)?.as_bytes());
             project.snapshots.entry(id).or_default().push(snap);
         }
         if let Some(list) = project.snapshots.get_mut(&id) {
             list.sort_by_key(|s| wordsmith_manuscript_model::snapshot::order_key(&s.taken));
         }
     }
-    Ok((index, project))
+    Ok(project)
+}
+
+/// A project's files, as a save writes them.
+pub(crate) fn rendered(project: &Project) -> Result<Files, Error> {
+    Ok(files::render(project)?.into_iter().collect())
+}
+
+/// What opening a folder says when its `project.toml` is refused, in Manuscript's words: the
+/// core's folder layer reads only that file before [`load`] reads the rest.
+fn manifest_error(e: jcj_project::Error) -> Error {
+    match e {
+        jcj_project::Error::TooLarge(_) => Error::TooLarge { what: "project.toml".into(), limit: limits::MAX_PROJECT_FILE },
+        jcj_project::Error::Damaged(why) => {
+            Error::Damaged { file: "project.toml".into(), why: why.strip_prefix("the manifest: ").map_or(why.clone(), str::to_owned) }
+        }
+        e => e.into(),
+    }
+}
+
+/// An open project folder: where it is and what its files held when read or last saved.
+#[derive(Clone, Debug)]
+pub struct Folder {
+    inner: core::Folder,
 }
 
 impl Folder {
     /// The folder's path.
     pub fn root(&self) -> &Path {
-        &self.root
+        self.inner.root()
     }
 
-    /// What is known about each file.
-    pub fn index(&self) -> &BTreeMap<String, Stamp> {
-        &self.index
+    /// What is known about a file, when it was read or saved.
+    pub fn stamp(&self, rel: &str) -> Option<Stamp> {
+        self.inner.stamp(rel)
     }
 
-    /// Open the project in `root`.
+    /// Open the project in `root`. Nothing is written.
     pub fn open(root: &Path) -> Result<(Folder, Project), Error> {
-        let (index, project) = load(&DiskSource(root))?;
-        Ok((Folder { root: root.to_path_buf(), index }, project))
+        let mut inner = core::Folder::open(root, &FORMAT).map_err(manifest_error)?;
+        let project = load(&mut inner)?;
+        Ok((Folder { inner }, project))
     }
 
     /// Make a new project folder at `root` (which must not hold a project yet) and save into it.
     pub fn create(root: &Path, project: &Project) -> Result<Folder, Error> {
-        if root.join("project.toml").exists() {
-            return Err(Error::Io { file: "project.toml".into(), why: "a project already exists here".into() });
+        if root.join(FORMAT.manifest).exists() {
+            return Err(Error::Io { file: FORMAT.manifest.into(), why: "a project already exists here".into() });
         }
-        std::fs::create_dir_all(root).map_err(|e| Error::Io { file: root.display().to_string(), why: e.to_string() })?;
-        let mut folder = Folder { root: root.to_path_buf(), index: BTreeMap::new() };
-        folder.save(project)?;
-        Ok(folder)
+        Ok(Folder { inner: core::Folder::create(root, &FORMAT, &rendered(project)?)? })
     }
 
     /// The files changed, added or removed outside the app since they were read or last saved:
     /// `project.toml`, `binder.toml` and the text and entry files (FIL-4).
     pub fn outside_changes(&self) -> Result<Vec<OutsideChange>, Error> {
-        let mut out = Vec::new();
-        for (rel, stamp) in &self.index {
-            if !watched(rel) {
-                continue;
-            }
-            match read_text(&self.root, rel, limits::MAX_TEXT_FILE.max(limits::MAX_BINDER_FILE))? {
-                Some((text, h)) if h != stamp.disk => out.push(OutsideChange { rel: rel.clone(), now: Some((text, h)) }),
-                Some(_) => {}
-                None => out.push(OutsideChange { rel: rel.clone(), now: None }),
-            }
-        }
-        for dir in ["text", "bible"] {
-            let Ok(rd) = std::fs::read_dir(self.root.join(dir)) else { continue };
-            for e in rd.flatten() {
-                let rel = format!("{dir}/{}", e.file_name().to_string_lossy());
-                if watched(&rel)
-                    && !self.index.contains_key(&rel)
-                    && let Some((text, h)) = read_text(&self.root, &rel, limits::MAX_TEXT_FILE)?
-                {
-                    out.push(OutsideChange { rel, now: Some((text, h)) });
-                }
-            }
-        }
-        Ok(out)
+        Ok(self.inner.outside_changes(&watched)?)
     }
 
     /// Record what a file holds now: on disk (`disk`), and what the model renders it to
     /// (`model`). `None` forgets the file, so the next save writes it.
     pub fn accept(&mut self, rel: &str, stamp: Option<Stamp>) {
-        match stamp {
-            Some(s) => {
-                self.index.insert(rel.to_owned(), s);
-            }
-            None => {
-                self.index.remove(rel);
-            }
-        }
+        self.inner.accept(rel, stamp);
     }
 
     /// Save the project into its folder.
     pub fn save(&mut self, project: &Project) -> Result<Saved, Error> {
-        let mut disk = Disk::new(&self.root);
-        self.save_to(project, &mut disk)
+        Ok(self.inner.save(&rendered(project)?)?)
     }
 
-    /// Save through a sink. On an error the files written so far stay written and the index
-    /// records them, so the next save picks up where this one stopped.
+    /// Save through a sink. On an error the files written so far stay written and the folder
+    /// remembers them, so the next save picks up where this one stopped.
     pub fn save_to(&mut self, project: &Project, sink: &mut dyn Sink) -> Result<Saved, Error> {
-        let rendered = files::render(project)?;
-        let mut saved = Saved::default();
-        let mut keep: Vec<&str> = Vec::with_capacity(rendered.len());
-        let now = std::time::SystemTime::now();
-        for (rel, bytes) in &rendered {
-            keep.push(rel);
-            let h = hash(bytes);
-            if self.index.get(rel).is_some_and(|s| s.model == h) {
-                continue;
-            }
-            // Never write over a change made elsewhere without keeping it (FIL-4).
-            if let Ok(Some((theirs, disk))) = read_text(&self.root, rel, limits::MAX_TEXT_FILE.max(limits::MAX_BINDER_FILE))
-                && disk != h
-                && self.index.get(rel).is_none_or(|s| s.disk != disk)
-            {
-                let copy = conflict_name(rel, now);
-                sink.write(&copy, theirs.as_bytes())?;
-                saved.conflicts.push(copy);
-            }
-            sink.write(rel, bytes)?;
-            self.index.insert(rel.clone(), Stamp { disk: h, model: h });
-            saved.written.push(rel.clone());
-        }
-        let stale: Vec<String> = self
-            .index
-            .keys()
-            .filter(|k| {
-                (k.starts_with("text/") || k.starts_with("bible/") || k.starts_with("snapshots/") || k.starts_with("drafts/"))
-                    && !keep.contains(&k.as_str())
-            })
-            .cloned()
-            .collect();
-        for rel in stale {
-            if let Ok(Some((theirs, disk))) = read_text(&self.root, &rel, limits::MAX_TEXT_FILE)
-                && self.index.get(&rel).is_some_and(|s| s.disk != disk)
-            {
-                let copy = conflict_name(&rel, now);
-                sink.write(&copy, theirs.as_bytes())?;
-                saved.conflicts.push(copy);
-            }
-            sink.remove(&rel)?;
-            self.index.remove(&rel);
-            saved.removed.push(rel);
-        }
-        Ok(saved)
+        Ok(self.inner.save_to(&rendered(project)?, sink)?)
+    }
+
+    /// Save with recovery around it: the unsaved state goes to `.recovery/` first, the folder is
+    /// saved, and the recovery copy is removed only after the save succeeded.
+    pub fn save_safely(&mut self, project: &Project) -> Result<Saved, Error> {
+        Ok(self.inner.save_safely(&rendered(project)?)?)
     }
 }
