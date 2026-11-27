@@ -54,7 +54,7 @@ fn the_view_offers_a_date_field_then_shows_scenes() {
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 500.0)).build_ui_state(
         |ui, st: &mut (Session, bool)| {
             if !st.1 {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.1 = true;
             }
             let _ = timeline::view(ui, &mut st.0);

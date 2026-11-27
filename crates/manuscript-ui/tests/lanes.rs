@@ -65,7 +65,7 @@ fn the_lanes_view_shows_cards() {
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 500.0)).build_ui_state(
         |ui, st: &mut (Session, LanesView, bool)| {
             if !st.2 {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.2 = true;
             }
             let _ = lanes::view(ui, &mut st.0, &mut st.1);

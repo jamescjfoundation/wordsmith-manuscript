@@ -50,7 +50,7 @@ fn the_compare_window_shows_the_changes() {
     let mut h = Harness::builder().with_size(egui::vec2(700.0, 600.0)).build_ui_state(
         |ui, st: &mut St| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             snapshots::compare_window(ui.ctx(), &st.s, &mut st.v);

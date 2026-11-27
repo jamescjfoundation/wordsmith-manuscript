@@ -99,7 +99,7 @@ fn the_viewer_shows_pictures_pdfs_and_links() {
     let mut h = Harness::builder().with_size(egui::vec2(700.0, 600.0)).build_ui_state(
         |ui, st: &mut St| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             let _ = media::view(ui, &mut st.s, &mut st.v, st.show);

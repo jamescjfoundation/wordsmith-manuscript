@@ -19,7 +19,7 @@ fn save_as_template_and_start_a_new_project_from_it() {
     p.settings.labels.push(wordsmith_manuscript_model::Named::new("Subplot", "#336699"));
     let mut app = Manuscript::with_session(Session::new(p));
     app.templates_dir = Some(base.join("settings/templates"));
-    let mut sh = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    let mut sh = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens());
     app.run(&Cmd::with("file.saveTemplate", json!({ "name": "Three Acts", "about": "My usual shape" })), &mut sh).unwrap();
     let offered = app.templates();
     let mine = offered.iter().find(|t| t.group == "Your Templates").expect("offered on the New page");

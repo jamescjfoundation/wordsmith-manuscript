@@ -10,7 +10,7 @@ use wordsmith_manuscript_ui::session::Session;
 use wordsmith_manuscript_ui::view::ViewPrefs;
 
 fn shell() -> Shell {
-    Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens())
+    Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens())
 }
 
 #[test]

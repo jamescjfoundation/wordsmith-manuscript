@@ -78,7 +78,7 @@ fn the_test_of_v01() {
 
     // 3. Edit in a stitched view of the whole manuscript.
     let mut app = Manuscript::with_session(s);
-    let mut shell = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens());
+    let mut shell = Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens());
     app.run(&Cmd::new("view.stitchManuscript"), &mut shell).unwrap();
     {
         let ed = app.editor.as_mut().unwrap();

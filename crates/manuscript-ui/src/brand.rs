@@ -2,29 +2,13 @@
 //! Wordsmith Manuscript's brand: design tokens, the editor's page colors and the mark.
 
 use jcj_shell::egui::{self, Color32, Painter, Pos2, Rect, Stroke};
-use jcj_shell::theme::Tokens;
+use jcj_shell::theme::Brand;
 use serde::Deserialize;
 
-/// The brand's design tokens (`assets/brand/tokens.json`).
-pub const TOKENS_JSON: &str = include_str!("../../../assets/brand/tokens.json");
-
-/// The app icon at 256 pixels, for the window.
-pub const ICON_256: &[u8] = include_bytes!("../../../assets/brand/icon-256.png");
-
-/// The brand's tokens; the core's neutral tokens if the file could not be read (never expected:
-/// a test reads it).
-pub fn tokens() -> Tokens {
-    Tokens::from_json(TOKENS_JSON).unwrap_or_default()
-}
-
-/// Install the brand's fonts and theme in a context the shell does not manage (tests, offscreen
-/// pictures). The shell does this itself for the app's window.
-pub fn apply(ctx: &egui::Context, mode: jcj_shell::theme::Mode) {
-    let tokens = tokens();
-    let (names, faces) = jcj_shell::theme::with_defaults(&tokens.fonts, &[]);
-    jcj_shell::theme::install_fonts(ctx, &names, &faces);
-    jcj_shell::theme::apply(ctx, &tokens.theme(mode));
-}
+/// The brand's files: its design tokens (`assets/brand/tokens.json`) and the app icon at 256
+/// pixels, for the window. Reading them, the window's icon and installing the theme in a context
+/// the shell does not manage (`BRAND.apply`, for tests and offscreen pictures) are the core's.
+pub const BRAND: Brand = Brand::new(include_str!("../../../assets/brand/tokens.json"), include_bytes!("../../../assets/brand/icon-256.png"));
 
 /// The editor's page colors for one theme.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -66,37 +50,33 @@ struct RawEditor {
     dark: RawPage,
 }
 
-#[derive(Deserialize)]
-struct RawFile {
-    manuscript: RawEditor,
-}
-
-fn hex(s: &str) -> Color32 {
-    let h = s.trim_start_matches('#');
-    let byte = |i: usize| h.get(i..i + 2).and_then(|b| u8::from_str_radix(b, 16).ok()).unwrap_or(0);
-    Color32::from_rgb(byte(0), byte(2), byte(4))
-}
-
-fn colors(p: &RawPage) -> PageColors {
-    PageColors { page: hex(&p.page), text: hex(&p.text), dim: hex(&p.dim), selection: hex(&p.selection) }
+fn colors(p: &RawPage) -> Option<PageColors> {
+    let hex = |s: &str| jcj_shell::theme::parse_hex(s).ok();
+    Some(PageColors { page: hex(&p.page)?, text: hex(&p.text)?, dim: hex(&p.dim)?, selection: hex(&p.selection)? })
 }
 
 const FALLBACK: PageColors =
     PageColors { page: Color32::WHITE, text: Color32::from_rgb(0x1F, 0x1F, 0x22), dim: Color32::GRAY, selection: Color32::LIGHT_BLUE };
 
+/// Manuscript's own section of the tokens file: the editor's face and page colors.
+fn editor() -> Option<RawEditor> {
+    BRAND.section("manuscript")
+}
+
 /// The editor's colors for a surface and the window's darkness.
 pub fn page_colors(surface: EditorSurface, dark: bool) -> PageColors {
-    let Ok(raw) = serde_json::from_str::<RawFile>(TOKENS_JSON) else { return FALLBACK };
-    match (surface, dark) {
-        (EditorSurface::Sepia, _) => colors(&raw.manuscript.sepia),
-        (EditorSurface::Theme, false) => colors(&raw.manuscript.light),
-        (EditorSurface::Theme, true) => colors(&raw.manuscript.dark),
-    }
+    let Some(raw) = editor() else { return FALLBACK };
+    let page = match (surface, dark) {
+        (EditorSurface::Sepia, _) => &raw.sepia,
+        (EditorSurface::Theme, false) => &raw.light,
+        (EditorSurface::Theme, true) => &raw.dark,
+    };
+    colors(page).unwrap_or(FALLBACK)
 }
 
 /// The editor's text face name (a font bundled with the core).
 pub fn editor_font() -> String {
-    serde_json::from_str::<RawFile>(TOKENS_JSON).map(|r| r.manuscript.editor_font).unwrap_or_else(|_| "Source Serif 4".into())
+    editor().map_or_else(|| "Source Serif 4".into(), |r| r.editor_font)
 }
 
 /// Paint the mark (the letter M and the cursor of three sheets, as
@@ -154,8 +134,8 @@ mod tests {
 
     #[test]
     fn the_tokens_file_reads_and_names_the_brand() {
-        assert!(Tokens::from_json(TOKENS_JSON).is_ok());
-        assert!(serde_json::from_str::<RawFile>(TOKENS_JSON).is_ok());
+        assert!(BRAND.read_tokens().is_ok());
+        assert!(editor().is_some(), "the tokens file has Manuscript's own section");
         assert_eq!(editor_font(), "Source Serif 4");
     }
 
@@ -178,50 +158,19 @@ mod tests {
     const NIGHT: Color32 = Color32::from_rgb(0x12, 0x16, 0x2B);
     const MODES: [Mode; 3] = [Mode::Light, Mode::Dark, Mode::ExtraDark];
 
-    /// WCAG 2.x relative luminance.
-    fn luminance(c: Color32) -> f32 {
-        let lin = |v: u8| {
-            let v = f32::from(v) / 255.0;
-            if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
-        };
-        0.2126 * lin(c.r()) + 0.7152 * lin(c.g()) + 0.0722 * lin(c.b())
-    }
-
-    /// WCAG 2.x contrast ratio, 1 to 21.
-    fn contrast(a: Color32, b: Color32) -> f32 {
-        let (x, y) = (luminance(a), luminance(b));
-        (x.max(y) + 0.05) / (x.min(y) + 0.05)
-    }
-
-    /// The hue in degrees (0 to 360).
-    fn hue(c: Color32) -> f32 {
-        let [r, g, b] = [c.r(), c.g(), c.b()].map(|v| f32::from(v) / 255.0);
-        let (max, min) = (r.max(g).max(b), r.min(g).min(b));
-        let d = max - min;
-        if d == 0.0 {
-            return 0.0;
-        }
-        let h = if max == r {
-            ((g - b) / d).rem_euclid(6.0)
-        } else if max == g {
-            (b - r) / d + 2.0
-        } else {
-            (r - g) / d + 4.0
-        };
-        h * 60.0
-    }
+    use jcj_shell::theme::brand::{contrast, hue_distance};
 
     #[test]
     fn the_light_theme_is_the_brand_palette() {
-        let t = tokens().theme(Mode::Light);
+        let t = BRAND.tokens().theme(Mode::Light);
         assert_eq!(t.text, INK);
         assert_eq!(t.surface, PAPER);
         assert_eq!(t.text_dim, SLATE);
         assert_eq!(t.accent, MARGIN_BLUE);
         assert_eq!((t.brand, t.on_brand), (INK, PAPER));
         assert_eq!(t.highlight, CARD_RED);
-        assert_eq!(tokens().theme(Mode::Dark).canvas, NIGHT);
-        assert_eq!(tokens().theme(Mode::Dark).on_brand, PAPER);
+        assert_eq!(BRAND.tokens().theme(Mode::Dark).canvas, NIGHT);
+        assert_eq!(BRAND.tokens().theme(Mode::Dark).on_brand, PAPER);
     }
 
     /// Card Red is the one small accent (the File page's current-entry mark), so problems must not
@@ -229,9 +178,8 @@ mod tests {
     #[test]
     fn danger_stays_apart_from_card_red() {
         for mode in MODES {
-            let t = tokens().theme(mode);
-            let apart = (hue(t.danger) - hue(t.highlight)).rem_euclid(360.0);
-            assert!(apart.min(360.0 - apart) >= 15.0, "{mode:?}: danger {:?} is too close to {:?}", t.danger, t.highlight);
+            let t = BRAND.tokens().theme(mode);
+            assert!(hue_distance(t.danger, t.highlight) >= 15.0, "{mode:?}: danger {:?} is too close to {:?}", t.danger, t.highlight);
         }
     }
 
@@ -241,7 +189,7 @@ mod tests {
     #[test]
     fn text_and_focus_meet_wcag_aa() {
         for mode in MODES {
-            let t = tokens().theme(mode);
+            let t = BRAND.tokens().theme(mode);
             let grounds = [t.canvas, t.surface, t.surface_high, t.input, t.hover];
             for (name, fg) in [("text", t.text), ("text_dim", t.text_dim), ("accent", t.accent), ("danger", t.danger)] {
                 for bg in grounds {
@@ -275,25 +223,14 @@ mod tests {
 
     #[test]
     fn the_icon_is_a_png() {
-        assert_eq!(&ICON_256[..8], b"\x89PNG\r\n\x1a\n");
+        assert!(BRAND.icon().is_some(), "the window's icon decodes");
     }
 
     /// The Windows program's icon (embedded by `apps/manuscript/build.rs`; the brand kit's file,
     /// unchanged) holds the sizes Windows asks for, each a 32-bit image.
     #[test]
     fn the_windows_icon_has_the_sizes_windows_needs() {
-        let ico: &[u8] = include_bytes!("../../../assets/brand/icon.ico");
-        let word = |at: usize| ico.get(at..at + 2).map_or(0, |b| u16::from_le_bytes([b[0], b[1]]));
-        let long = |at: usize| ico.get(at..at + 4).map_or(0, |b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])) as usize;
-        assert_eq!((word(0), word(2)), (0, 1), "an icon file");
-        let mut sizes = Vec::new();
-        for i in 0..usize::from(word(4)) {
-            let e = 6 + 16 * i;
-            let side = ico.get(e).map_or(0, |&b| if b == 0 { 256 } else { u32::from(b) });
-            assert_eq!(word(e + 6), 32, "{side} px is 32-bit");
-            assert!(long(e + 12) + long(e + 8) <= ico.len(), "{side} px lies inside the file");
-            sizes.push(side);
-        }
+        let sizes = jcj_shell::theme::brand::ico_sizes(include_bytes!("../../../assets/brand/icon.ico")).unwrap();
         // Which sizes the file holds is the kit's choice; these four are the ones Windows
         // cannot do without (small and large lists, the taskbar, the largest view).
         for needed in [16, 32, 48, 256] {

@@ -282,7 +282,7 @@ fn view(app: &mut Manuscript, shell: &mut Shell, cmd: &str) -> Result<(), String
 
 fn shot(shell: &mut Shell, app: &mut Manuscript, out: &Path, name: &str) -> Result<(), String> {
     let ctx = egui::Context::default();
-    wordsmith_manuscript_ui::brand::apply(&ctx, shell.mode);
+    wordsmith_manuscript_ui::brand::BRAND.apply(&ctx, shell.mode);
     let pic = jcj_shell::snapshot::render(&ctx, SIZE, PPP, Vec::new(), 6, |ui| shell.ui(ui, app));
     let path = out.join(format!("{name}.png"));
     std::fs::write(&path, pic.to_png()).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -293,7 +293,7 @@ fn shot(shell: &mut Shell, app: &mut Manuscript, out: &Path, name: &str) -> Resu
 fn run(out: &Path) -> Result<(), String> {
     std::fs::create_dir_all(out).map_err(|e| format!("{}: {e}", out.display()))?;
     let mut app = sample()?;
-    let mut shell = Shell::new(wordsmith_manuscript_ui::NAME, env!("CARGO_PKG_VERSION"), wordsmith_manuscript_ui::brand::tokens());
+    let mut shell = Shell::new(wordsmith_manuscript_ui::NAME, env!("CARGO_PKG_VERSION"), wordsmith_manuscript_ui::brand::BRAND.tokens());
     let (a, s) = (&mut app, &mut shell);
     panels(a, s, &[BINDER_PANEL, INSPECTOR_PANEL]);
     s.chrome.tab = "write".into();

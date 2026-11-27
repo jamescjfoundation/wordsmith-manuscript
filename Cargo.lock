@@ -2194,6 +2194,7 @@ name = "jcj-shell"
 version = "0.1.23"
 source = "git+https://github.com/jamescjfoundation/open-source-core?tag=v0.1.23#0ed85c4fc9b22119f2780a6692beeebde2747a62"
 dependencies = [
+ "eframe",
  "egui",
  "image",
  "jcj-i18n",
@@ -5170,6 +5171,7 @@ version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2bc6d36480b829272a5bdabf08e6dca8004761c1da7e35efef800540c66221b"
 dependencies = [
+ "toml",
  "version_check",
 ]
 
@@ -5425,7 +5427,6 @@ dependencies = [
 name = "wordsmith-manuscript"
 version = "0.9.0"
 dependencies = [
- "eframe",
  "jcj-shell",
  "winresource",
  "wordsmith-manuscript-ui",

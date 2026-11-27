@@ -61,7 +61,7 @@ fn the_calendar_shows_a_month() {
     let mut harness = Harness::builder().with_size(egui::vec2(520.0, 420.0)).build_ui_state(
         |ui, st: &mut (History, HistoryView, bool)| {
             if !st.2 {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.2 = true;
             }
             history::calendar(ui, &st.0, &mut st.1, 2026, 3, Day { year: 2026, month: 3, day: 3 });

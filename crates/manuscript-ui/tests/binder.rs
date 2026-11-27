@@ -141,7 +141,7 @@ fn harness(state: State) -> Harness<'static, State> {
     Harness::builder().with_size(egui::vec2(320.0, 600.0)).build_ui_state(
         |ui, st: &mut State| {
             if !st.styled {
-                wordsmith_manuscript_ui::brand::apply(ui.ctx(), jcj_shell::theme::Mode::Light);
+                wordsmith_manuscript_ui::brand::BRAND.apply(ui.ctx(), jcj_shell::theme::Mode::Light);
                 st.styled = true;
             }
             let _ = binder::panel(ui, &mut st.session, &mut st.view);

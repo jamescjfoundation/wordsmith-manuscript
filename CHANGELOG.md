@@ -12,6 +12,17 @@ of the build plan, each prepared as a release and none released.
 
 ## Unreleased
 
+### Starting and updating
+
+The app starts the way every app on open-source-core starts, with the same steps in the same
+order. The command line, `--version` and the window's title are as before. What you may notice:
+
+- When an update has been installed, the window closes and the new version starts. Before, the
+  update waited until you closed the app yourself.
+- A preference you change within a second of another is written straight away, without waiting
+  for your next key press or click.
+- With no settings folder at all, the interface still follows your computer's language.
+
 ### Files
 
 Projects are read and written by the shared project-folder code of open-source-core, which

@@ -20,7 +20,7 @@ fn app() -> (Manuscript, Shell) {
         p.texts.insert(id(n), ItemText::with_body(Text::from_paragraphs(&[&format!("Scene {n} has a lamp.")])));
     }
     p.binder.insert(Place::end_of(Area::Manuscript), ch).unwrap();
-    (Manuscript::with_session(Session::new(p)), Shell::new("Test", "0", wordsmith_manuscript_ui::brand::tokens()))
+    (Manuscript::with_session(Session::new(p)), Shell::new("Test", "0", wordsmith_manuscript_ui::brand::BRAND.tokens()))
 }
 
 #[test]
