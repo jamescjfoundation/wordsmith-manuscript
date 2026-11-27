@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Export through an external converter (EXP-7): the program the writer names is run directly
 //! with the arguments filled in, and the result is checked word for word when it can be read.
+//!
+//! The stand-in converters are `cp` and `false`, programs every Unix system has, so the whole
+//! file is for Unix: on Windows it holds no test, and nothing in it is built there.
+
+#![cfg(unix)]
 
 use serde_json::json;
 use wordsmith_manuscript_model::{Area, Item, ItemId, ItemText, Kind, Place, Project, Role, Text};
@@ -14,7 +19,6 @@ fn session() -> Session {
     Session::new(p)
 }
 
-#[cfg(unix)]
 #[test]
 fn a_converter_is_run_and_its_result_checked() {
     let dir = std::env::temp_dir().join(format!("wsm-convert-{}", std::process::id()));
