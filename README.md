@@ -2,6 +2,13 @@
 
 # Wordsmith Manuscript
 
+[![CI status](https://img.shields.io/github/actions/workflow/status/jamescjfoundation/wordsmith-manuscript/ci.yml?branch=main&label=CI&style=flat-square&labelColor=1C2340)](https://github.com/jamescjfoundation/wordsmith-manuscript/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/jamescjfoundation/wordsmith-manuscript?label=release&color=A8322A&style=flat-square&labelColor=1C2340)](https://github.com/jamescjfoundation/wordsmith-manuscript/releases/latest)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-3B4FA8?style=flat-square&labelColor=1C2340)](#license)
+![Platforms: macOS, Windows, Linux](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-5A6080?style=flat-square&labelColor=1C2340)
+[![Written in Rust](https://img.shields.io/badge/written%20in-Rust-5A6080?logo=rust&style=flat-square&labelColor=1C2340)](https://www.rust-lang.org)
+[![User guide on the Wordsmith wiki](https://img.shields.io/badge/guide-wordsmithand.ink-A8322A?style=flat-square&labelColor=1C2340)](https://wordsmithand.ink/wiki/manuscript/)
+
 Licensed under MIT OR Apache-2.0, at your option ([License](#license)).
 
 An open-source app for writing novels and other long work, for macOS, Windows and Linux, written
