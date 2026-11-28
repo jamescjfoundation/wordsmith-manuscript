@@ -359,6 +359,7 @@ moves more often than Manuscript is released.
 | `book-view-1.7` | 1 | v0.1.22 | Manuscript moved to a newer core. The workspace's version is 0.9.0 from this tag on, so the two crates are `0.9.0` in Book's lock file; nothing Book uses changed |
 | `book-view-1.8` | 1 | v0.1.23 | Manuscript moved to a newer core |
 | `v0.9.0` | 1 | v0.1.22 | The first public release of Wordsmith Manuscript, a preview of 1.0.0. The two crates are as at `book-view-1.7` |
+| `v0.9.1` | 1 | v0.1.25 | Wordsmith Manuscript 0.9.1, on core v0.1.25 (the macOS app shows its icon). Nothing Book uses changed: Book moves its core tag and its two lines together |
 
 ## How this contract is kept
 
