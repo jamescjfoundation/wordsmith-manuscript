@@ -12,6 +12,12 @@ of the build plan, each prepared as a release and none released.
 
 ## Unreleased
 
+### Fixed
+
+- **The app icon shows on macOS.** In 0.9.0 the app carried its icon but named it so that macOS
+  could not find it, and Finder, the Dock and Launchpad showed a blank icon for Wordsmith Manuscript.
+  Fixed by moving to open-source-core v0.1.25.
+
 ### Starting and updating
 
 The app starts the way every app on open-source-core starts, with the same steps in the same
